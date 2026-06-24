@@ -36,7 +36,6 @@ import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_screen.dart';
 import 'package:seekarr/features/qbittorrent/presentation/torrent_detail_screen.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/add_torrent_button.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/qbittorrent_actions_bar.dart';
 import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_library_screen.dart';
