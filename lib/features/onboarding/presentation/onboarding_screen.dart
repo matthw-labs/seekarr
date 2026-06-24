@@ -27,6 +27,7 @@ const _serviceColors = {
   ServiceKey.sonarr: Color(0xFF8B5CF6), // purple
   ServiceKey.lidarr: Color(0xFFEC4899), // pink
   ServiceKey.qbittorrent: Color(0xFF2F67BA), // blue
+  ServiceKey.bazarr: Color(0xFF25A7DF), // bazarr cyan
 };
 
 // ─── Health-check helper (mirrors serviceConnectionProvider logic) ──────────
@@ -41,6 +42,8 @@ String _healthEndpoint(ServiceKey service) {
       return '/api/v1/system/status';
     case ServiceKey.qbittorrent:
       return '/api/v2/app/version';
+    case ServiceKey.bazarr:
+      return '/api/system/status';
   }
 }
 

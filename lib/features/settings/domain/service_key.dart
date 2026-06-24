@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/theme.dart';
 
-enum ServiceKey { seerr, radarr, sonarr, lidarr, qbittorrent }
+enum ServiceKey { seerr, radarr, sonarr, lidarr, qbittorrent, bazarr }
 
 extension ServiceKeyExtension on ServiceKey {
   String get title {
@@ -17,6 +17,8 @@ extension ServiceKeyExtension on ServiceKey {
         return 'Lidarr';
       case ServiceKey.qbittorrent:
         return 'qBittorrent';
+      case ServiceKey.bazarr:
+        return 'Bazarr';
     }
   }
 
@@ -32,6 +34,8 @@ extension ServiceKeyExtension on ServiceKey {
         return Icons.music_note_rounded;
       case ServiceKey.qbittorrent:
         return Icons.download_rounded;
+      case ServiceKey.bazarr:
+        return Icons.subtitles_rounded;
     }
   }
 
@@ -47,6 +51,8 @@ extension ServiceKeyExtension on ServiceKey {
         return AppColors.lidarr;
       case ServiceKey.qbittorrent:
         return AppColors.qbittorrent;
+      case ServiceKey.bazarr:
+        return AppColors.bazarr;
     }
   }
 
@@ -55,7 +61,10 @@ extension ServiceKeyExtension on ServiceKey {
   }
 
   bool get isSearchable {
-    return this != ServiceKey.qbittorrent;
+    return this == ServiceKey.seerr ||
+        this == ServiceKey.radarr ||
+        this == ServiceKey.sonarr ||
+        this == ServiceKey.lidarr;
   }
 
   bool get supportsManualImport {
@@ -74,6 +83,8 @@ extension ServiceKeyExtension on ServiceKey {
         return 'v3';
       case ServiceKey.qbittorrent:
         return 'WebUI';
+      case ServiceKey.bazarr:
+        return 'v1';
     }
   }
 
@@ -89,6 +100,8 @@ extension ServiceKeyExtension on ServiceKey {
         return 'artists';
       case ServiceKey.qbittorrent:
         return 'torrents';
+      case ServiceKey.bazarr:
+        return 'subtitles';
     }
   }
 
@@ -100,6 +113,7 @@ extension ServiceKeyExtension on ServiceKey {
       case ServiceKey.sonarr:
       case ServiceKey.lidarr:
       case ServiceKey.qbittorrent:
+      case ServiceKey.bazarr:
         return name;
     }
   }

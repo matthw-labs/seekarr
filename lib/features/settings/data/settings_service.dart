@@ -88,6 +88,11 @@ class SettingsService {
       secureApiKey: 'secure_qbittorrent_password',
       username: 'qbittorrent_username',
     ),
+    ServiceKey.bazarr: _ServiceStorageKeys(
+      url: 'bazarr_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_bazarr_api_key',
+    ),
   };
 
   final SharedPreferences _prefs;
@@ -195,6 +200,8 @@ class SettingsService {
       qbittorrentUrl: serviceSettings[ServiceKey.qbittorrent]!.$1,
       qbittorrentUsername: qbUsername,
       qbittorrentPassword: qbPassword,
+      bazarrUrl: serviceSettings[ServiceKey.bazarr]!.$1,
+      bazarrApiKey: serviceSettings[ServiceKey.bazarr]!.$2,
       region: _loadRegion(),
       themeMode: AppThemeMode.fromName(_prefs.getString(_kThemeMode)),
     );

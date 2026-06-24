@@ -42,6 +42,13 @@ class FakeApiClient extends ApiClient {
   Map<String, dynamic>? lastPutQueryParameters;
   int putCallCount = 0;
 
+  String? lastPatchPath;
+  dynamic lastPatchData;
+  Map<String, dynamic>? lastPatchQueryParameters;
+  dynamic patchResponseData;
+  Object? patchException;
+  int patchCallCount = 0;
+
   String? lastDeletePath;
   dynamic lastDeleteData;
   Map<String, dynamic>? lastDeleteQueryParameters;
@@ -105,6 +112,25 @@ class FakeApiClient extends ApiClient {
     return Response<dynamic>(
       requestOptions: RequestOptions(path: path),
       data: putResponseData,
+    );
+  }
+
+  @override
+  Future<Response<dynamic>> patch(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    lastPatchPath = path;
+    lastPatchData = data;
+    lastPatchQueryParameters = queryParameters;
+    patchCallCount++;
+
+    if (patchException != null) throw patchException!;
+
+    return Response<dynamic>(
+      requestOptions: RequestOptions(path: path),
+      data: patchResponseData,
     );
   }
 

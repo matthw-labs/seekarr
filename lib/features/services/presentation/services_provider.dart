@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/core/utils/arr_activity_display.dart';
 import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
@@ -112,6 +113,10 @@ Future<String?> _loadVersion(
         .timeout(const Duration(seconds: 5));
     final data = response.data;
     if (data is Map<String, dynamic>) {
+      if (service == ServiceKey.bazarr) {
+        final nested = mapOrNull(data['data']);
+        return stringOrNull(nested?['bazarr_version']);
+      }
       return (data['version'] ?? data['appVersion'])?.toString();
     }
     return null;
@@ -131,6 +136,8 @@ String _statusEndpointFor(ServiceKey service) {
       return '/api/v1/system/status';
     case ServiceKey.qbittorrent:
       return '/api/v2/app/version';
+    case ServiceKey.bazarr:
+      return '/api/system/status';
   }
 }
 
@@ -146,6 +153,8 @@ Future<int> _loadItemCount(Ref ref, ServiceKey service) async {
       return (await ref.watch(lidarrServiceProvider).getArtists()).length;
     case ServiceKey.qbittorrent:
       return (await ref.watch(qbittorrentServiceProvider).getTorrents()).length;
+    case ServiceKey.bazarr:
+      return (await ref.watch(bazarrServiceProvider).getBadges()).totalWanted;
   }
 }
 
@@ -296,7 +305,8 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
       ServiceKey.sonarr => await ref.watch(sonarrServiceProvider).getQueue(),
       ServiceKey.seerr ||
       ServiceKey.lidarr ||
-      ServiceKey.qbittorrent => const <dynamic>[],
+      ServiceKey.qbittorrent ||
+      ServiceKey.bazarr => const <dynamic>[],
     };
     return items
         .whereType<Map>()
@@ -335,7 +345,9 @@ String _queueTypeLabel(ServiceKey service) {
     ServiceKey.radarr => 'Movie',
     ServiceKey.sonarr => 'Series',
     ServiceKey.lidarr => 'Music',
-    ServiceKey.seerr || ServiceKey.qbittorrent => service.title,
+    ServiceKey.seerr ||
+    ServiceKey.qbittorrent ||
+    ServiceKey.bazarr => service.title,
   };
 }
 

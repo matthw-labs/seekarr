@@ -26,6 +26,8 @@ String _healthEndpoint(ServiceKey service) {
       return '/api/v1/system/status';
     case ServiceKey.qbittorrent:
       return '/api/v2/app/version';
+    case ServiceKey.bazarr:
+      return '/api/system/status';
   }
 }
 
