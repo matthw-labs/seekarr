@@ -21,6 +21,8 @@ import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
 import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
 
+export 'fake_bazarr_service.dart';
+
 ApiClient _client(String baseUrl) => ApiClient(baseUrl: baseUrl, apiKey: 'key');
 
 class FakeRadarrService extends RadarrService {

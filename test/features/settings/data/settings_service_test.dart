@@ -94,6 +94,8 @@ void main() {
         sonarrApiKey: 'sonarr-key',
         lidarrUrl: 'https://lidarr.example.com',
         lidarrApiKey: 'lidarr-key',
+        bazarrUrl: 'https://bazarr.example.com',
+        bazarrApiKey: 'bazarr-key',
         region: 'IT',
         themeMode: AppThemeMode.dark,
       );
@@ -110,6 +112,8 @@ void main() {
       expect(loaded.sonarrApiKey, settings.sonarrApiKey);
       expect(loaded.lidarrUrl, settings.lidarrUrl);
       expect(loaded.lidarrApiKey, settings.lidarrApiKey);
+      expect(loaded.bazarrUrl, settings.bazarrUrl);
+      expect(loaded.bazarrApiKey, settings.bazarrApiKey);
       expect(loaded.region, settings.region);
       expect(loaded.themeMode, settings.themeMode);
     });
@@ -125,7 +129,22 @@ void main() {
       expect(loaded.sonarrApiKey, isEmpty);
       expect(loaded.lidarrUrl, isEmpty);
       expect(loaded.lidarrApiKey, isEmpty);
+      expect(loaded.bazarrUrl, isEmpty);
+      expect(loaded.bazarrApiKey, isEmpty);
       expect(loaded.themeMode, AppThemeMode.system);
+    });
+
+    test('loadSettings reads Bazarr API key from secure storage', () async {
+      await prefs.setString('bazarr_url', 'https://bazarr.example.com');
+      await secureStore.write(
+        key: 'secure_bazarr_api_key',
+        value: 'bazarr-key',
+      );
+
+      final loaded = await service.loadSettings();
+
+      expect(loaded.bazarrUrl, 'https://bazarr.example.com');
+      expect(loaded.bazarrApiKey, 'bazarr-key');
     });
 
     test('loadSettings falls back to legacy Jellyseerr keys', () async {

@@ -37,6 +37,12 @@ import 'package:seekarr/features/onboarding/presentation/onboarding_screen.dart'
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_screen.dart';
 import 'package:seekarr/features/qbittorrent/presentation/torrent_detail_screen.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/add_torrent_button.dart';
+import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:seekarr/features/bazarr/presentation/bazarr_screen.dart';
+import 'package:seekarr/features/bazarr/presentation/bazarr_wanted_screen.dart';
+import 'package:seekarr/features/bazarr/presentation/bazarr_library_screen.dart';
+import 'package:seekarr/features/bazarr/presentation/bazarr_series_detail_screen.dart';
+import 'package:seekarr/features/bazarr/presentation/bazarr_movie_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
@@ -341,6 +347,72 @@ GoRoute _qbittorrentRoutes({required String path}) {
   );
 }
 
+GoRoute _bazarrRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.bazarr,
+        child: const BazarrScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+    routes: [
+      GoRoute(
+        path: 'wanted',
+        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          child: const BazarrWantedScreen(),
+        ),
+      ),
+      GoRoute(
+        path: 'library',
+        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          child: const BazarrLibraryScreen(),
+        ),
+      ),
+      GoRoute(
+        path: 'series/:id',
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+        pageBuilder: (context, state) {
+          final id = RouteUtils.safeIntParam(state, 'id')!;
+          final wanted = RouteUtils.safeExtra<BazarrWantedItem>(state);
+          return RouteUtils.cupertinoPage(
+            key: state.pageKey,
+            child: BazarrSeriesDetailScreen(
+              sonarrSeriesId: id,
+              heroTag: state.uri.queryParameters['heroTag'],
+              initialWanted: wanted,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: 'movie/:id',
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+        pageBuilder: (context, state) {
+          final id = RouteUtils.safeIntParam(state, 'id')!;
+          final wanted = RouteUtils.safeExtra<BazarrWantedItem>(state);
+          return RouteUtils.cupertinoPage(
+            key: state.pageKey,
+            child: BazarrMovieDetailScreen(
+              radarrId: id,
+              heroTag: state.uri.queryParameters['heroTag'],
+              initialWanted: wanted,
+            ),
+          );
+        },
+      ),
+    ],
+  );
+}
+
 String? _redirectLegacyDiscover(GoRouterState state) {
   final path = state.uri.path;
   if (path == '/discover') return '/services';
@@ -416,6 +488,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               _seriesRoutes(path: 'sonarr'),
               _musicRoutes(path: 'lidarr'),
               _qbittorrentRoutes(path: 'qbittorrent'),
+              _bazarrRoutes(path: 'bazarr'),
             ],
           ),
           GoRoute(

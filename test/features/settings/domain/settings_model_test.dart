@@ -12,6 +12,7 @@ void main() {
       radarrUrl: 'https://radarr.example.com',
       sonarrUrl: 'https://sonarr.example.com',
       lidarrUrl: 'https://lidarr.example.com',
+      bazarrUrl: 'https://bazarr.example.com',
     );
 
     test('returns correct URL for each ServiceKey', () {
@@ -19,6 +20,7 @@ void main() {
       expect(settings.urlFor(ServiceKey.radarr), 'https://radarr.example.com');
       expect(settings.urlFor(ServiceKey.sonarr), 'https://sonarr.example.com');
       expect(settings.urlFor(ServiceKey.lidarr), 'https://lidarr.example.com');
+      expect(settings.urlFor(ServiceKey.bazarr), 'https://bazarr.example.com');
     });
   });
 
@@ -28,6 +30,7 @@ void main() {
       radarrApiKey: 'rkey',
       sonarrApiKey: 'skey',
       lidarrApiKey: 'lkey',
+      bazarrApiKey: 'bkey',
     );
 
     test('returns correct API key for each ServiceKey', () {
@@ -35,6 +38,7 @@ void main() {
       expect(settings.apiKeyFor(ServiceKey.radarr), 'rkey');
       expect(settings.apiKeyFor(ServiceKey.sonarr), 'skey');
       expect(settings.apiKeyFor(ServiceKey.lidarr), 'lkey');
+      expect(settings.apiKeyFor(ServiceKey.bazarr), 'bkey');
     });
   });
 
@@ -65,7 +69,18 @@ void main() {
       expect(updated.sonarrApiKey, '');
     });
 
-    test('works for all four ServiceKey values', () {
+    test('updates Bazarr URL and API key through copyWithService', () {
+      final updated = base.copyWithService(
+        ServiceKey.bazarr,
+        url: 'https://bazarr.local',
+        apiKey: 'bzkey',
+      );
+
+      expect(updated.bazarrUrl, 'https://bazarr.local');
+      expect(updated.bazarrApiKey, 'bzkey');
+    });
+
+    test('works for all ServiceKey values', () {
       for (final key in ServiceKey.values) {
         final updated = base.copyWithService(key, url: 'https://test');
         expect(updated.urlFor(key), 'https://test');
@@ -119,6 +134,7 @@ void main() {
       expect(ServiceKey.radarr.routeParam, 'radarr');
       expect(ServiceKey.sonarr.routeParam, 'sonarr');
       expect(ServiceKey.lidarr.routeParam, 'lidarr');
+      expect(ServiceKey.bazarr.routeParam, 'bazarr');
     });
   });
 
@@ -128,10 +144,12 @@ void main() {
       expect(ServiceKey.radarr.accent.toARGB32(), 0xFFF59E0B);
       expect(ServiceKey.sonarr.accent.toARGB32(), 0xFF8B5CF6);
       expect(ServiceKey.lidarr.accent.toARGB32(), 0xFFEC4899);
+      expect(ServiceKey.bazarr.accent.toARGB32(), 0xFF25A7DF);
       expect(ServiceKey.seerr.icon, Icons.search_rounded);
       expect(ServiceKey.radarr.icon, Icons.movie_rounded);
       expect(ServiceKey.sonarr.icon, Icons.tv_rounded);
       expect(ServiceKey.lidarr.icon, Icons.music_note_rounded);
+      expect(ServiceKey.bazarr.icon, Icons.subtitles_rounded);
     });
 
     test('maps API versions per service', () {
@@ -139,6 +157,7 @@ void main() {
       expect(ServiceKey.radarr.apiVersion, 'v3');
       expect(ServiceKey.sonarr.apiVersion, 'v3');
       expect(ServiceKey.lidarr.apiVersion, 'v1');
+      expect(ServiceKey.bazarr.apiVersion, 'v1');
     });
 
     test('maps summary item labels per service', () {
@@ -146,6 +165,27 @@ void main() {
       expect(ServiceKey.radarr.itemLabel, 'movies');
       expect(ServiceKey.sonarr.itemLabel, 'series');
       expect(ServiceKey.lidarr.itemLabel, 'artists');
+      expect(ServiceKey.bazarr.itemLabel, 'subtitles');
+    });
+
+    test('keeps Bazarr out of global search and manual import flows', () {
+      expect(ServiceKey.bazarr.isSearchable, isFalse);
+      expect(ServiceKey.bazarr.supportsManualImport, isFalse);
+      expect(ServiceKey.bazarr.usesApiKey, isTrue);
+      expect(
+        ServiceKey.values.where((s) => s.isSearchable),
+        containsAll([
+          ServiceKey.seerr,
+          ServiceKey.radarr,
+          ServiceKey.sonarr,
+          ServiceKey.lidarr,
+        ]),
+        reason: 'Searchable services should stay limited to Seerr/*arr',
+      );
+      expect(
+        ServiceKey.values.where((s) => s.isSearchable),
+        isNot(contains(ServiceKey.bazarr)),
+      );
     });
 
     test('extracts host labels with ports for service cards', () {
@@ -162,6 +202,10 @@ void main() {
         'sonarr.local:8989',
       );
       expect(ServiceKey.lidarr.extractHost(''), isNull);
+      expect(
+        ServiceKey.bazarr.extractHost('http://bazarr.local:6767'),
+        'bazarr.local:6767',
+      );
     });
   });
 }

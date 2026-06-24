@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:seekarr/core/api/api_client.dart';
+import 'package:seekarr/features/bazarr/data/bazarr_service.dart';
+import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
 import 'package:seekarr/features/music/data/lidarr_service.dart';
@@ -89,6 +92,67 @@ void main() {
       expect(summary.status, ServiceSummaryStatus.online);
       expect(summary.versionLabel, 'v5.4.6');
       expect(summary.countLabel, 'Summary unavailable');
+    });
+  });
+
+  group('serviceSummaryProvider Bazarr', () {
+    test('reads bazarr_version from the nested data envelope', () async {
+      final container = _container(
+        settings: const SettingsModel(
+          bazarrUrl: 'http://bazarr.local:6767',
+          bazarrApiKey: 'key',
+        ),
+        statusClient: _StatusClient({
+          'data': {'bazarr_version': '1.4.5'},
+        }),
+        bazarrService: FakeBazarrService()
+          ..badges = const BazarrBadges(
+            episodes: 0,
+            movies: 0,
+            providers: 0,
+            status: false,
+            sonarrSignalR: false,
+            radarrSignalR: false,
+            announcements: 0,
+          ),
+      );
+
+      final summary = await container.read(
+        serviceSummaryProvider(ServiceKey.bazarr).future,
+      );
+
+      expect(summary.status, ServiceSummaryStatus.online);
+      expect(summary.host, 'bazarr.local:6767');
+      expect(summary.versionLabel, 'v1.4.5');
+      expect(summary.countLabel, '0 subtitles');
+    });
+
+    test('totals wanted badges across episodes and movies', () async {
+      final container = _container(
+        settings: const SettingsModel(
+          bazarrUrl: 'http://bazarr.local:6767',
+          bazarrApiKey: 'key',
+        ),
+        statusClient: _StatusClient({
+          'data': {'bazarr_version': '1.4.5'},
+        }),
+        bazarrService: FakeBazarrService()
+          ..badges = const BazarrBadges(
+            episodes: 12,
+            movies: 4,
+            providers: 3,
+            status: true,
+            sonarrSignalR: true,
+            radarrSignalR: true,
+            announcements: 0,
+          ),
+      );
+
+      final summary = await container.read(
+        serviceSummaryProvider(ServiceKey.bazarr).future,
+      );
+
+      expect(summary.countLabel, '16 subtitles');
     });
   });
 
@@ -240,6 +304,7 @@ ProviderContainer _container({
   RadarrService? radarrService,
   SonarrService? sonarrService,
   LidarrService? lidarrService,
+  BazarrService? bazarrService,
   ApiClient? statusClient,
 }) {
   final container = ProviderContainer(
@@ -259,6 +324,9 @@ ProviderContainer _container({
       ),
       lidarrServiceProvider.overrideWith(
         (ref) => lidarrService ?? FakeLidarrService(),
+      ),
+      bazarrServiceProvider.overrideWith(
+        (ref) => bazarrService ?? FakeBazarrService(),
       ),
     ],
   );
