@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/app_elevation.dart';
+import 'package:seekarr/core/app_gradients.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/service_theme.dart';
 
 /// Variants for AppCard appearance following Material Design 3.
 enum AppCardVariant {
@@ -43,6 +46,9 @@ class AppCard extends StatelessWidget {
   /// Optional custom outline color for outlined cards.
   final Color? borderColor;
 
+  /// When set, paints a soft accent glow inside the card (signature surfaces).
+  final Color? accentColor;
+
   const AppCard({
     super.key,
     required this.child,
@@ -52,6 +58,7 @@ class AppCard extends StatelessWidget {
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
+    this.accentColor,
   });
 
   /// Creates a filled card (default)
@@ -63,6 +70,7 @@ class AppCard extends StatelessWidget {
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
+    this.accentColor,
   }) : variant = AppCardVariant.filled;
 
   /// Creates an outlined card
@@ -74,6 +82,7 @@ class AppCard extends StatelessWidget {
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
+    this.accentColor,
   }) : variant = AppCardVariant.outlined;
 
   /// Creates the common app surface card with an outline.
@@ -85,6 +94,7 @@ class AppCard extends StatelessWidget {
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
+    this.accentColor,
   }) : variant = AppCardVariant.surfaceOutlined;
 
   /// Creates an elevated card with shadow
@@ -96,6 +106,7 @@ class AppCard extends StatelessWidget {
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
+    this.accentColor,
   }) : variant = AppCardVariant.elevated;
 
   @override
@@ -123,24 +134,30 @@ class AppCard extends StatelessWidget {
       case AppCardVariant.elevated:
         bgColor = backgroundColor ?? colorScheme.surfaceContainer;
         border = null;
-        shadows = [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ];
+        shadows = AppElevation.level2(colorScheme);
         break;
       case AppCardVariant.surfaceOutlined:
         bgColor = backgroundColor ?? colorScheme.surfaceContainer;
         border = Border.all(color: borderColor ?? colorScheme.outlineVariant);
         shadows = null;
         break;
+    }
+
+    // Optional accent glow painted behind the content for signature cards.
+    final glow = accentColor != null
+        ? AppGradients.serviceGlow(accentColor!)
+        : null;
+
+    Widget wrapWithGlow(Widget padded) {
+      if (glow == null) return padded;
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(decoration: BoxDecoration(gradient: glow)),
+          ),
+          padded,
+        ],
+      );
     }
 
     if (onTap != null) {
@@ -160,16 +177,26 @@ class AppCard extends StatelessWidget {
             : BorderSide.none,
       );
 
-      return Material(
+      final material = Material(
         color: bgColor,
         shape: shape,
-        elevation: shadows != null ? 1 : 0,
-        shadowColor: colorScheme.shadow.withValues(alpha: 0.3),
+        clipBehavior: glow != null ? Clip.antiAlias : Clip.none,
         child: InkWell(
           onTap: onTap,
           customBorder: shape,
-          child: Padding(padding: effectivePadding, child: child),
+          child: wrapWithGlow(Padding(padding: effectivePadding, child: child)),
         ),
+      );
+
+      // Explicit token shadows sit under the Material so tappable elevated
+      // cards match the non-tappable ones.
+      if (shadows == null) return material;
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: effectiveBorderRadius,
+          boxShadow: shadows,
+        ),
+        child: material,
       );
     }
 
@@ -181,8 +208,8 @@ class AppCard extends StatelessWidget {
         border: border,
         boxShadow: shadows,
       ),
-      padding: effectivePadding,
-      child: child,
+      clipBehavior: glow != null ? Clip.antiAlias : Clip.none,
+      child: wrapWithGlow(Padding(padding: effectivePadding, child: child)),
     );
   }
 }
@@ -254,7 +281,9 @@ class SettingsCard extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: effectiveAccentColor.withValues(alpha: 0.14),
+              color: ServiceTheme.fromAccent(
+                effectiveAccentColor,
+              ).softContainer,
               borderRadius: AppRadius.borderRadiusSm,
             ),
             child: IconTheme(

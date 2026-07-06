@@ -184,7 +184,7 @@ void main() {
 
       expect(find.text('Reset all data?'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Reset'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Reset'));
       await tester.pumpAndSettle();
 
       expect(container.read(settingsProvider).radarrUrl, isEmpty);

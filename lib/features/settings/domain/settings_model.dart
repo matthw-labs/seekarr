@@ -41,6 +41,8 @@ class SettingsModel {
   final String qbittorrentPassword;
   final String bazarrUrl;
   final String bazarrApiKey;
+  final String truenasUrl;
+  final String truenasApiKey;
   final String region;
   final AppThemeMode themeMode;
 
@@ -84,6 +86,12 @@ class SettingsModel {
           update: (settings, {url, apiKey}) =>
               settings.copyWith(bazarrUrl: url, bazarrApiKey: apiKey),
         ),
+        ServiceKey.truenas: _ServiceSettingsAccess(
+          url: (settings) => settings.truenasUrl,
+          apiKey: (settings) => settings.truenasApiKey,
+          update: (settings, {url, apiKey}) =>
+              settings.copyWith(truenasUrl: url, truenasApiKey: apiKey),
+        ),
       };
 
   static String normalizeRegion(String? region) {
@@ -105,6 +113,8 @@ class SettingsModel {
     this.qbittorrentPassword = '',
     this.bazarrUrl = '',
     this.bazarrApiKey = '',
+    this.truenasUrl = '',
+    this.truenasApiKey = '',
     this.region = 'US',
     this.themeMode = AppThemeMode.system,
   });
@@ -123,6 +133,8 @@ class SettingsModel {
     String? qbittorrentPassword,
     String? bazarrUrl,
     String? bazarrApiKey,
+    String? truenasUrl,
+    String? truenasApiKey,
     String? region,
     AppThemeMode? themeMode,
   }) {
@@ -140,6 +152,8 @@ class SettingsModel {
       qbittorrentPassword: qbittorrentPassword ?? this.qbittorrentPassword,
       bazarrUrl: bazarrUrl ?? this.bazarrUrl,
       bazarrApiKey: bazarrApiKey ?? this.bazarrApiKey,
+      truenasUrl: truenasUrl ?? this.truenasUrl,
+      truenasApiKey: truenasApiKey ?? this.truenasApiKey,
       region: region ?? this.region,
       themeMode: themeMode ?? this.themeMode,
     );

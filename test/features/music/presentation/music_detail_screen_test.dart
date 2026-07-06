@@ -96,10 +96,8 @@ void main() {
       expect(find.byType(MediaDetailHeroSummaryCard), findsOneWidget);
       expect(find.text('An English rock band.'), findsOneWidget);
 
-      await _scrollUntilVisible(tester, find.text('Where to Watch'));
+      await _scrollUntilVisible(tester, find.text('Tags'));
 
-      expect(find.text('Where to Watch'), findsOneWidget);
-      expect(find.text('Cast'), findsOneWidget);
       expect(find.text('Tags'), findsOneWidget);
 
       await _scrollUntilVisible(

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/theme.dart';
 
-enum ServiceKey { seerr, radarr, sonarr, lidarr, qbittorrent, bazarr }
+enum ServiceKey { seerr, radarr, sonarr, lidarr, qbittorrent, bazarr, truenas }
 
 extension ServiceKeyExtension on ServiceKey {
   String get title {
@@ -19,6 +19,8 @@ extension ServiceKeyExtension on ServiceKey {
         return 'qBittorrent';
       case ServiceKey.bazarr:
         return 'Bazarr';
+      case ServiceKey.truenas:
+        return 'TrueNAS';
     }
   }
 
@@ -36,6 +38,8 @@ extension ServiceKeyExtension on ServiceKey {
         return Icons.download_rounded;
       case ServiceKey.bazarr:
         return Icons.subtitles_rounded;
+      case ServiceKey.truenas:
+        return Icons.storage_rounded;
     }
   }
 
@@ -53,6 +57,8 @@ extension ServiceKeyExtension on ServiceKey {
         return AppColors.qbittorrent;
       case ServiceKey.bazarr:
         return AppColors.bazarr;
+      case ServiceKey.truenas:
+        return AppColors.truenas;
     }
   }
 
@@ -85,6 +91,8 @@ extension ServiceKeyExtension on ServiceKey {
         return 'WebUI';
       case ServiceKey.bazarr:
         return 'v1';
+      case ServiceKey.truenas:
+        return 'v25';
     }
   }
 
@@ -102,6 +110,8 @@ extension ServiceKeyExtension on ServiceKey {
         return 'torrents';
       case ServiceKey.bazarr:
         return 'subtitles';
+      case ServiceKey.truenas:
+        return 'pools';
     }
   }
 
@@ -114,6 +124,7 @@ extension ServiceKeyExtension on ServiceKey {
       case ServiceKey.lidarr:
       case ServiceKey.qbittorrent:
       case ServiceKey.bazarr:
+      case ServiceKey.truenas:
         return name;
     }
   }

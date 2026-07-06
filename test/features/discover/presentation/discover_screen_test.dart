@@ -6,6 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:seekarr/core/models/media_preview.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
+import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
+import 'package:seekarr/features/discover/domain/models/seerr_genre.dart';
+import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 import 'package:seekarr/features/discover/presentation/discover_screen.dart';
 import 'package:seekarr/features/discover/presentation/discover_search_provider.dart';
@@ -22,41 +25,39 @@ const _trending = [
 ];
 
 void main() {
-  group('DiscoverScreen sections', () {
-    testWidgets('renders three section headers when data loads', (
+  group('DiscoverScreen catalog', () {
+    testWidgets('renders curated section headers when data loads', (
       tester,
     ) async {
       await _pumpDiscover(tester);
       await tester.pumpAndSettle();
 
       expect(find.text('Trending'), findsOneWidget);
-      expect(find.text('Movies'), findsOneWidget);
-      expect(find.text('TV Series'), findsOneWidget);
-      expect(find.byType(ContentCard), findsNWidgets(4));
+      expect(find.text('Popular Movies'), findsOneWidget);
+      expect(find.text('Popular Series'), findsOneWidget);
+      expect(find.byType(ContentCard), findsWidgets);
     });
 
-    testWidgets('shows loading indicator when a section is loading', (
-      tester,
-    ) async {
+    testWidgets('shows skeleton when a section is loading', (tester) async {
       await _pumpDiscover(
         tester,
         trendingBuilder: (ref) => Completer<List<MediaPreview>>().future,
       );
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsWidgets);
+      expect(find.byType(ShimmerPlaceholder), findsWidgets);
     });
 
-    testWidgets('shows empty message when a section returns empty list', (
-      tester,
-    ) async {
+    testWidgets('hides a section that returns an empty list', (tester) async {
       await _pumpDiscover(
         tester,
         moviesBuilder: (ref) async => const <MediaPreview>[],
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('No items found'), findsOneWidget);
+      // Empty rows collapse rather than showing a placeholder message.
+      expect(find.text('Popular Movies'), findsNothing);
+      expect(find.text('Trending'), findsOneWidget);
     });
 
     testWidgets('renders app bar with title and activity button', (
@@ -109,7 +110,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Error loading results'), findsOneWidget);
+      expect(find.text('Something went wrong'), findsOneWidget);
       expect(find.textContaining('Network error'), findsOneWidget);
     });
 
@@ -151,6 +152,14 @@ Future<void> _pumpDiscover(
   String Function(Ref ref)? searchQueryBuilder,
   Future<List<MediaPreview>?> Function(Ref ref)? searchResultsBuilder,
 }) async {
+  // Tall viewport so all catalog rows build (the vertical ListView is lazy).
+  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -161,6 +170,18 @@ Future<void> _pumpDiscover(
           moviesBuilder ?? (ref) async => _movies,
         ),
         discoverTVProvider.overrideWith(tvBuilder ?? (ref) async => _tvShows),
+        // Keep the rest of the catalog deterministic (empty → hidden rows).
+        discoverUpcomingMoviesProvider.overrideWith(
+          (ref) async => const <MediaPreview>[],
+        ),
+        discoverUpcomingTvProvider.overrideWith(
+          (ref) async => const <MediaPreview>[],
+        ),
+        discoverTopRatedMoviesProvider.overrideWith(
+          (ref) async => const <MediaPreview>[],
+        ),
+        movieGenresProvider.overrideWith((ref) async => const <SeerrGenre>[]),
+        requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
         discoverSearchQueryProvider.overrideWith(
           searchQueryBuilder ?? (ref) => '',
         ),

@@ -6,6 +6,7 @@ import 'package:seekarr/core/api/quality_profile_mixin.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
+import 'package:seekarr/features/discover/presentation/widgets/arr_media_extras_section.dart';
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
@@ -73,7 +74,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
 
     return MediaDetailView(
-      heroTag: widget.heroTag,
+      accent: ServiceKey.sonarr.accent,
       posterUrl: viewModel.posterUrl,
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
@@ -84,6 +85,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         infoGroups,
         episodesAsync,
         series.id > 0 ? series.id : widget.seriesId,
+        series.tmdbId,
       ),
     );
   }
@@ -129,12 +131,14 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     List<MediaInfoGroup> infoGroups,
     AsyncValue<List<SonarrEpisode>> episodesAsync,
     int seriesId,
+    int tmdbId,
   ) {
     final detailInfoGroups = _detailInfoGroups(infoGroups);
 
     return [
       LibraryDetailActions(
         collapseFactor: 0,
+        accent: ServiceKey.sonarr.accent,
         isInLibrary: viewModel.isInLibrary,
         isMonitored: viewModel.isMonitored,
         addLabel: 'Add Series',
@@ -193,7 +197,10 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const MediaDetailSectionHeader(title: 'Details'),
+              MediaDetailSectionHeader(
+                title: 'Details',
+                accent: ServiceKey.sonarr.accent,
+              ),
               SizedBox(
                 width: double.infinity,
                 child: MediaInfoCard(groups: detailInfoGroups),
@@ -203,26 +210,11 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         ),
         const SizedBox(height: AppSpacing.lg),
       ],
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: MediaDetailUnavailableSection(
-          title: 'Where to Watch',
-          message: 'Watch provider info is not available from Sonarr details.',
-        ),
-      ),
-      const SizedBox(height: AppSpacing.lg),
       if (viewModel.isInLibrary) ...[
         _buildSeasonsSection(context, viewModel, episodesAsync),
         const SizedBox(height: AppSpacing.lg),
       ],
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: MediaDetailUnavailableSection(
-          title: 'Cast',
-          message: 'Cast info is not available from Sonarr details.',
-        ),
-      ),
-      const SizedBox(height: AppSpacing.lg),
+      ArrMediaExtrasSection(tmdbId: tmdbId, mediaType: 'tv'),
       if (viewModel.genres.isNotEmpty) ...[
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),

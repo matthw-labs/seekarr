@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import 'package:seekarr/core/app_gradients.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
@@ -10,7 +11,6 @@ import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
 /// A reusable view for displaying media details with a prototype-style hero,
 /// compact poster/title block, and sliver-based scrollable content.
 class MediaDetailView extends StatelessWidget {
-  final String heroTag;
   final String? posterUrl;
   final Map<String, String>? posterHeaders;
 
@@ -20,16 +20,21 @@ class MediaDetailView extends StatelessWidget {
   /// Builder for the poster row that stays pinned on scroll.
   ///
   /// Receives a `collapseFactor` from 0.0 (fully expanded) to 1.0
-  /// (fully collapsed) for smooth interpolation of sizes.
+  /// (fully collapsed) for smooth interpolation of sizes. The poster's Hero is
+  /// owned by the caller's poster row (via [MediaPosterCard]), so this view no
+  /// longer needs a heroTag of its own.
   final Widget Function(double collapseFactor)? posterRow;
 
   final List<Widget> contentSections;
   final List<Widget> slivers;
   final Widget? background;
 
+  /// Per-service accent used to tint the hero glow (Radarr amber, Sonarr
+  /// violet, Lidarr pink, Seerr indigo). Falls back to no glow when null.
+  final Color? accent;
+
   const MediaDetailView({
     super.key,
-    required this.heroTag,
     required this.contentSections,
     this.posterUrl,
     this.posterHeaders,
@@ -37,6 +42,7 @@ class MediaDetailView extends StatelessWidget {
     this.posterRow,
     this.slivers = const [],
     this.background,
+    this.accent,
   });
 
   /// Retained for loading skeleton sizing.
@@ -57,12 +63,12 @@ class MediaDetailView extends StatelessWidget {
         slivers: [
           SliverToBoxAdapter(
             child: _PrototypeDetailHero(
-              heroTag: heroTag,
               posterUrl: posterUrl,
               posterHeaders: posterHeaders,
               backdropUrl: backdropUrl,
               posterRow: posterRow,
               background: background,
+              accent: accent,
               surfaceColor: colorScheme.surface,
             ),
           ),
@@ -90,22 +96,22 @@ class MediaDetailView extends StatelessWidget {
 }
 
 class _PrototypeDetailHero extends StatelessWidget {
-  final String heroTag;
   final String? posterUrl;
   final Map<String, String>? posterHeaders;
   final String? backdropUrl;
   final Widget Function(double collapseFactor)? posterRow;
   final Widget? background;
+  final Color? accent;
   final Color surfaceColor;
 
   const _PrototypeDetailHero({
-    required this.heroTag,
     required this.surfaceColor,
     this.posterUrl,
     this.posterHeaders,
     this.backdropUrl,
     this.posterRow,
     this.background,
+    this.accent,
   });
 
   @override
@@ -126,10 +132,25 @@ class _PrototypeDetailHero extends StatelessWidget {
               )
             else
               _FallbackHeroBackdrop(
-                heroTag: heroTag,
                 posterUrl: posterUrl,
                 posterHeaders: posterHeaders,
                 surfaceColor: surfaceColor,
+              ),
+            // Subtle per-service accent glow so the hero feels lit by the
+            // service's colour instead of a flat neutral backdrop.
+            if (accent != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: AppGradients.serviceGlow(
+                        accent!,
+                        center: Alignment.topRight,
+                        radius: 1.3,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             if (background != null) background!,
             Positioned(
@@ -172,13 +193,11 @@ class _HeroBackButton extends StatelessWidget {
 }
 
 class _FallbackHeroBackdrop extends StatelessWidget {
-  final String heroTag;
   final String? posterUrl;
   final Map<String, String>? posterHeaders;
   final Color surfaceColor;
 
   const _FallbackHeroBackdrop({
-    required this.heroTag,
     required this.surfaceColor,
     this.posterUrl,
     this.posterHeaders,
@@ -204,19 +223,20 @@ class _FallbackHeroBackdrop extends StatelessWidget {
         Center(
           child: Opacity(
             opacity: 0.22,
+            // Intentionally NOT a Hero: the source (poster grid/carousel) has
+            // no matching `_backdrop` element, so a Hero here would be orphaned
+            // and fade in on navigation. Plain faded art avoids that artifact
+            // while the real poster flies via the poster-row Hero.
             child: hasPoster
-                ? Hero(
-                    tag: '${heroTag}_backdrop',
-                    child: CachedNetworkImage(
-                      imageUrl: posterUrl!,
-                      httpHeaders: posterHeaders,
-                      width: 120,
-                      fit: BoxFit.cover,
-                      errorWidget: (context, url, error) => Icon(
-                        Icons.movie_outlined,
-                        size: 90,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                ? CachedNetworkImage(
+                    imageUrl: posterUrl!,
+                    httpHeaders: posterHeaders,
+                    width: 120,
+                    fit: BoxFit.cover,
+                    errorWidget: (context, url, error) => Icon(
+                      Icons.movie_outlined,
+                      size: 90,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   )
                 : Icon(
@@ -330,10 +350,15 @@ class MediaDetailSectionHeader extends StatelessWidget {
   final String title;
   final Widget? trailing;
 
+  /// Optional per-service accent; renders a short leading colour bar for a more
+  /// premium, editorial section rhythm.
+  final Color? accent;
+
   const MediaDetailSectionHeader({
     super.key,
     required this.title,
     this.trailing,
+    this.accent,
   });
 
   @override
@@ -342,10 +367,21 @@ class MediaDetailSectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, AppSpacing.xs),
       child: Row(
         children: [
+          if (accent != null) ...[
+            Container(
+              width: 3,
+              height: 16,
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+          ],
           Expanded(
             child: Text(
               title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.1,
               ),
@@ -370,10 +406,18 @@ class MediaDetailLoadingView extends StatelessWidget {
   final Widget? posterCard;
   final double subtitleWidth;
 
+  /// Optional poster URL rendered as a faint backdrop while loading, so the
+  /// hero has visual body immediately and the real backdrop (which arrives with
+  /// the data) doesn't appear to "fade in" over an empty gradient.
+  final String? backdropPosterUrl;
+  final Map<String, String>? backdropPosterHeaders;
+
   const MediaDetailLoadingView({
     super.key,
     this.posterCard,
     this.subtitleWidth = 160,
+    this.backdropPosterUrl,
+    this.backdropPosterHeaders,
   });
 
   @override
@@ -385,7 +429,11 @@ class MediaDetailLoadingView extends StatelessWidget {
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: MediaDetailLoadingHeader(posterCard: posterCard),
+            child: MediaDetailLoadingHeader(
+              posterCard: posterCard,
+              backdropPosterUrl: backdropPosterUrl,
+              backdropPosterHeaders: backdropPosterHeaders,
+            ),
           ),
           _MediaDetailLoadingBody(subtitleWidth: subtitleWidth),
         ],
@@ -396,13 +444,22 @@ class MediaDetailLoadingView extends StatelessWidget {
 
 class MediaDetailLoadingHeader extends StatelessWidget {
   final Widget? posterCard;
+  final String? backdropPosterUrl;
+  final Map<String, String>? backdropPosterHeaders;
 
-  const MediaDetailLoadingHeader({super.key, this.posterCard});
+  const MediaDetailLoadingHeader({
+    super.key,
+    this.posterCard,
+    this.backdropPosterUrl,
+    this.backdropPosterHeaders,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final topPadding = MediaQuery.paddingOf(context).top;
+    final hasBackdropPoster =
+        backdropPosterUrl != null && backdropPosterUrl!.isNotEmpty;
 
     return SizedBox(
       height: MediaDetailView.expandedHeight + topPadding,
@@ -410,18 +467,25 @@ class MediaDetailLoadingHeader extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    colorScheme.surfaceContainerHighest,
-                    colorScheme.surface,
-                  ],
+            if (hasBackdropPoster)
+              _FallbackHeroBackdrop(
+                posterUrl: backdropPosterUrl,
+                posterHeaders: backdropPosterHeaders,
+                surfaceColor: colorScheme.surface,
+              )
+            else
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      colorScheme.surfaceContainerHighest,
+                      colorScheme.surface,
+                    ],
+                  ),
                 ),
               ),
-            ),
             Positioned(
               left: AppSpacing.lg,
               right: AppSpacing.lg,
@@ -498,16 +562,7 @@ class _BackdropHeader extends StatelessWidget {
         ),
         DecoratedBox(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                surfaceColor.withValues(alpha: 0.6),
-                surfaceColor,
-              ],
-              stops: const [0.2, 0.7, 1.0],
-            ),
+            gradient: AppGradients.heroScrim(surfaceColor),
           ),
         ),
       ],

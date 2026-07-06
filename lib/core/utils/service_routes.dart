@@ -13,6 +13,34 @@ class ServiceRoutes {
   static const seerrMoviesAll = '$seerr/movies/all';
   static const seerrTvAll = '$seerr/tv/all';
   static const seerrTrendingAll = '$seerr/trending/all';
+  static const seerrGenreBase = '$seerr/genre';
+  static const seerrPersonBase = '$seerr/person';
+  static const seerrCollectionBase = '$seerr/collection';
+
+  /// Person (cast member) detail page, e.g. `/services/seerr/person/287`.
+  static String seerrPerson(int id, {String? heroTag, String? posterUrl}) {
+    return _withQuery('$seerrPersonBase/$id', {
+      'heroTag': heroTag,
+      'posterUrl': posterUrl,
+    });
+  }
+
+  /// Movie collection detail page, e.g. `/services/seerr/collection/10`.
+  static String seerrCollection(int id, {String? heroTag}) {
+    return _withQuery('$seerrCollectionBase/$id', {'heroTag': heroTag});
+  }
+
+  /// See-all for a single genre row, e.g. `/services/seerr/genre/movie/28?title=Action`.
+  static String seerrGenre({
+    required String mediaType,
+    required int genreId,
+    String? title,
+  }) {
+    final normalizedMediaType = mediaType == 'tv' ? 'tv' : 'movie';
+    return _withQuery('$seerrGenreBase/$normalizedMediaType/$genreId', {
+      'title': title,
+    });
+  }
 
   static const radarrMovieBase = '$radarr/movie';
   static const sonarrSeriesBase = '$sonarr/series';

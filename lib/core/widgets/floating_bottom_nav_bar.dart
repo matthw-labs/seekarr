@@ -1,8 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:seekarr/core/app_animation.dart';
+import 'package:seekarr/core/app_elevation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
@@ -189,6 +191,13 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
     });
   }
 
+  void _handleDestinationTap(int index) {
+    if (index != widget.selectedIndex) {
+      HapticFeedback.selectionClick();
+    }
+    widget.onDestinationSelected(index);
+  }
+
   void _onSpringAnimation() {
     if (_springAnimation != null) {
       setState(() {
@@ -199,12 +208,13 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isDark = colorScheme.brightness == Brightness.dark;
-    final glassColor = colorScheme.surfaceContainer.withValues(
-      alpha: isDark ? 0.72 : 0.55,
-    );
+    final glassColor =
+        theme.extension<SeekarrThemeColors>()?.glassSurface ??
+        colorScheme.surfaceContainer.withValues(alpha: isDark ? 0.72 : 0.55);
     final borderColor = isDark
         ? Colors.white.withValues(alpha: 0.12)
         : colorScheme.outline.withValues(alpha: 0.85);
@@ -243,23 +253,7 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: AppRadius.borderRadiusXl,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: isDark ? 0.35 : 0.18,
-                        ),
-                        blurRadius: 32,
-                        offset: const Offset(0, 8),
-                        spreadRadius: 0,
-                      ),
-                      BoxShadow(
-                        color: Colors.white.withValues(
-                          alpha: isDark ? 0.07 : 0.55,
-                        ),
-                        blurRadius: 0,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
+                    boxShadow: AppElevation.glass(colorScheme),
                   ),
                   child: ClipRRect(
                     borderRadius: AppRadius.borderRadiusXl,
@@ -340,8 +334,8 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
                                                 widget.destinations[index],
                                             isSelected:
                                                 index == widget.selectedIndex,
-                                            onTap: () => widget
-                                                .onDestinationSelected(index),
+                                            onTap: () =>
+                                                _handleDestinationTap(index),
                                           ),
                                         ),
                                       ],

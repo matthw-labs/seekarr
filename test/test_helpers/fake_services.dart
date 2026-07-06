@@ -10,6 +10,7 @@ library;
 import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/core/models/media_preview.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
+import 'package:seekarr/features/discover/domain/models/seerr_genre.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
@@ -196,15 +197,36 @@ class FakeSeerrService extends SeerrService {
   final Map<String, dynamic> _tvDetails;
 
   @override
-  Future<List<MediaPreview>> getDiscoverMovies({int page = 1}) async =>
-      const [];
+  Future<List<MediaPreview>> getDiscoverMovies({
+    int page = 1,
+    int? genre,
+    String? sortBy,
+  }) async => const [];
 
   @override
-  Future<List<MediaPreview>> getDiscoverTV({int page = 1}) async => const [];
+  Future<List<MediaPreview>> getDiscoverTV({
+    int page = 1,
+    int? genre,
+    String? sortBy,
+  }) async => const [];
 
   @override
   Future<List<MediaPreview>> getDiscoverTrending({int page = 1}) async =>
       const [];
+
+  @override
+  Future<List<MediaPreview>> getDiscoverUpcomingMovies({int page = 1}) async =>
+      const [];
+
+  @override
+  Future<List<MediaPreview>> getDiscoverUpcomingTv({int page = 1}) async =>
+      const [];
+
+  @override
+  Future<List<SeerrGenre>> getMovieGenres() async => const [];
+
+  @override
+  Future<List<SeerrGenre>> getTvGenres() async => const [];
 
   @override
   Future<List<MediaPreview>> search(String query, {int page = 1}) async =>

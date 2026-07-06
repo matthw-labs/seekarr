@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/widgets/ambient_scaffold.dart';
+import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
 extension ManualImportServiceCopy on ServiceKey {
@@ -55,13 +57,13 @@ class ManualImportFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return AmbientScaffold(
+      accent: service.accent,
+      appBar: GlassAppBar(
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           onPressed: () => context.pop(),
         ),
-        titleSpacing: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

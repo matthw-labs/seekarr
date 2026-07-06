@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
@@ -103,27 +104,14 @@ class RequestsList extends ConsumerWidget {
                           IconButton(
                             icon: Icon(Icons.delete, color: colorScheme.error),
                             onPressed: () async {
-                              final confirmed = await showDialog<bool>(
+                              final result = await showAppConfirmDialog(
                                 context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Delete Request?'),
-                                  content: const Text('This cannot be undone.'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                      child: const Text('Delete'),
-                                    ),
-                                  ],
-                                ),
+                                title: 'Delete Request?',
+                                destructive: true,
+                                confirmLabel: 'Delete',
                               );
 
-                              if (confirmed == true) {
+                              if (result.confirmed) {
                                 await ref
                                     .read(seerrServiceProvider)
                                     .deleteRequest(request.id);

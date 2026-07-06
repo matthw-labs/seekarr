@@ -68,6 +68,19 @@ final globalQueueItemsProvider = FutureProvider<List<GlobalActivityItem>>((
   return _loadArrItems(ref, GlobalActivityKind.queue);
 });
 
+/// "Now" bucket for the global Activity screen: active downloads (queue) plus
+/// current Seerr requests, so requests remain first-class in the unified view.
+final globalNowItemsProvider = FutureProvider<List<GlobalActivityItem>>((
+  ref,
+) async {
+  ref.watch(activityRefreshVersionProvider);
+  final results = await Future.wait([
+    _loadRequestItems(ref),
+    _loadArrItems(ref, GlobalActivityKind.queue),
+  ]);
+  return _sortItems(results.expand((items) => items).toList(growable: false));
+});
+
 final globalHistoryItemsProvider = FutureProvider<List<GlobalActivityItem>>((
   ref,
 ) async {

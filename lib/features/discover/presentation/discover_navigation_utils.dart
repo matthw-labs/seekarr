@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
@@ -136,19 +137,11 @@ Future<bool> _openSeriesInService({
 }
 
 void _showNotConfiguredDialog(BuildContext context, String serviceName) {
-  showDialog<void>(
+  showAppConfirmDialog(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text('$serviceName Not Configured'),
-      content: Text(
-        'Please configure $serviceName in Settings to use this feature.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('OK'),
-        ),
-      ],
-    ),
+    title: '$serviceName Not Configured',
+    message: 'Please configure $serviceName in Settings to use this feature.',
+    confirmLabel: 'OK',
+    cancelLabel: 'Cancel',
   );
 }

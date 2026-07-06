@@ -8,6 +8,7 @@ import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/music/domain/models/lidarr_artist.dart';
 import 'package:seekarr/features/music/presentation/music_provider.dart';
 import 'package:seekarr/features/music/presentation/music_search_provider.dart';
+import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
@@ -64,6 +65,10 @@ class MusicScreen extends ConsumerWidget {
       coverTypes: const ['poster', 'fanart', 'banner'],
       showAppBar: showAppBar,
       topPadding: topPadding,
+      kpiPeek: ServiceKpiPeek(
+        kpis: ref.watch(serviceKpiProvider(ServiceKey.lidarr)),
+        accent: ServiceKey.lidarr.accent,
+      ),
     );
   }
 }

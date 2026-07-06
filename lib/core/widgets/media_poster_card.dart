@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import 'package:seekarr/core/app_elevation.dart';
 import 'package:seekarr/core/app_radius.dart';
 
 /// A reusable poster card for media detail screens.
@@ -29,9 +30,6 @@ class MediaPosterCard extends StatelessWidget {
     this.borderRadius,
   });
 
-  static const _shadowAlpha = 0.4;
-  static const _shadowBlur = 16.0;
-  static const _shadowSpread = 4.0;
   static const _fallbackIconSize = 48.0;
 
   @override
@@ -55,6 +53,11 @@ class MediaPosterCard extends StatelessWidget {
             imageUrl: imageUrl!,
             httpHeaders: imageHeaders,
             fit: BoxFit.cover,
+            // No cross-fade: keeps the Hero flight crisp when the poster is
+            // already cached from the source grid/carousel.
+            fadeInDuration: Duration.zero,
+            fadeOutDuration: Duration.zero,
+            placeholderFadeInDuration: Duration.zero,
             errorWidget: (context, url, error) => fallback(),
           )
         : fallback();
@@ -66,13 +69,9 @@ class MediaPosterCard extends StatelessWidget {
       decoration: BoxDecoration(
         shape: circular ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: circular ? null : effectiveBorderRadius,
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: _shadowAlpha),
-            blurRadius: _shadowBlur,
-            spreadRadius: _shadowSpread,
-          ),
-        ],
+        // Match ContentCard's resting elevation so the shared-element flight
+        // doesn't "pop" a different shadow mid-transition.
+        boxShadow: AppElevation.level2(colorScheme),
       ),
       child: clippedImage,
     );

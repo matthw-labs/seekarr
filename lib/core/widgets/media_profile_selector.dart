@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
 import 'package:seekarr/core/widgets/header_action_row.dart';
 
 /// A reusable quality profile selector widget.
@@ -145,46 +146,33 @@ class MediaProfileSelector extends StatelessWidget {
 
     final colorScheme = Theme.of(context).colorScheme;
 
-    final selectedId = await showDialog<int>(
+    final selectedId = await AppBottomSheet.show<int>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Quality Profile'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: qualityProfiles.length,
-            itemBuilder: (context, index) {
-              final profile = qualityProfiles[index];
-              final id = profile['id'] as int;
-              final name = profile['name'] as String;
-              final isSelected = id == currentProfileId;
+      title: 'Quality profile',
+      icon: Icons.tune_rounded,
+      builder: (context) => ListView.builder(
+        shrinkWrap: true,
+        itemCount: qualityProfiles.length,
+        itemBuilder: (context, index) {
+          final profile = qualityProfiles[index];
+          final id = profile['id'] as int;
+          final name = profile['name'] as String;
+          final isSelected = id == currentProfileId;
 
-              return ListTile(
-                title: Text(name),
-                leading: isSelected
-                    ? Icon(
-                        Icons.check_circle_rounded,
-                        color: colorScheme.primary,
-                      )
-                    : Icon(
-                        Icons.circle_outlined,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                onTap: () => Navigator.pop(context, id),
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppRadius.borderRadiusSm,
-                ),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
+          return ListTile(
+            title: Text(name),
+            leading: isSelected
+                ? Icon(Icons.check_circle_rounded, color: colorScheme.primary)
+                : Icon(
+                    Icons.circle_outlined,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+            onTap: () => Navigator.pop(context, id),
+            shape: RoundedRectangleBorder(
+              borderRadius: AppRadius.borderRadiusSm,
+            ),
+          );
+        },
       ),
     );
 

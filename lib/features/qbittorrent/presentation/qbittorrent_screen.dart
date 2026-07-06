@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/search_bar_header.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
@@ -11,6 +12,7 @@ import 'package:seekarr/features/qbittorrent/presentation/widgets/speed_stats_ba
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_list_controls.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_selection_bar.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_tile.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
 
 class QbittorrentScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -58,10 +60,14 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen>
     final torrentsAsync = ref.watch(torrentsProvider);
     final selectedHashes = ref.watch(selectedTorrentHashesProvider);
 
-    return Scaffold(
+    return AmbientScaffold(
+      accent: ServiceKey.qbittorrent.accent,
       body: Column(
         children: [
-          if (widget.topPadding > 0) SizedBox(height: widget.topPadding),
+          if (widget.topPadding > 0)
+            SizedBox(
+              height: widget.topPadding + MediaQuery.paddingOf(context).top,
+            ),
           _buildStatsBar(),
           SearchBarHeader(
             hintText: 'Search torrents...',

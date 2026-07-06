@@ -28,120 +28,112 @@ class RequestBottomSheet extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Request ${mediaType == 'movie' ? 'Movie' : 'TV Show'}',
-            style: theme.textTheme.titleLarge,
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          if (state.isLoading)
-            const Center(child: CircularProgressIndicator())
-          else if (state.error != null)
-            Text(state.error!, style: TextStyle(color: colorScheme.error))
-          else ...[
-            if (state.servers.length > 1) ...[
-              Text('Server', style: theme.textTheme.labelLarge),
-              const SizedBox(height: AppSpacing.sm),
-              DropdownButtonFormField<int>(
-                key: ValueKey('request_server_${state.selectedServerId}'),
-                initialValue: state.selectedServerId,
-                items: state.servers
-                    .map(
-                      (server) => DropdownMenuItem(
-                        value: server.id,
-                        child: Text(server.name),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    notifier.selectServer(value);
-                  }
-                },
-              ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-            Text('Quality Profile', style: theme.textTheme.labelLarge),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (state.isLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (state.error != null)
+          Text(state.error!, style: TextStyle(color: colorScheme.error))
+        else ...[
+          if (state.servers.length > 1) ...[
+            Text('Server', style: theme.textTheme.labelLarge),
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<int>(
-              key: ValueKey('request_profile_${state.selectedProfileId}'),
-              initialValue: state.selectedProfileId,
-              items: state.profiles
+              key: ValueKey('request_server_${state.selectedServerId}'),
+              initialValue: state.selectedServerId,
+              items: state.servers
                   .map(
-                    (profile) => DropdownMenuItem(
-                      value: profile.id,
-                      child: Text(profile.name),
+                    (server) => DropdownMenuItem(
+                      value: server.id,
+                      child: Text(server.name),
                     ),
                   )
                   .toList(),
               onChanged: (value) {
                 if (value != null) {
-                  notifier.selectProfile(value);
+                  notifier.selectServer(value);
                 }
               },
             ),
             const SizedBox(height: AppSpacing.lg),
-            if (state.rootFolders.isNotEmpty) ...[
-              Text('Root Folder', style: theme.textTheme.labelLarge),
-              const SizedBox(height: AppSpacing.sm),
-              DropdownButtonFormField<String>(
-                key: ValueKey('request_root_${state.selectedRootFolder}'),
-                initialValue: state.selectedRootFolder,
-                items: state.rootFolders
-                    .map(
-                      (folder) => DropdownMenuItem(
-                        value: folder.path,
-                        child: Text(folder.path),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    notifier.selectRootFolder(value);
-                  }
-                },
-              ),
-              const SizedBox(height: AppSpacing.xl),
-            ],
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: state.canSubmit
-                    ? () async {
-                        final error = await notifier.submitRequest();
-                        if (!context.mounted) {
-                          return;
-                        }
-
-                        if (error == null) {
-                          Navigator.pop(context);
-                          onRequestComplete();
-                          return;
-                        }
-
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(error)));
-                      }
-                    : null,
-                child: state.isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Submit Request'),
-              ),
-            ),
           ],
+          Text('Quality Profile', style: theme.textTheme.labelLarge),
+          const SizedBox(height: AppSpacing.sm),
+          DropdownButtonFormField<int>(
+            key: ValueKey('request_profile_${state.selectedProfileId}'),
+            initialValue: state.selectedProfileId,
+            items: state.profiles
+                .map(
+                  (profile) => DropdownMenuItem(
+                    value: profile.id,
+                    child: Text(profile.name),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) {
+              if (value != null) {
+                notifier.selectProfile(value);
+              }
+            },
+          ),
           const SizedBox(height: AppSpacing.lg),
+          if (state.rootFolders.isNotEmpty) ...[
+            Text('Root Folder', style: theme.textTheme.labelLarge),
+            const SizedBox(height: AppSpacing.sm),
+            DropdownButtonFormField<String>(
+              key: ValueKey('request_root_${state.selectedRootFolder}'),
+              initialValue: state.selectedRootFolder,
+              items: state.rootFolders
+                  .map(
+                    (folder) => DropdownMenuItem(
+                      value: folder.path,
+                      child: Text(folder.path),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  notifier.selectRootFolder(value);
+                }
+              },
+            ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: state.canSubmit
+                  ? () async {
+                      final error = await notifier.submitRequest();
+                      if (!context.mounted) {
+                        return;
+                      }
+
+                      if (error == null) {
+                        Navigator.pop(context);
+                        onRequestComplete();
+                        return;
+                      }
+
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(error)));
+                    }
+                  : null,
+              child: state.isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Submit Request'),
+            ),
+          ),
         ],
-      ),
+        const SizedBox(height: AppSpacing.lg),
+      ],
     );
   }
 }

@@ -97,10 +97,8 @@ void main() {
       expect(find.byType(MediaInfoCard), findsOneWidget);
       expect(find.byType(FileInfoSection), findsOneWidget);
 
-      await _scrollUntilVisible(tester, find.text('Where to Watch'));
+      await _scrollUntilVisible(tester, find.text('Tags'));
 
-      expect(find.text('Where to Watch'), findsOneWidget);
-      expect(find.text('Cast'), findsOneWidget);
       expect(find.text('Tags'), findsOneWidget);
     });
 

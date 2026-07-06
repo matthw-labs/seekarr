@@ -18,6 +18,7 @@ import 'package:seekarr/features/services/domain/service_summary.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
 
 final serviceSummaryProvider =
     FutureProvider.family<ServiceSummary, ServiceKey>((ref, service) async {
@@ -101,6 +102,14 @@ Future<String?> _loadVersion(
     }
   }
 
+  if (service == ServiceKey.truenas) {
+    final info = await ref
+        .watch(truenasServiceProvider)
+        .getSystemInfo()
+        .timeout(const Duration(seconds: 8));
+    return info.version;
+  }
+
   final createClient = ref.watch(serviceStatusClientFactoryProvider);
   final client = createClient(
     baseUrl: settings.urlFor(service),
@@ -138,6 +147,9 @@ String _statusEndpointFor(ServiceKey service) {
       return '/api/v2/app/version';
     case ServiceKey.bazarr:
       return '/api/system/status';
+    case ServiceKey.truenas:
+      // Handled over WebSocket in _loadVersion; no REST endpoint.
+      return '';
   }
 }
 
@@ -155,6 +167,8 @@ Future<int> _loadItemCount(Ref ref, ServiceKey service) async {
       return (await ref.watch(qbittorrentServiceProvider).getTorrents()).length;
     case ServiceKey.bazarr:
       return (await ref.watch(bazarrServiceProvider).getBadges()).totalWanted;
+    case ServiceKey.truenas:
+      return (await ref.watch(truenasServiceProvider).getPools()).length;
   }
 }
 
@@ -306,7 +320,8 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
       ServiceKey.seerr ||
       ServiceKey.lidarr ||
       ServiceKey.qbittorrent ||
-      ServiceKey.bazarr => const <dynamic>[],
+      ServiceKey.bazarr ||
+      ServiceKey.truenas => const <dynamic>[],
     };
     return items
         .whereType<Map>()
@@ -347,7 +362,8 @@ String _queueTypeLabel(ServiceKey service) {
     ServiceKey.lidarr => 'Music',
     ServiceKey.seerr ||
     ServiceKey.qbittorrent ||
-    ServiceKey.bazarr => service.title,
+    ServiceKey.bazarr ||
+    ServiceKey.truenas => service.title,
   };
 }
 

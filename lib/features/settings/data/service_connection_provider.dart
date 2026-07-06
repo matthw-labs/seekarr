@@ -5,6 +5,7 @@ import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
 
 /// Represents the reachability state of a configured service.
 enum ServiceConnectionStatus {
@@ -28,6 +29,9 @@ String _healthEndpoint(ServiceKey service) {
       return '/api/v2/app/version';
     case ServiceKey.bazarr:
       return '/api/system/status';
+    case ServiceKey.truenas:
+      // TrueNAS uses a WebSocket JSON-RPC ping instead of a REST endpoint.
+      return '';
   }
 }
 
@@ -59,6 +63,21 @@ Future<ServiceConnectionStatus> _checkService(
       return ServiceConnectionStatus.disconnected;
     } finally {
       client.close();
+    }
+  }
+
+  if (service == ServiceKey.truenas) {
+    final client = TrueNasWsClient(
+      baseUrl: settings.truenasUrl,
+      apiKey: settings.truenasApiKey,
+    );
+    try {
+      await client.call('core.ping').timeout(const Duration(seconds: 6));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      await client.close();
     }
   }
 

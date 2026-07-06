@@ -123,7 +123,7 @@ void main() {
         const Color(0xFF6366F1),
         const Color(0xFFF59E0B),
         const Color(0xFF6366F1),
-        const Color(0xFF9CA3AF),
+        const Color(0xFFB4BCCB),
       ]);
     });
   });

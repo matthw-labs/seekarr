@@ -93,6 +93,11 @@ class SettingsService {
       legacyApiKey: '',
       secureApiKey: 'secure_bazarr_api_key',
     ),
+    ServiceKey.truenas: _ServiceStorageKeys(
+      url: 'truenas_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_truenas_api_key',
+    ),
   };
 
   final SharedPreferences _prefs;
@@ -202,6 +207,8 @@ class SettingsService {
       qbittorrentPassword: qbPassword,
       bazarrUrl: serviceSettings[ServiceKey.bazarr]!.$1,
       bazarrApiKey: serviceSettings[ServiceKey.bazarr]!.$2,
+      truenasUrl: serviceSettings[ServiceKey.truenas]!.$1,
+      truenasApiKey: serviceSettings[ServiceKey.truenas]!.$2,
       region: _loadRegion(),
       themeMode: AppThemeMode.fromName(_prefs.getString(_kThemeMode)),
     );

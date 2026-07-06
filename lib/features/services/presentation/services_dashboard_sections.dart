@@ -9,8 +9,10 @@ import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
+import 'package:seekarr/core/widgets/app_skeleton.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
+import 'package:seekarr/core/widgets/pressable_scale.dart';
 import 'package:seekarr/core/widgets/section_header.dart';
 import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
@@ -37,6 +39,7 @@ class ServicesTrendingSection extends ConsumerWidget {
       serviceName: 'Seerr',
       actionLabel: 'Seerr',
       onAction: () => context.push(ServiceRoutes.seerr),
+      onRetry: () => ref.invalidate(servicesTrendingProvider),
       itemTitle: (item) => item.title,
       itemSubtitle: (item) => item.year,
       imageUrl: (item, _) => ImageUtils.buildTmdbPosterUrl(item.posterPath),
@@ -66,6 +69,7 @@ class ServicesRecentlyAddedMoviesSection extends ConsumerWidget {
       serviceName: 'Radarr',
       actionLabel: 'See all',
       onAction: () => context.push(ServiceRoutes.radarr),
+      onRetry: () => ref.invalidate(servicesMoviesProvider),
       itemTitle: (item) => item.title,
       itemSubtitle: (item) => item.year.toString(),
       imageUrl: (item, settings) => ImageUtils.extractPosterUrl(
@@ -102,6 +106,7 @@ class ServicesRecentlyAddedSeriesSection extends ConsumerWidget {
       serviceName: 'Sonarr',
       actionLabel: 'See all',
       onAction: () => context.push(ServiceRoutes.sonarr),
+      onRetry: () => ref.invalidate(servicesSeriesProvider),
       itemTitle: (item) => item.title,
       itemSubtitle: (item) => item.year.toString(),
       imageUrl: (item, settings) => ImageUtils.extractPosterUrl(
@@ -140,6 +145,7 @@ class ServicesRecentRequestsSection extends ConsumerWidget {
       serviceName: 'Seerr',
       actionLabel: 'See all',
       onAction: () => context.push(ServiceRoutes.seerrRequests),
+      onRetry: () => ref.invalidate(servicesRequestsProvider),
       emptyLabel: 'No recent requests',
       itemsBuilder: (items) => items.take(3).map(_RequestRow.new).toList(),
       loadingWidget: const Column(
@@ -173,6 +179,7 @@ class ServicesDownloadingSection extends ConsumerWidget {
       serviceName: 'download queue',
       actionLabel: 'Queue',
       onAction: () => context.go('/activity'),
+      onRetry: () => ref.invalidate(servicesQueueProvider),
       emptyLabel: 'No active downloads',
       itemsBuilder: (items) => items.map(_DownloadRow.new).toList(),
     );
@@ -191,6 +198,7 @@ class _PosterSection<T> extends StatelessWidget {
   final String Function(T item, SettingsModel settings) imageUrl;
   final String Function(T item)? heroTag;
   final void Function(T item) onTap;
+  final VoidCallback? onRetry;
   final int limit;
 
   const _PosterSection({
@@ -205,6 +213,7 @@ class _PosterSection<T> extends StatelessWidget {
     required this.imageUrl,
     required this.onTap,
     this.heroTag,
+    this.onRetry,
     this.limit = 10,
   });
 
@@ -225,6 +234,8 @@ class _PosterSection<T> extends StatelessWidget {
           child: AsyncValueWidget<List<T>>(
             value: asyncValue,
             serviceName: serviceName,
+            onRetry: onRetry,
+            skeleton: AppSkeleton.posterRow(height: 138),
             data: (items) {
               final visibleItems = items.take(limit).toList(growable: false);
               if (visibleItems.isEmpty) {
@@ -278,6 +289,7 @@ class _ListSection<T> extends StatelessWidget {
   /// Optional widget shown while [asyncValue] is loading.
   /// Defaults to a centered [CircularProgressIndicator].
   final Widget? loadingWidget;
+  final VoidCallback? onRetry;
 
   const _ListSection({
     required this.title,
@@ -289,6 +301,7 @@ class _ListSection<T> extends StatelessWidget {
     required this.emptyLabel,
     required this.itemsBuilder,
     this.loadingWidget,
+    this.onRetry,
   });
 
   @override
@@ -309,6 +322,7 @@ class _ListSection<T> extends StatelessWidget {
             value: asyncValue,
             serviceName: serviceName,
             loadingWidget: loadingWidget,
+            onRetry: onRetry,
             data: (items) {
               final rows = itemsBuilder(items);
               if (rows.isEmpty) {
@@ -348,9 +362,8 @@ class _ServicePosterTile extends StatelessWidget {
 
     return SizedBox(
       width: 96,
-      child: InkWell(
+      child: PressableScale(
         onTap: onTap,
-        borderRadius: AppRadius.borderRadiusMd,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -422,7 +435,11 @@ class _HeroContentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = ContentCard(imageUrl: imageUrl);
-    if (heroTag == null || heroTag!.isEmpty) {
+    // Only fly a Hero when there is both a tag AND an image on this end. An
+    // empty image would produce a blank/orphaned Hero whose destination has no
+    // matching poster (common for Seerr items without a posterPath), which
+    // shows up as a fade instead of a shared-element flight.
+    if (heroTag == null || heroTag!.isEmpty || imageUrl.isEmpty) {
       return card;
     }
 

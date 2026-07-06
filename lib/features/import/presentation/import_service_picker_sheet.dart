@@ -3,19 +3,16 @@ import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/import/presentation/manual_import_widgets.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
 Future<void> showImportServicePickerSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return AppBottomSheet.show<void>(
     context: context,
-    useSafeArea: true,
-    showDragHandle: false,
-    backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withValues(
-      alpha: Theme.of(context).brightness == Brightness.dark ? 0.55 : 0.3,
-    ),
+    title: 'Manual import',
+    icon: Icons.drive_folder_upload_outlined,
     builder: (context) => const _ImportServicePickerSheet(),
   );
 }
@@ -25,59 +22,17 @@ class _ImportServicePickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppRadius.xl),
-        ),
-        border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.sm,
-            AppSpacing.lg,
-            AppSpacing.lg,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
-                    borderRadius: AppRadius.borderRadiusFull,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'MANUAL IMPORT',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.66,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              for (final service in const [
-                ServiceKey.radarr,
-                ServiceKey.sonarr,
-                ServiceKey.lidarr,
-              ])
-                _ServicePickerRow(service: service),
-            ],
-          ),
-        ),
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final service in const [
+          ServiceKey.radarr,
+          ServiceKey.sonarr,
+          ServiceKey.lidarr,
+        ])
+          _ServicePickerRow(service: service),
+      ],
     );
   }
 }

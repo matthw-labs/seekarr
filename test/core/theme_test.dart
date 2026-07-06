@@ -10,12 +10,12 @@ void main() {
     ) async {
       final theme = AppTheme.darkTheme(null);
 
-      expect(theme.colorScheme.surface, const Color(0xFF0F1117));
-      expect(theme.colorScheme.surfaceContainer, const Color(0xFF1C2130));
-      expect(theme.colorScheme.surfaceContainerHigh, const Color(0xFF252D3D));
+      expect(theme.colorScheme.surface, const Color(0xFF0A0B11));
+      expect(theme.colorScheme.surfaceContainer, const Color(0xFF161923));
+      expect(theme.colorScheme.surfaceContainerHigh, const Color(0xFF1E2430));
       expect(theme.colorScheme.outline, const Color(0xFF2D3748));
       expect(theme.colorScheme.onSurface, const Color(0xFFF0F2F8));
-      expect(theme.colorScheme.onSurfaceVariant, const Color(0xFF9CA3AF));
+      expect(theme.colorScheme.onSurfaceVariant, const Color(0xFFB4BCCB));
       expect(
         theme.navigationBarTheme.backgroundColor,
         AppColors.surfaceContainerDark,

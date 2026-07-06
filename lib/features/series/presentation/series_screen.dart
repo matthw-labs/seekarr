@@ -8,6 +8,7 @@ import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
 import 'package:seekarr/features/series/presentation/series_provider.dart';
 import 'package:seekarr/features/series/presentation/series_search_provider.dart';
+import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
@@ -67,6 +68,10 @@ class SeriesScreen extends ConsumerWidget {
       },
       showAppBar: showAppBar,
       topPadding: topPadding,
+      kpiPeek: ServiceKpiPeek(
+        kpis: ref.watch(serviceKpiProvider(ServiceKey.sonarr)),
+        accent: ServiceKey.sonarr.accent,
+      ),
     );
   }
 }

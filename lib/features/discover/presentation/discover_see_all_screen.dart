@@ -5,18 +5,24 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/models/media_preview.dart';
+import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
+import 'package:seekarr/core/widgets/pressable_scale.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 
 class DiscoverSeeAllScreen extends ConsumerStatefulWidget {
-  final String type; // 'movies', 'tv', 'trending'
+  final String type; // 'movies', 'tv', 'trending', 'genre'
   final String title;
+
+  /// Set when [type] is 'genre' to paginate a single genre row.
+  final GenreRowKey? genreKey;
 
   const DiscoverSeeAllScreen({
     super.key,
     required this.type,
     required this.title,
+    this.genreKey,
   });
 
   @override
@@ -59,6 +65,15 @@ class _DiscoverSeeAllScreenState extends ConsumerState<DiscoverSeeAllScreen> {
         // Seerr trending endpoint returns mixed results.
         future = ref.read(discoverTrendingPageProvider(pageKey).future);
         break;
+      case 'genre':
+        final key = widget.genreKey;
+        if (key == null) {
+          throw Exception('genre type requires a genreKey');
+        }
+        future = ref.read(
+          discoverByGenrePageProvider((key: key, page: pageKey)).future,
+        );
+        break;
       default:
         throw Exception('Unknown type: ${widget.type}');
     }
@@ -86,17 +101,18 @@ class _DiscoverSeeAllScreenState extends ConsumerState<DiscoverSeeAllScreen> {
               ),
               builderDelegate: PagedChildBuilderDelegate<MediaPreview>(
                 itemBuilder: (context, item, index) {
-                  final posterPath = item.posterPath;
-                  final imageUrl = posterPath != null
-                      ? 'https://image.tmdb.org/t/p/w500$posterPath'
-                      : '';
+                  final imageUrl = ImageUtils.buildTmdbPosterUrl(
+                    item.posterPath,
+                  );
 
+                  // For genre rows the media type is fixed by the row; trending
+                  // stays mixed per-item.
                   final mediaType =
-                      item.mediaType; // Might be mixed for trending
+                      widget.genreKey?.mediaType ?? item.mediaType;
                   final heroTag =
                       'discover_seeall_${mediaType}_${item.id}_$index';
 
-                  return GestureDetector(
+                  return PressableScale(
                     onTap: () {
                       context.push(
                         ServiceRoutes.seerrDetail(

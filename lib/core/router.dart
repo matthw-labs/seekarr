@@ -43,6 +43,9 @@ import 'package:seekarr/features/bazarr/presentation/bazarr_movie_detail_screen.
 import 'package:seekarr/features/bazarr/presentation/bazarr_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_series_detail_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_wanted_screen.dart';
+import 'package:seekarr/features/truenas/presentation/truenas_screen.dart';
+import 'package:seekarr/features/discover/presentation/person_detail_screen.dart';
+import 'package:seekarr/features/discover/presentation/collection_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
@@ -59,9 +62,9 @@ Page<void> _discoverDetailPage(
   }
   final heroTag =
       state.uri.queryParameters['heroTag'] ?? 'discover_${mediaType}_$id';
-  final posterUrl = state.uri.queryParameters['posterUrl'] != null
-      ? Uri.decodeComponent(state.uri.queryParameters['posterUrl']!)
-      : null;
+  // go_router already URL-decodes queryParameters; decoding again here would
+  // double-decode a poster URL that contains a literal `%` sequence.
+  final posterUrl = state.uri.queryParameters['posterUrl'];
   return RouteUtils.cupertinoPage(
     key: state.pageKey,
     child: DiscoverDetailScreen(
@@ -154,6 +157,25 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
             const DiscoverSeeAllScreen(type: 'trending', title: 'Trending'),
       ),
       GoRoute(
+        path: 'genre/:mediaType/:genreId',
+        redirect: (context, state) {
+          final genreId = RouteUtils.safeIntParam(state, 'genreId');
+          return genreId == null ? '/services/seerr' : null;
+        },
+        builder: (context, state) {
+          final mediaType = state.pathParameters['mediaType'] == 'tv'
+              ? 'tv'
+              : 'movie';
+          final genreId = RouteUtils.safeIntParam(state, 'genreId')!;
+          final title = state.uri.queryParameters['title'] ?? 'Genre';
+          return DiscoverSeeAllScreen(
+            type: 'genre',
+            title: title,
+            genreKey: (mediaType: mediaType, genreId: genreId),
+          );
+        },
+      ),
+      GoRoute(
         path: 'movie/:id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
@@ -166,6 +188,31 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
             RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
         pageBuilder: (context, state) =>
             _discoverDetailPage(state, mediaType: 'tv'),
+      ),
+      GoRoute(
+        path: 'person/:id',
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          child: PersonDetailScreen(
+            personId: RouteUtils.safeIntParam(state, 'id')!,
+            heroTag: state.uri.queryParameters['heroTag'],
+            initialProfileUrl: state.uri.queryParameters['posterUrl'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: 'collection/:id',
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          child: CollectionDetailScreen(
+            collectionId: RouteUtils.safeIntParam(state, 'id')!,
+            heroTag: state.uri.queryParameters['heroTag'],
+          ),
+        ),
       ),
     ],
   );
@@ -413,6 +460,22 @@ GoRoute _bazarrRoutes({required String path}) {
   );
 }
 
+GoRoute _truenasRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.truenas,
+        child: const TrueNasScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+  );
+}
+
 String? _redirectLegacyDiscover(GoRouterState state) {
   final path = state.uri.path;
   if (path == '/discover') return '/services';
@@ -489,6 +552,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               _musicRoutes(path: 'lidarr'),
               _qbittorrentRoutes(path: 'qbittorrent'),
               _bazarrRoutes(path: 'bazarr'),
+              _truenasRoutes(path: 'truenas'),
             ],
           ),
           GoRoute(

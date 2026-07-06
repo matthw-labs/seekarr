@@ -8,6 +8,7 @@ import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -23,13 +24,9 @@ class BazarrScreen extends ConsumerWidget {
     final settings = ref.watch(currentSettingsProvider);
     final isConfigured = settings.isServiceConfigured(ServiceKey.bazarr);
 
-    return Scaffold(
-      appBar: showAppBar
-          ? AppBar(
-              title: const Text('Bazarr'),
-              backgroundColor: AppColors.bazarr.withValues(alpha: 0.12),
-            )
-          : null,
+    return AmbientScaffold(
+      accent: AppColors.bazarr,
+      appBar: showAppBar ? const GlassAppBar(title: Text('Bazarr')) : null,
       body: SafeArea(
         child: isConfigured
             ? _BazarrDashboard(topPadding: topPadding)
@@ -87,7 +84,6 @@ class _BazarrDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final badgesAsync = ref.watch(bazarrBadgesProvider);
     final wantedAsync = ref.watch(bazarrDashboardWantedProvider);
     final historyAsync = ref.watch(bazarrDashboardHistoryProvider);
 
@@ -103,8 +99,11 @@ class _BazarrDashboard extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
-          // Stat row — badges
-          _BazarrStatsRow(badgesAsync: badgesAsync),
+          // Stat row — shared premium KPI peek
+          ServiceKpiPeek(
+            kpis: ref.watch(serviceKpiProvider(ServiceKey.bazarr)),
+            accent: AppColors.bazarr,
+          ),
           const SizedBox(height: 4),
           // Search bar — decorative, non-functional for Fase 3
           _SearchBar(accent: AppColors.bazarr),
@@ -130,133 +129,6 @@ class _BazarrDashboard extends ConsumerWidget {
           _BazarrCta(accent: AppColors.bazarr),
           const SizedBox(height: 24),
         ],
-      ),
-    );
-  }
-}
-
-/// Horizontal scrollable stat row showing Bazarr badge metrics.
-class _BazarrStatsRow extends ConsumerWidget {
-  const _BazarrStatsRow({required this.badgesAsync});
-
-  final AsyncValue<BazarrBadges> badgesAsync;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return badgesAsync.when(
-      data: (badges) {
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              _StatChip(
-                label: '${badges.totalWanted}',
-                subtitle: 'Wanted',
-                color: AppColors.bazarr,
-              ),
-              const SizedBox(width: 8),
-              _StatChip(
-                label: '${badges.episodes}',
-                subtitle: 'Episodes',
-                color: AppColors.bazarr,
-              ),
-              const SizedBox(width: 8),
-              _StatChip(
-                label: '${badges.movies}',
-                subtitle: 'Movies',
-                color: AppColors.bazarr,
-              ),
-              const SizedBox(width: 8),
-              _StatChip(
-                label: '${badges.providers}',
-                subtitle: 'Providers',
-                color: AppColors.bazarr,
-              ),
-              const SizedBox(width: 8),
-              _StatChip(
-                label: badges.status ? 'ON' : 'OFF',
-                subtitle: 'Status',
-                color: badges.status ? AppColors.success : AppColors.warning,
-              ),
-            ],
-          ),
-        );
-      },
-      loading: () => const _StatsShimmer(),
-      error: (error, _) => _ErrorRetry(
-        message: 'Failed to load stats',
-        onRetry: () => ref.invalidate(bazarrBadgesProvider),
-        height: 80,
-      ),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({
-    required this.label,
-    required this.subtitle,
-    required this.color,
-  });
-
-  final String label;
-  final String subtitle;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusSm,
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatsShimmer extends StatelessWidget {
-  const _StatsShimmer();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: List.generate(
-          4,
-          (i) => Padding(
-            padding: EdgeInsets.only(left: i > 0 ? 8 : 0),
-            child: ShimmerPlaceholder(
-              width: 72,
-              height: 56,
-              borderRadius: AppRadius.borderRadiusSm,
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -715,22 +587,17 @@ class _ListShimmer extends StatelessWidget {
 /// Inline error placeholder with a retry action so failures are
 /// distinguishable from the loading shimmer state.
 class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({
-    required this.message,
-    required this.onRetry,
-    this.height = 120,
-  });
+  const _ErrorRetry({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
-  final double height;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      height: height,
+      height: 120,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

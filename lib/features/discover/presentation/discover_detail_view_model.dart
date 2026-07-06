@@ -9,6 +9,7 @@ typedef DiscoverDetailRating = ({
 });
 
 typedef DiscoverCastMember = ({
+  int id,
   String name,
   String character,
   String? profilePath,
@@ -324,6 +325,7 @@ int _movieReleasePriority(int type) {
 
 DiscoverCastMember _toCastMember(Map<String, dynamic> member) {
   return (
+    id: (member['id'] as num?)?.toInt() ?? 0,
     name: member['name']?.toString() ?? '',
     character: member['character']?.toString() ?? '',
     profilePath:

@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
+import 'package:seekarr/core/widgets/ambient_scaffold.dart';
+import 'package:seekarr/core/widgets/app_empty_state.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/services/presentation/services_dashboard_sections.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/services/presentation/services_status_overview.dart';
@@ -32,8 +35,8 @@ class ServicesScreen extends ConsumerWidget {
       (s) => !settings.isServiceConfigured(s),
     );
 
-    return Scaffold(
-      appBar: AppBar(
+    return AmbientScaffold(
+      appBar: GlassAppBar(
         title: const Text('Services'),
         actions: const [
           Padding(
@@ -71,52 +74,15 @@ class _ServicesEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colorScheme.surfaceContainerHigh,
-              ),
-              child: Icon(
-                Icons.dns_outlined,
-                size: 34,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'No services configured',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Connect your self-hosted services to start managing them from one place.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            FilledButton.icon(
-              onPressed: onSetUpServices,
-              icon: const Icon(Icons.settings_outlined, size: 18),
-              label: const Text('Set up services'),
-            ),
-          ],
-        ),
+    return AppEmptyState(
+      icon: Icons.dns_outlined,
+      title: 'No services configured',
+      message:
+          'Connect your self-hosted services to start managing them from one place.',
+      action: FilledButton.icon(
+        onPressed: onSetUpServices,
+        icon: const Icon(Icons.settings_outlined, size: 18),
+        label: const Text('Set up services'),
       ),
     );
   }
