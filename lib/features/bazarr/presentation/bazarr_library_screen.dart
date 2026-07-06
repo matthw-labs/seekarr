@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
@@ -270,11 +271,18 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
 }
 
 class BazarrLibraryEntry {
-  BazarrLibraryEntry({required this.title, required this.subtitle});
+  BazarrLibraryEntry({
+    required this.kind,
+    required this.id,
+    required this.title,
+    required this.subtitle,
+  });
 
   factory BazarrLibraryEntry.from(dynamic item) {
     if (item is BazarrSeries) {
       return BazarrLibraryEntry(
+        kind: _BazarrLibraryTabKind.series,
+        id: item.sonarrSeriesId,
         title: item.title ?? 'Untitled series',
         subtitle: item.path ?? item.sortTitle ?? '',
       );
@@ -282,13 +290,22 @@ class BazarrLibraryEntry {
     if (item is BazarrMovie) {
       final year = item.year != null ? ' (${item.year})' : '';
       return BazarrLibraryEntry(
+        kind: _BazarrLibraryTabKind.movies,
+        id: item.radarrId,
         title: '${item.title ?? 'Untitled movie'}$year',
         subtitle: item.path ?? item.sortTitle ?? '',
       );
     }
-    return BazarrLibraryEntry(title: 'Unknown', subtitle: '');
+    return BazarrLibraryEntry(
+      kind: _BazarrLibraryTabKind.series,
+      id: 0,
+      title: 'Unknown',
+      subtitle: '',
+    );
   }
 
+  final _BazarrLibraryTabKind kind;
+  final int id;
   final String title;
   final String subtitle;
 }
@@ -324,11 +341,7 @@ class _BazarrLibraryRow extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  entry.subtitle.isNotEmpty
-                      ? entry.title.contains('Untitled movie')
-                            ? '🎬'
-                            : '📺'
-                      : '❔',
+                  entry.kind == _BazarrLibraryTabKind.series ? '📺' : '🎬',
                   style: const TextStyle(fontSize: 16),
                 ),
               ),
@@ -369,9 +382,10 @@ class _BazarrLibraryRow extends StatelessWidget {
   }
 
   void _openEntry(BuildContext context) {
-    if (entry.title.contains('Untitled movie')) {
-      // Should not occur unless the data layer is misbehaving.
-      return;
+    if (entry.kind == _BazarrLibraryTabKind.series) {
+      context.push(ServiceRoutes.bazarrSeries(entry.id));
+    } else {
+      context.push(ServiceRoutes.bazarrMovie(entry.id));
     }
   }
 }

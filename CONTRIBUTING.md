@@ -50,6 +50,16 @@ Run the app locally:
 flutter run -d macos
 ```
 
+### Per-worktree local files
+
+The following files are gitignored and **must be present in every worktree / fresh checkout** before you can build or sign the app. They are intentionally kept out of version control because they contain local paths or signing credentials.
+
+- `android/key.properties` — required for Android **release** builds. Copy from an existing worktree, or recreate from `android/key.properties.example` with real keystore values. Without it, `flutter run --release` on Android fails with a `Missing release signing config` error. Debug builds are unaffected.
+- `macos/Runner/Configs/LocalSigning.xcconfig` — required for local macOS code signing.
+- `ios/Flutter/LocalSigning.xcconfig` — required for local iOS code signing.
+
+Other gitignored files that are typically per-developer rather than per-worktree: `.env`, `.env.local`, anything under `secrets/`, and `*.pem` / `*.key`. None of these break the standard build flow, but keep them out of commits.
+
 ### Required Checks
 Before opening a pull request, run:
 

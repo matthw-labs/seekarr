@@ -35,7 +35,7 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           onPressed: () =>
-              RouteUtils.popOrGo(context, ServiceRoutes.bazarrWanted),
+              RouteUtils.popOrGo(context, ServiceRoutes.bazarrLibrary),
           tooltip: 'Back',
         ),
         title: const Text('Movie'),
