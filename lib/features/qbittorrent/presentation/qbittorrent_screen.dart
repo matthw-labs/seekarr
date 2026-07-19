@@ -64,22 +64,34 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen>
       accent: ServiceKey.qbittorrent.accent,
       body: Column(
         children: [
-          if (widget.topPadding > 0)
-            SizedBox(
-              height: widget.topPadding + MediaQuery.paddingOf(context).top,
-            ),
-          _buildStatsBar(),
-          SearchBarHeader(
-            hintText: 'Search torrents...',
-            onQueryChanged: (query) {
-              ref.read(torrentSearchQueryProvider.notifier).state = query;
-            },
-          ),
-          const TorrentFilterChipsRow(),
-          const TorrentFilterPillsRow(),
-          const TorrentSortRow(),
+          // Stats + search + filter/sort rows scroll away with the torrent
+          // list; the selection action bar stays pinned at the bottom.
           Expanded(
-            child: _buildTorrentList(context, torrentsAsync, selectedHashes),
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                if (widget.topPadding > 0)
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height:
+                          widget.topPadding + MediaQuery.paddingOf(context).top,
+                    ),
+                  ),
+                SliverToBoxAdapter(child: _buildStatsBar()),
+                SliverToBoxAdapter(
+                  child: SearchBarHeader(
+                    hintText: 'Search torrents...',
+                    onQueryChanged: (query) {
+                      ref.read(torrentSearchQueryProvider.notifier).state =
+                          query;
+                    },
+                  ),
+                ),
+                const SliverToBoxAdapter(child: TorrentFilterChipsRow()),
+                const SliverToBoxAdapter(child: TorrentFilterPillsRow()),
+                const SliverToBoxAdapter(child: TorrentSortRow()),
+              ],
+              body: _buildTorrentList(context, torrentsAsync, selectedHashes),
+            ),
           ),
           TorrentSelectionBar(
             onConfirmDelete: () =>

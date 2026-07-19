@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
 
 class DiscoverWatchProviders extends StatelessWidget {
   final WatchProviderRegion? providers;
@@ -23,7 +24,10 @@ class DiscoverWatchProviders extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const MediaDetailSectionHeader(title: 'Where to Watch'),
+        MediaDetailSectionHeader(
+          title: 'Where to Watch',
+          accent: ServiceKey.seerr.accent,
+        ),
         if (providers == null)
           Text(
             'Watch provider info is not available in your region ($region).',

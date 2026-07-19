@@ -213,7 +213,10 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       if (viewModel.genres.isNotEmpty) ...[
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: MediaDetailTagsSection(tags: viewModel.genres),
+          child: MediaDetailTagsSection(
+            tags: viewModel.genres,
+            accent: ServiceKey.lidarr.accent,
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
       ],
@@ -275,7 +278,10 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const MediaDetailSectionHeader(title: 'Albums'),
+            MediaDetailSectionHeader(
+              title: 'Albums',
+              accent: ServiceKey.lidarr.accent,
+            ),
             albumsAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.all(AppSpacing.lg),

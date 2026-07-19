@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:seekarr/core/models/media_preview.dart';
+import 'package:seekarr/features/bazarr/data/bazarr_service.dart';
+import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
@@ -29,6 +31,7 @@ final globalSearchResultsProvider = FutureProvider.autoDispose((ref) async {
     _loadRadarrResults(ref, query, settings),
     _loadSonarrResults(ref, query, settings),
     _loadLidarrResults(ref, query, settings),
+    _loadBazarrResults(ref, query),
   ]);
 });
 
@@ -76,6 +79,17 @@ Future<GlobalSearchServiceResults> _loadLidarrResults(
     service: ServiceKey.lidarr,
     loadItems: () => ref.read(lidarrServiceProvider).lookupArtists(query),
     toResult: (item) => _lidarrResult(item, settings),
+  );
+}
+
+Future<GlobalSearchServiceResults> _loadBazarrResults(
+  Ref ref,
+  String query,
+) async {
+  return _loadServiceResults(
+    service: ServiceKey.bazarr,
+    loadItems: () => ref.read(bazarrServiceProvider).searchLibrary(query),
+    toResult: _bazarrResult,
   );
 }
 
@@ -155,6 +169,22 @@ GlobalSearchResult _sonarrResult(SonarrSeries item, SettingsModel settings) {
     tags: ['Series', item.status],
     route: ServiceRoutes.sonarrSeries(item.id),
     routeExtra: item,
+  );
+}
+
+GlobalSearchResult _bazarrResult(BazarrSearchHit item) {
+  final type = item.isMovie ? 'Movie' : 'Series';
+  return GlobalSearchResult(
+    service: ServiceKey.bazarr,
+    id: item.id,
+    title: item.title,
+    subtitle: 'Subtitles · $type',
+    imageUrl: '',
+    imageHeaders: null,
+    tags: ['Subtitles', type],
+    route: item.isMovie
+        ? ServiceRoutes.bazarrMovie(item.id)
+        : ServiceRoutes.bazarrSeries(item.id),
   );
 }
 

@@ -77,22 +77,35 @@ class DiscoverScreen extends ConsumerWidget {
               ],
             )
           : null,
-      body: Column(
-        children: [
+      // Header (search + KPI) scrolls away with the catalog, consistent with
+      // the arr library screens.
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
           if (topPadding > 0)
-            SizedBox(height: topPadding + MediaQuery.paddingOf(context).top),
-          SearchBarHeader(
-            hintText: 'Search movies & TV shows...',
-            onQueryChanged: (query) {
-              ref.read(discoverSearchQueryProvider.notifier).state = query;
-            },
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: topPadding + MediaQuery.paddingOf(context).top,
+              ),
+            ),
+          SliverToBoxAdapter(
+            child: SearchBarHeader(
+              hintText: 'Search movies & TV shows...',
+              onQueryChanged: (query) {
+                ref.read(discoverSearchQueryProvider.notifier).state = query;
+              },
+            ),
           ),
-          Expanded(
-            child: searchQuery.isEmpty
-                ? _buildCatalog(context, ref)
-                : const _DiscoverSearchResults(),
-          ),
+          if (searchQuery.isEmpty)
+            SliverToBoxAdapter(
+              child: ServiceKpiPeek(
+                kpis: ref.watch(serviceKpiProvider(ServiceKey.seerr)),
+                accent: ServiceKey.seerr.accent,
+              ),
+            ),
         ],
+        body: searchQuery.isEmpty
+            ? _buildCatalog(context, ref)
+            : const _DiscoverSearchResults(),
       ),
     );
   }
@@ -109,10 +122,6 @@ class DiscoverScreen extends ConsumerWidget {
               FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         children: [
-          ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(ServiceKey.seerr)),
-            accent: ServiceKey.seerr.accent,
-          ),
           const _DiscoverFeatured(),
           DiscoverCarousel(
             title: 'Trending',

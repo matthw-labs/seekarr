@@ -81,6 +81,14 @@ final globalNowItemsProvider = FutureProvider<List<GlobalActivityItem>>((
   return _sortItems(results.expand((items) => items).toList(growable: false));
 });
 
+/// Seerr requests only — the "Requests" sub-segment of the global "Now" bucket.
+final globalRequestItemsProvider = FutureProvider<List<GlobalActivityItem>>((
+  ref,
+) async {
+  ref.watch(activityRefreshVersionProvider);
+  return _sortItems(await _loadRequestItems(ref));
+});
+
 final globalHistoryItemsProvider = FutureProvider<List<GlobalActivityItem>>((
   ref,
 ) async {

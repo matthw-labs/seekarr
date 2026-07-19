@@ -63,6 +63,47 @@ class BazarrService {
     return _parsePaged(response.data, BazarrMovie.fromJson, start: start);
   }
 
+  /// Client-side search across the Bazarr library.
+  ///
+  /// Bazarr exposes no search endpoint, so this fetches the series and movie
+  /// lists and filters by title. Intended for the global search surface, which
+  /// only needs a small number of matches.
+  Future<List<BazarrSearchHit>> searchLibrary(
+    String query, {
+    int length = 500,
+  }) async {
+    final needle = query.trim().toLowerCase();
+    if (needle.isEmpty) return const [];
+
+    final (series, movies) = await (
+      getSeries(length: length),
+      getMovies(length: length),
+    ).wait;
+
+    final hits = <BazarrSearchHit>[];
+    for (final item in series.data) {
+      final title = item.title;
+      if (title != null && title.toLowerCase().contains(needle)) {
+        hits.add(
+          BazarrSearchHit(
+            id: item.sonarrSeriesId,
+            title: title,
+            isMovie: false,
+          ),
+        );
+      }
+    }
+    for (final item in movies.data) {
+      final title = item.title;
+      if (title != null && title.toLowerCase().contains(needle)) {
+        hits.add(
+          BazarrSearchHit(id: item.radarrId, title: title, isMovie: true),
+        );
+      }
+    }
+    return hits;
+  }
+
   /// Paged list of missing episode subtitles.
   Future<BazarrPagedResult<BazarrWantedItem>> getWantedEpisodes({
     int start = 0,
@@ -172,6 +213,22 @@ class BazarrService {
   Future<void> deleteJob(String jobId) async {
     await client.delete('/api/system/jobs', queryParameters: {'id': jobId});
   }
+}
+
+/// A single global-search match from the Bazarr library.
+///
+/// [id] is the upstream Sonarr series id or Radarr movie id, matching the
+/// route parameters used by [ServiceRoutes.bazarrSeries] / `bazarrMovie`.
+class BazarrSearchHit {
+  final int id;
+  final String title;
+  final bool isMovie;
+
+  const BazarrSearchHit({
+    required this.id,
+    required this.title,
+    required this.isMovie,
+  });
 }
 
 /// Paged result from a Bazarr list endpoint.

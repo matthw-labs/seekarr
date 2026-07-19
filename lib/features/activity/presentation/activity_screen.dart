@@ -88,22 +88,60 @@ class ActivityScreen extends ConsumerWidget {
   }
 }
 
-/// The three top-level activity sections. Blocklist/Cutoff live inside the
-/// per-service view; the global view keeps to these three clear buckets.
+/// The three top-level activity buckets. Each bucket exposes a contextual
+/// sub-segment bar so service-specific subsections (Queue/Requests,
+/// History/Blocklist, Missing/Cutoff) remain reachable from the global view.
 enum _ActivitySection {
-  now('Now', Icons.downloading_rounded, 'Nothing downloading right now'),
-  history('History', Icons.history_rounded, 'No recent history'),
-  wanted('Wanted', Icons.manage_search_rounded, 'Nothing wanted');
+  now('Now', Icons.downloading_rounded),
+  history('History', Icons.history_rounded),
+  wanted('Wanted', Icons.manage_search_rounded);
 
   final String label;
   final IconData icon;
+
+  const _ActivitySection(this.label, this.icon);
+}
+
+/// A contextual sub-segment within an [_ActivitySection], backed by one of the
+/// granular providers in `activity_provider.dart`.
+class _ActivitySub {
+  final String label;
+  final FutureProvider<List<GlobalActivityItem>> provider;
   final String emptyMessage;
 
-  const _ActivitySection(this.label, this.icon, this.emptyMessage);
+  const _ActivitySub(this.label, this.provider, this.emptyMessage);
 }
+
+/// Sub-segments per bucket. The first entry is the default selection and, for
+/// Now/Wanted, is the combined view that preserved the previous behaviour.
+final Map<_ActivitySection, List<_ActivitySub>> _activitySubs = {
+  _ActivitySection.now: [
+    _ActivitySub('All', globalNowItemsProvider, 'Nothing downloading right now'),
+    _ActivitySub('Queue', globalQueueItemsProvider, 'Download queue is empty'),
+    _ActivitySub('Requests', globalRequestItemsProvider, 'No pending requests'),
+  ],
+  _ActivitySection.history: [
+    _ActivitySub('History', globalHistoryItemsProvider, 'No recent history'),
+    _ActivitySub('Blocklist', globalBlocklistItemsProvider, 'Blocklist is empty'),
+  ],
+  _ActivitySection.wanted: [
+    _ActivitySub('All', globalWantedItemsProvider, 'Nothing wanted'),
+    _ActivitySub('Missing', globalMissingItemsProvider, 'Nothing missing'),
+    _ActivitySub(
+      'Cutoff Unmet',
+      globalCutoffItemsProvider,
+      'Cutoff met for everything',
+    ),
+  ],
+};
 
 final _activitySectionProvider = StateProvider<_ActivitySection>(
   (ref) => _ActivitySection.now,
+);
+
+/// Selected sub-segment index, remembered per bucket.
+final _activitySubIndexProvider = StateProvider.family<int, _ActivitySection>(
+  (ref, section) => 0,
 );
 
 /// Selected service filter; null means "all services".
@@ -140,11 +178,12 @@ class GlobalActivityScreen extends ConsumerWidget {
 
     final section = ref.watch(_activitySectionProvider);
     final filter = ref.watch(_activityServiceFilterProvider);
-    final itemsAsync = switch (section) {
-      _ActivitySection.now => ref.watch(globalNowItemsProvider),
-      _ActivitySection.history => ref.watch(globalHistoryItemsProvider),
-      _ActivitySection.wanted => ref.watch(globalWantedItemsProvider),
-    };
+    final subs = _activitySubs[section]!;
+    final subIndex = ref
+        .watch(_activitySubIndexProvider(section))
+        .clamp(0, subs.length - 1);
+    final sub = subs[subIndex];
+    final itemsAsync = ref.watch(sub.provider);
 
     return AmbientScaffold(
       appBar: GlassAppBar(
@@ -182,6 +221,14 @@ class GlobalActivityScreen extends ConsumerWidget {
                       selection.first,
             ),
           ),
+          if (subs.length > 1)
+            _SubSegmentChips(
+              labels: [for (final s in subs) s.label],
+              selectedIndex: subIndex,
+              onSelected: (index) =>
+                  ref.read(_activitySubIndexProvider(section).notifier).state =
+                      index,
+            ),
           _ServiceFilterChips(
             services: _filterServices,
             selected: filter,
@@ -214,6 +261,7 @@ class GlobalActivityScreen extends ConsumerWidget {
                 data: (items) => _ActivityData(
                   items: items,
                   section: section,
+                  emptyMessage: sub.emptyMessage,
                   filter: filter,
                   bottomPadding: bottomPadding,
                 ),
@@ -229,12 +277,14 @@ class GlobalActivityScreen extends ConsumerWidget {
 class _ActivityData extends StatelessWidget {
   final List<GlobalActivityItem> items;
   final _ActivitySection section;
+  final String emptyMessage;
   final ServiceKey? filter;
   final double bottomPadding;
 
   const _ActivityData({
     required this.items,
     required this.section,
+    required this.emptyMessage,
     required this.filter,
     required this.bottomPadding,
   });
@@ -251,7 +301,7 @@ class _ActivityData extends StatelessWidget {
         child: AppEmptyState(
           icon: section.icon,
           title: section.label,
-          message: section.emptyMessage,
+          message: emptyMessage,
         ),
       );
     }
@@ -302,6 +352,43 @@ class _ActivityData extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(bottom: bottomPadding),
       children: children,
+    );
+  }
+}
+
+/// Contextual sub-segment selector shown under the main bucket segmented
+/// button (e.g. Missing / Cutoff Unmet within "Wanted").
+class _SubSegmentChips extends StatelessWidget {
+  final List<String> labels;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  const _SubSegmentChips({
+    required this.labels,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          for (var index = 0; index < labels.length; index++)
+            _Chip(
+              label: labels[index],
+              selected: selectedIndex == index,
+              onTap: () => onSelected(index),
+            ),
+        ],
+      ),
     );
   }
 }

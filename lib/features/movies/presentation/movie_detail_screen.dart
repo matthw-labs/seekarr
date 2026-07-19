@@ -177,6 +177,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
           child: FileInfoSection(
             path: viewModel.path,
             filename: viewModel.filename,
+            accent: ServiceKey.radarr.accent,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -204,7 +205,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       if (viewModel.genres.isNotEmpty) ...[
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: MediaDetailTagsSection(tags: viewModel.genres),
+          child: MediaDetailTagsSection(
+            tags: viewModel.genres,
+            accent: ServiceKey.radarr.accent,
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
       ],

@@ -5,6 +5,7 @@ import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
 
 class DiscoverSeasonsList extends StatefulWidget {
   final List<TvSeason> seasons;
@@ -32,7 +33,10 @@ class _DiscoverSeasonsListState extends State<DiscoverSeasonsList> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const MediaDetailSectionHeader(title: 'Seasons'),
+        MediaDetailSectionHeader(
+          title: 'Seasons',
+          accent: ServiceKey.seerr.accent,
+        ),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(

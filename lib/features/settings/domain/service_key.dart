@@ -70,7 +70,8 @@ extension ServiceKeyExtension on ServiceKey {
     return this == ServiceKey.seerr ||
         this == ServiceKey.radarr ||
         this == ServiceKey.sonarr ||
-        this == ServiceKey.lidarr;
+        this == ServiceKey.lidarr ||
+        this == ServiceKey.bazarr;
   }
 
   bool get supportsManualImport {

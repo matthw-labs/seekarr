@@ -168,8 +168,8 @@ void main() {
       expect(ServiceKey.bazarr.itemLabel, 'subtitles');
     });
 
-    test('keeps Bazarr out of global search and manual import flows', () {
-      expect(ServiceKey.bazarr.isSearchable, isFalse);
+    test('includes Bazarr in global search but not manual import flows', () {
+      expect(ServiceKey.bazarr.isSearchable, isTrue);
       expect(ServiceKey.bazarr.supportsManualImport, isFalse);
       expect(ServiceKey.bazarr.usesApiKey, isTrue);
       expect(
@@ -179,12 +179,17 @@ void main() {
           ServiceKey.radarr,
           ServiceKey.sonarr,
           ServiceKey.lidarr,
+          ServiceKey.bazarr,
         ]),
-        reason: 'Searchable services should stay limited to Seerr/*arr',
+        reason: 'Bazarr joins Seerr/*arr as a searchable service',
       );
       expect(
         ServiceKey.values.where((s) => s.isSearchable),
-        isNot(contains(ServiceKey.bazarr)),
+        isNot(contains(ServiceKey.qbittorrent)),
+      );
+      expect(
+        ServiceKey.values.where((s) => s.isSearchable),
+        isNot(contains(ServiceKey.truenas)),
       );
     });
 

@@ -146,36 +146,44 @@ class _MediaBrowseScaffoldState<T>
               ],
             )
           : null,
-      body: Column(
-        children: [
+      // The header (search + KPI + filters) lives in the NestedScrollView
+      // header slivers as non-pinned adapters, so it scrolls away with the
+      // content instead of staying fixed above the list.
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
           if (widget.topPadding > 0)
-            SizedBox(
-              height: widget.topPadding + MediaQuery.paddingOf(context).top,
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: widget.topPadding + MediaQuery.paddingOf(context).top,
+              ),
             ),
-          SearchBarHeader(
-            hintText: widget.searchHint,
-            onQueryChanged: (query) {
-              ref.read(widget.searchQueryProvider.notifier).state = query;
-            },
-          ),
-          if (!isSearching && widget.kpiPeek != null) widget.kpiPeek!,
-          if (!isSearching)
-            _MediaBrowseFilterChips(
-              selectedFilter: _selectedFilter,
-              color:
-                  widget.accentColor ?? Theme.of(context).colorScheme.primary,
-              onSelected: (filter) {
-                setState(() {
-                  _selectedFilter = filter;
-                });
+          SliverToBoxAdapter(
+            child: SearchBarHeader(
+              hintText: widget.searchHint,
+              onQueryChanged: (query) {
+                ref.read(widget.searchQueryProvider.notifier).state = query;
               },
             ),
-          Expanded(
-            child: isSearching
-                ? _buildSearchResults(context)
-                : _buildLibraryContent(context),
           ),
+          if (!isSearching && widget.kpiPeek != null)
+            SliverToBoxAdapter(child: widget.kpiPeek!),
+          if (!isSearching)
+            SliverToBoxAdapter(
+              child: _MediaBrowseFilterChips(
+                selectedFilter: _selectedFilter,
+                color:
+                    widget.accentColor ?? Theme.of(context).colorScheme.primary,
+                onSelected: (filter) {
+                  setState(() {
+                    _selectedFilter = filter;
+                  });
+                },
+              ),
+            ),
         ],
+        body: isSearching
+            ? _buildSearchResults(context)
+            : _buildLibraryContent(context),
       ),
     );
   }

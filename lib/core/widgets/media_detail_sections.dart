@@ -9,10 +9,14 @@ class MediaDetailUnavailableSection extends StatelessWidget {
   final String title;
   final String message;
 
+  /// Optional per-service accent for the section header pipe.
+  final Color? accent;
+
   const MediaDetailUnavailableSection({
     super.key,
     required this.title,
     required this.message,
+    this.accent,
   });
 
   @override
@@ -23,7 +27,7 @@ class MediaDetailUnavailableSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        MediaDetailSectionHeader(title: title),
+        MediaDetailSectionHeader(title: title, accent: accent),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -47,7 +51,10 @@ class MediaDetailUnavailableSection extends StatelessWidget {
 class MediaDetailTagsSection extends StatelessWidget {
   final List<String> tags;
 
-  const MediaDetailTagsSection({super.key, required this.tags});
+  /// Optional per-service accent for the section header pipe.
+  final Color? accent;
+
+  const MediaDetailTagsSection({super.key, required this.tags, this.accent});
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +65,7 @@ class MediaDetailTagsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const MediaDetailSectionHeader(title: 'Tags'),
+        MediaDetailSectionHeader(title: 'Tags', accent: accent),
         Wrap(
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,

@@ -187,7 +187,10 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       if (viewModel.hasFiles && viewModel.path != null) ...[
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: FileInfoSection(path: viewModel.path),
+          child: FileInfoSection(
+            path: viewModel.path,
+            accent: ServiceKey.sonarr.accent,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
       ],
@@ -218,7 +221,10 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       if (viewModel.genres.isNotEmpty) ...[
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: MediaDetailTagsSection(tags: viewModel.genres),
+          child: MediaDetailTagsSection(
+            tags: viewModel.genres,
+            accent: ServiceKey.sonarr.accent,
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
       ],
@@ -288,7 +294,10 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const MediaDetailSectionHeader(title: 'Seasons'),
+          MediaDetailSectionHeader(
+            title: 'Seasons',
+            accent: ServiceKey.sonarr.accent,
+          ),
           SeriesSeasonsList(
             seasons: viewModel.seasons,
             episodesAsync: episodesAsync,

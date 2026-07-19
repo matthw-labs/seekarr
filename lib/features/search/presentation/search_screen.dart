@@ -517,7 +517,7 @@ class _SearchEmptyState extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Enter a title, show, or artist to query Seerr, Radarr, Sonarr, and Lidarr.',
+          'Enter a title, show, or artist to query Seerr, Radarr, Sonarr, Lidarr, and Bazarr.',
           textAlign: TextAlign.center,
           style: Theme.of(
             context,

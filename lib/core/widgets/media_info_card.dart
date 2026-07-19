@@ -73,19 +73,45 @@ class _InfoGrid extends StatelessWidget {
       builder: (context, constraints) {
         final useSingleColumn = constraints.maxWidth < 320;
 
-        return Wrap(
-          spacing: AppSpacing.lg,
-          runSpacing: AppSpacing.sm,
-          children: cells
-              .map(
-                (cell) => SizedBox(
-                  width: useSingleColumn
-                      ? constraints.maxWidth
-                      : (constraints.maxWidth - AppSpacing.lg) / 2,
-                  child: cell,
-                ),
-              )
-              .toList(growable: false),
+        if (useSingleColumn) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < cells.length; i++) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.md),
+                cells[i],
+              ],
+            ],
+          );
+        }
+
+        // Pair cells into two-column rows so the columns stay aligned and share
+        // a top baseline regardless of individual cell height. The previous
+        // Wrap-of-fixed-width layout could wrap raggedly at sub-pixel widths,
+        // producing the broken table that was reported.
+        final rows = <Widget>[];
+        for (var i = 0; i < cells.length; i += 2) {
+          final right = i + 1 < cells.length ? cells[i + 1] : null;
+          rows.add(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: cells[i]),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(child: right ?? const SizedBox.shrink()),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < rows.length; i++) ...[
+              if (i > 0) const SizedBox(height: AppSpacing.sm),
+              rows[i],
+            ],
+          ],
         );
       },
     );
