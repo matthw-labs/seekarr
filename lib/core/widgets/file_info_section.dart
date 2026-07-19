@@ -9,7 +9,10 @@ class FileInfoSection extends StatelessWidget {
   final String? path;
   final String? filename;
 
-  const FileInfoSection({super.key, this.path, this.filename});
+  /// Optional per-service accent for the section header pipe.
+  final Color? accent;
+
+  const FileInfoSection({super.key, this.path, this.filename, this.accent});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +26,7 @@ class FileInfoSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const MediaDetailSectionHeader(title: 'File'),
+        MediaDetailSectionHeader(title: 'File', accent: accent),
         _InfoRow(
           title: filename ?? 'Library path',
           subtitle: path,

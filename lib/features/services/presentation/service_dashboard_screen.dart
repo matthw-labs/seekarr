@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/utils/route_utils.dart';
+import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
 class ServiceDashboardScreen extends StatefulWidget {
@@ -35,8 +36,6 @@ class _ServiceDashboardScreenState extends State<ServiceDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Stack(
       children: [
         widget.child,
@@ -44,8 +43,10 @@ class _ServiceDashboardScreenState extends State<ServiceDashboardScreen> {
           top: 0,
           left: 0,
           right: 0,
-          child: Material(
-            color: colorScheme.surface,
+          // Glass band instead of an opaque surface strip, so the hosted
+          // screen's ambient gradient reads continuously behind the app bar
+          // and scrolling content frosts underneath.
+          child: GlassSurface(
             child: SafeArea(
               bottom: false,
               child: _ServiceDashboardAppBar(

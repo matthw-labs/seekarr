@@ -128,7 +128,11 @@ class ShimmerList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
+      // Non-scrolling and shrink-wrapped so the skeleton can be nested inside
+      // another scroll view (e.g. a loading state inside a ListView) without a
+      // "viewport given unbounded height" error.
       physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
       padding: const EdgeInsets.all(16),
       itemCount: itemCount,
       separatorBuilder: (context, index) => SizedBox(height: spacing),

@@ -129,12 +129,10 @@ void main() {
       );
       expect(find.text('A chemistry teacher turns to crime.'), findsOneWidget);
 
-      await _scrollUntilVisible(tester, find.text('Where to Watch'));
+      await _scrollUntilVisible(tester, find.text('Seasons'));
 
-      expect(find.text('Where to Watch'), findsOneWidget);
       expect(find.text('Seasons'), findsOneWidget);
       expect(find.byType(SeriesSeasonsList), findsOneWidget);
-      expect(find.text('Cast'), findsOneWidget);
       expect(find.text('Tags'), findsOneWidget);
       expect(find.byType(MediaInfoCard), findsOneWidget);
     });

@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/api/api_client.dart';
+import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
 
 // ─── Design tokens (pixel-faithful to prototype) ───────────────────────────
 const _bg = Color(0xFF07080D);
@@ -15,18 +18,13 @@ const _border = Color(0xFF283247);
 const _fg = Color(0xFFF3F6FF);
 const _muted = Color(0xFF98A3B9);
 const _muted2 = Color(0xFF647089);
-const _accent = Color(0xFF6366F1);
-const _success = Color(0xFF22C55E);
+const _accent = AppColors.primary; // brand indigo — single source of truth
+const _success = AppColors.success;
 const _screenPad = EdgeInsets.fromLTRB(22, 22, 22, 32);
 
-// Service-specific colors (from prototype --radarr, --sonarr, --lidarr)
-const _serviceColors = {
-  ServiceKey.seerr: Color(0xFF22C55E), // green
-  ServiceKey.radarr: Color(0xFFF59E0B), // amber
-  ServiceKey.sonarr: Color(0xFF8B5CF6), // purple
-  ServiceKey.lidarr: Color(0xFFEC4899), // pink
-  ServiceKey.qbittorrent: Color(0xFF2F67BA), // blue
-};
+/// Service accent, sourced from the app-wide [ServiceKey.accent] so onboarding
+/// matches the rest of the app (previously Seerr was mistakenly tinted green).
+Color _serviceColor(ServiceKey service) => service.accent;
 
 // ─── Health-check helper (mirrors serviceConnectionProvider logic) ──────────
 String _healthEndpoint(ServiceKey service) {
@@ -40,6 +38,11 @@ String _healthEndpoint(ServiceKey service) {
       return '/api/v1/system/status';
     case ServiceKey.qbittorrent:
       return '/api/v2/app/version';
+    case ServiceKey.bazarr:
+      return '/api/system/status';
+    case ServiceKey.truenas:
+      // TrueNAS verifies over WebSocket, not a REST endpoint.
+      return '';
   }
 }
 
@@ -69,6 +72,17 @@ Future<ServiceConnectionStatus> _verifyService(
   }
   if (url.trim().isEmpty || apiKey.trim().isEmpty) {
     return ServiceConnectionStatus.notConfigured;
+  }
+  if (service == ServiceKey.truenas) {
+    final client = TrueNasWsClient(baseUrl: url.trim(), apiKey: apiKey.trim());
+    try {
+      await client.call('core.ping').timeout(const Duration(seconds: 6));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      await client.close();
+    }
   }
   final client = ApiClient(baseUrl: url.trim(), apiKey: apiKey.trim());
   try {
@@ -152,6 +166,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       password: _passwordCtrl[service]!.text,
     );
     if (!mounted) return;
+    if (status == ServiceConnectionStatus.connected) {
+      HapticFeedback.mediumImpact();
+    } else {
+      HapticFeedback.lightImpact();
+    }
     setState(() {
       _verifyStatus[service] = status;
       _verifying[service] = false;
@@ -188,13 +207,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         }
       }
     }
-    await ref.read(settingsProvider.notifier).updateSettings(updated);
+    try {
+      await ref.read(settingsProvider.notifier).updateSettings(updated);
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarHelper.error(
+        context,
+        "Couldn't save your services. Please try again. ($e)",
+      );
+      return;
+    }
     _goToStep(2);
   }
 
   /// Marks onboarding complete — triggers router redirect to /services.
   Future<void> _finish() async {
-    await markOnboardingComplete(ref);
+    HapticFeedback.mediumImpact();
+    try {
+      await markOnboardingComplete(ref);
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarHelper.error(
+        context,
+        "Couldn't finish setup. Please try again. ($e)",
+      );
+    }
   }
 
   void _goToStep(int step) {
@@ -262,7 +299,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   _ReadyStep(
                     configuredServices: _configuredServices,
                     verifyStatus: _verifyStatus,
-                    onReviewSettings: _finish,
+                    onReviewSettings: () async => _goToStep(1),
                     onFinish: _finish,
                   ),
                 ],
@@ -407,7 +444,7 @@ class _HeroCard extends StatelessWidget {
           _StackDivider(),
           const SizedBox(height: 12),
           _StackRow(
-            color: Color(0xFF22C55E),
+            color: AppColors.seerr,
             name: 'Seerr',
             sub: 'Requests and discovery across your stack',
           ),
@@ -653,7 +690,7 @@ class _ServiceCard extends StatelessWidget {
   final ValueChanged<bool> onToggle;
   final VoidCallback onVerify;
 
-  Color get _color => _serviceColors[serviceKey]!;
+  Color get _color => _serviceColor(serviceKey);
 
   @override
   Widget build(BuildContext context) {
@@ -948,7 +985,7 @@ class _ConfigField extends StatelessWidget {
             autocorrect: false,
             enableSuggestions: false,
             style: const TextStyle(
-              fontFamily: 'JetBrains Mono',
+              fontFamily: AppTheme.fontFamily,
               fontSize: 13,
               color: Color(0xFFDDE4FA),
               height: 1.2,
@@ -956,7 +993,7 @@ class _ConfigField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: isUrl ? 'http://your-server:port' : 'Enter API key',
               hintStyle: const TextStyle(
-                fontFamily: 'JetBrains Mono',
+                fontFamily: AppTheme.fontFamily,
                 fontSize: 13,
                 color: _muted2,
               ),
@@ -1147,7 +1184,7 @@ class _ReadyStep extends StatelessWidget {
                           const Divider(height: 24, color: Color(0x14FFFFFF)),
                         Row(
                           children: [
-                            _ServiceDot(color: _serviceColors[k]),
+                            _ServiceDot(color: _serviceColor(k)),
                             const SizedBox(width: 14),
                             Expanded(
                               child: Column(

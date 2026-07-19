@@ -52,8 +52,14 @@ class ServiceStatusGrid extends ConsumerWidget {
     final cols = (services.length / 2).ceil();
     final rows = services.length > 1 ? 2 : 1;
     final screenWidth = MediaQuery.sizeOf(context).width;
-    // Show first column fully + ~80% of the second column to hint scrolling.
-    final cardWidth = (screenWidth - AppSpacing.lg - AppSpacing.sm) / 1.8;
+    final availableWidth = screenWidth - AppSpacing.lg * 2;
+    final double cardWidth;
+    if (cols <= 2) {
+      cardWidth = (availableWidth - (cols - 1) * AppSpacing.sm) / cols;
+    } else {
+      // Peek ~80% of the next column to hint scrollable content.
+      cardWidth = (screenWidth - AppSpacing.lg - AppSpacing.sm) / 1.8;
+    }
     const cardHeight = 76.0;
     final gridHeight = cardHeight * rows + (rows > 1 ? AppSpacing.sm : 0);
 

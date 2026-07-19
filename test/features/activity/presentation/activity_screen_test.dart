@@ -62,7 +62,7 @@ void main() {
     expect(find.byType(WantedTab), findsOneWidget);
   });
 
-  testWidgets('renders global activity dashboard with seven tabs', (
+  testWidgets('renders global activity with sections, grouping and filter', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -114,17 +114,14 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    // Three clear top-level sections replace the old seven tabs.
     expect(find.text('Activity'), findsWidgets);
-    for (final label in [
-      'Queue',
-      'History',
-      'Wanted',
-      'Blocklist',
-      'Missing',
-      'Cutoff',
-    ]) {
+    for (final label in ['Now', 'History', 'Wanted']) {
       expect(find.text(label), findsOneWidget);
     }
+
+    // "Now" merges active downloads (queue) with current requests, grouped by
+    // service.
     expect(find.text('Furiosa'), findsOneWidget);
     expect(find.text('Shogun'), findsOneWidget);
     expect(
@@ -132,7 +129,8 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(find.text('Missing'));
+    // Switch to the Wanted section.
+    await tester.tap(find.text('Wanted'));
     await tester.pumpAndSettle();
 
     expect(find.text('Kingdom of the Planet of the Apes'), findsOneWidget);

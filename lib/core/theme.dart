@@ -31,6 +31,8 @@ class AppColors {
   static const Color sonarr = Color(0xFF8B5CF6);
   static const Color lidarr = Color(0xFFEC4899);
   static const Color qbittorrent = Color(0xFF2F67BA);
+  static const Color bazarr = Color(0xFF25A7DF);
+  static const Color truenas = Color(0xFF0095D5); // TrueNAS blue
 
   // === PRIMARY (Seerr Indigo) ===
   static const Color primary = seerr;
@@ -39,10 +41,14 @@ class AppColors {
   static const Color primaryLighter = Color(0xFFA5B4FC); // indigo-300
 
   // === DARK THEME SURFACES ===
-  static const Color surfaceDark = Color(0xFF0F1117);
-  static const Color surfaceContainerDark = Color(0xFF1C2130);
-  static const Color surfaceContainerHighDark = Color(0xFF252D3D);
-  static const Color surfaceContainerHighestDark = Color(0xFF2D3748);
+  // Deep, layered near-black ladder so cards separate cleanly once elevation
+  // and shadows are applied. Each step is a genuinely distinct tone.
+  static const Color surfaceDark = Color(0xFF0A0B11); // scaffold base
+  static const Color surfaceContainerLowestDark = Color(0xFF08090F);
+  static const Color surfaceContainerLowDark = Color(0xFF11131B);
+  static const Color surfaceContainerDark = Color(0xFF161923);
+  static const Color surfaceContainerHighDark = Color(0xFF1E2430);
+  static const Color surfaceContainerHighestDark = Color(0xFF29303E);
 
   // === LIGHT THEME SURFACES ===
   static const Color surfaceLight = Color(0xFFF3F4F6);
@@ -52,13 +58,15 @@ class AppColors {
 
   // === TEXT COLORS - DARK ===
   static const Color onSurfaceDark = Color(0xFFF0F2F8);
-  static const Color onSurfaceVariantDark = Color(0xFF9CA3AF);
-  static const Color onSurfaceDimDark = Color(0xFF9CA3AF);
+  static const Color onSurfaceVariantDark = Color(
+    0xFFB4BCCB,
+  ); // brighter secondary
+  static const Color onSurfaceDimDark = Color(0xFF7C8598); // dimmer tertiary
 
   // === TEXT COLORS - LIGHT ===
   static const Color onSurfaceLight = Color(0xFF111827); // gray-900
   static const Color onSurfaceVariantLight = Color(0xFF6B7280); // gray-500
-  static const Color onSurfaceDimLight = Color(0xFF6B7280); // gray-500
+  static const Color onSurfaceDimLight = Color(0xFF9AA1AE); // gray-400
 
   // === OUTLINE / BORDER ===
   static const Color outlineDark = Color(0xFF2D3748);
@@ -82,18 +90,42 @@ class SeekarrThemeColors extends ThemeExtension<SeekarrThemeColors> {
   final Color statusBadgeBackground;
   final Color statusBadgeForeground;
 
+  /// Dimmer tertiary text tone for editorial captions / metadata, sitting a
+  /// step below [ColorScheme.onSurfaceVariant].
+  final Color dimText;
+
+  /// Translucent surface used by backdrop-blurred (glass) elements.
+  final Color glassSurface;
+
+  /// Brand gradient endpoints (indigo → violet) for accents and marks.
+  final Color brandGradientStart;
+  final Color brandGradientEnd;
+
   const SeekarrThemeColors({
     required this.statusBadgeBackground,
     required this.statusBadgeForeground,
+    required this.dimText,
+    required this.glassSurface,
+    required this.brandGradientStart,
+    required this.brandGradientEnd,
   });
 
   factory SeekarrThemeColors.defaults({
     required Brightness brightness,
     required ColorScheme colorScheme,
   }) {
+    final isDark = brightness == Brightness.dark;
     return SeekarrThemeColors(
       statusBadgeBackground: colorScheme.surface.withValues(alpha: 0.8),
       statusBadgeForeground: colorScheme.onSurface,
+      dimText: isDark
+          ? AppColors.onSurfaceDimDark
+          : AppColors.onSurfaceDimLight,
+      glassSurface: colorScheme.surfaceContainer.withValues(
+        alpha: isDark ? 0.72 : 0.55,
+      ),
+      brandGradientStart: AppColors.seerr,
+      brandGradientEnd: AppColors.sonarr,
     );
   }
 
@@ -101,12 +133,20 @@ class SeekarrThemeColors extends ThemeExtension<SeekarrThemeColors> {
   SeekarrThemeColors copyWith({
     Color? statusBadgeBackground,
     Color? statusBadgeForeground,
+    Color? dimText,
+    Color? glassSurface,
+    Color? brandGradientStart,
+    Color? brandGradientEnd,
   }) {
     return SeekarrThemeColors(
       statusBadgeBackground:
           statusBadgeBackground ?? this.statusBadgeBackground,
       statusBadgeForeground:
           statusBadgeForeground ?? this.statusBadgeForeground,
+      dimText: dimText ?? this.dimText,
+      glassSurface: glassSurface ?? this.glassSurface,
+      brandGradientStart: brandGradientStart ?? this.brandGradientStart,
+      brandGradientEnd: brandGradientEnd ?? this.brandGradientEnd,
     );
   }
 
@@ -126,6 +166,15 @@ class SeekarrThemeColors extends ThemeExtension<SeekarrThemeColors> {
       statusBadgeForeground:
           Color.lerp(statusBadgeForeground, other.statusBadgeForeground, t) ??
           statusBadgeForeground,
+      dimText: Color.lerp(dimText, other.dimText, t) ?? dimText,
+      glassSurface:
+          Color.lerp(glassSurface, other.glassSurface, t) ?? glassSurface,
+      brandGradientStart:
+          Color.lerp(brandGradientStart, other.brandGradientStart, t) ??
+          brandGradientStart,
+      brandGradientEnd:
+          Color.lerp(brandGradientEnd, other.brandGradientEnd, t) ??
+          brandGradientEnd,
     );
   }
 }
@@ -136,6 +185,16 @@ class AppTheme {
 
   /// Bundled app font family declared in pubspec.yaml.
   static const String fontFamily = 'Inter';
+
+  /// Standardised "eyebrow" / overline style: small, uppercase-tracked label
+  /// used above section titles and on onboarding steps. Pair with
+  /// `Text(label.toUpperCase(), style: AppTheme.eyebrow(...))`.
+  static TextStyle eyebrow(Color color) => _inter(
+    color: color,
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1.4,
+  );
 
   // === DARK THEME (Primary) ===
   static ThemeData darkTheme(ColorScheme? dynamicColorScheme) {
@@ -378,8 +437,8 @@ class AppTheme {
     // Surface
     surface: AppColors.surfaceDark,
     onSurface: AppColors.onSurfaceDark,
-    surfaceContainerLowest: AppColors.surfaceDark,
-    surfaceContainerLow: AppColors.surfaceDark,
+    surfaceContainerLowest: AppColors.surfaceContainerLowestDark,
+    surfaceContainerLow: AppColors.surfaceContainerLowDark,
     surfaceContainer: AppColors.surfaceContainerDark,
     surfaceContainerHigh: AppColors.surfaceContainerHighDark,
     surfaceContainerHighest: AppColors.surfaceContainerHighestDark,
@@ -443,20 +502,44 @@ class AppTheme {
     return base
         .apply(fontFamily: fontFamily)
         .copyWith(
-          // Display
+          // Display — editorial: heavier weight, tight negative tracking
           displayLarge: _inter(
             fontSize: 57,
-            fontWeight: FontWeight.w400,
-            letterSpacing: -0.25,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1.0,
           ),
-          displayMedium: _inter(fontSize: 45, fontWeight: FontWeight.w400),
-          displaySmall: _inter(fontSize: 36, fontWeight: FontWeight.w400),
+          displayMedium: _inter(
+            fontSize: 45,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.75,
+          ),
+          displaySmall: _inter(
+            fontSize: 36,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
           // Headline
-          headlineLarge: _inter(fontSize: 32, fontWeight: FontWeight.w600),
-          headlineMedium: _inter(fontSize: 28, fontWeight: FontWeight.w600),
-          headlineSmall: _inter(fontSize: 24, fontWeight: FontWeight.w600),
+          headlineLarge: _inter(
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+          headlineMedium: _inter(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.4,
+          ),
+          headlineSmall: _inter(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+          ),
           // Title
-          titleLarge: _inter(fontSize: 22, fontWeight: FontWeight.w600),
+          titleLarge: _inter(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
+          ),
           titleMedium: _inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,

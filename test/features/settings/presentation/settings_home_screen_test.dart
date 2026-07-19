@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:seekarr/core/widgets/app_card.dart';
+import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:seekarr/features/settings/data/settings_service.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/settings/presentation/settings_home_screen.dart';
+
+import '../../../test_helpers/fake_secure_settings_store.dart';
 
 void main() {
   group('SettingsHomeScreen', () {
@@ -101,13 +106,147 @@ void main() {
       await _pumpSettingsHome(tester);
 
       expect(find.byType(SettingsCard), findsAtLeastNWidgets(6));
-      expect(find.byType(SettingsGroupCard), findsNWidgets(2));
+      expect(find.byType(SettingsGroupCard), findsNWidgets(3));
 
       await tester.scrollUntilVisible(find.text('Send Feedback'), 300);
       await tester.pumpAndSettle();
 
       expect(find.text('GitHub'), findsOneWidget);
       expect(find.text('Send Feedback'), findsOneWidget);
+    });
+
+    testWidgets('reset tile shows Danger Zone section', (tester) async {
+      await _pumpSettingsHome(tester);
+
+      await tester.scrollUntilVisible(find.text('DANGER ZONE'), 300);
+      await tester.pumpAndSettle();
+
+      expect(find.text('DANGER ZONE'), findsOneWidget);
+      expect(find.text('Reset app data'), findsOneWidget);
+    });
+
+    testWidgets('confirming reset clears data and restarts onboarding', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final secureStore = FakeSecureSettingsStore();
+      final service = SettingsService(prefs, secureStore);
+      await service.saveSettings(
+        const SettingsModel(
+          radarrUrl: 'https://radarr.local:7878',
+          radarrApiKey: 'radarr-key',
+          region: 'IT',
+          themeMode: AppThemeMode.dark,
+        ),
+      );
+      await service.saveOnboardingComplete();
+      final initialSettings = await service.loadSettings();
+
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWith((ref) => prefs),
+          secureSettingsStoreProvider.overrideWith((ref) => secureStore),
+          initialSettingsProvider.overrideWith((ref) => initialSettings),
+          initialOnboardingCompletedProvider.overrideWith((ref) => true),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(settingsProvider).radarrUrl,
+        'https://radarr.local:7878',
+      );
+      expect(container.read(onboardingCompletedProvider), isTrue);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: GoRouter(
+              initialLocation: '/settings',
+              routes: [
+                GoRoute(
+                  path: '/settings',
+                  builder: (_, __) => const SettingsHomeScreen(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(find.text('Reset app data'), 300);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reset app data'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reset all data?'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Reset'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(settingsProvider).radarrUrl, isEmpty);
+      expect(container.read(settingsProvider).radarrApiKey, isEmpty);
+      expect(container.read(settingsProvider).themeMode, AppThemeMode.system);
+      expect(container.read(onboardingCompletedProvider), isFalse);
+      expect(await secureStore.read(key: 'secure_radarr_api_key'), isNull);
+    });
+
+    testWidgets('canceling reset keeps data intact', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final secureStore = FakeSecureSettingsStore();
+      final service = SettingsService(prefs, secureStore);
+      await service.saveSettings(
+        const SettingsModel(radarrUrl: 'https://radarr.local:7878'),
+      );
+      await service.saveOnboardingComplete();
+      final initialSettings = await service.loadSettings();
+
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWith((ref) => prefs),
+          secureSettingsStoreProvider.overrideWith((ref) => secureStore),
+          initialSettingsProvider.overrideWith((ref) => initialSettings),
+          initialOnboardingCompletedProvider.overrideWith((ref) => true),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: GoRouter(
+              initialLocation: '/settings',
+              routes: [
+                GoRoute(
+                  path: '/settings',
+                  builder: (_, __) => const SettingsHomeScreen(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(find.text('Reset app data'), 300);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reset app data'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reset all data?'), findsNothing);
+      expect(
+        container.read(settingsProvider).radarrUrl,
+        'https://radarr.local:7878',
+      );
+      expect(container.read(onboardingCompletedProvider), isTrue);
     });
   });
 }

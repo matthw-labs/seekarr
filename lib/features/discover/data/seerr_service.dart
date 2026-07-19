@@ -1,6 +1,7 @@
 import 'dart:isolate';
 import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:seekarr/features/discover/domain/models/seerr_genre.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/core/models/media_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -94,10 +95,61 @@ class SeerrService {
     await _client.delete('/api/v1/request/$requestId');
   }
 
-  Future<List<MediaPreview>> getDiscoverMovies({int page = 1}) async {
+  Future<List<MediaPreview>> getDiscoverMovies({
+    int page = 1,
+    int? genre,
+    String? sortBy,
+  }) async {
     try {
       final response = await _client.get(
         '/api/v1/discover/movies',
+        queryParameters: {
+          'page': page,
+          if (genre != null) 'genre': genre,
+          if (sortBy != null) 'sortBy': sortBy,
+        },
+      );
+      final results = response.data['results'] as List<dynamic>;
+      return await Isolate.run(
+        () => results
+            .map((e) => MediaPreview.fromJson(e, forcedMediaType: 'movie'))
+            .toList(),
+      );
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<MediaPreview>> getDiscoverTV({
+    int page = 1,
+    int? genre,
+    String? sortBy,
+  }) async {
+    try {
+      final response = await _client.get(
+        '/api/v1/discover/tv',
+        queryParameters: {
+          'page': page,
+          if (genre != null) 'genre': genre,
+          if (sortBy != null) 'sortBy': sortBy,
+        },
+      );
+      final results = response.data['results'] as List<dynamic>;
+      return await Isolate.run(
+        () => results
+            .map((e) => MediaPreview.fromJson(e, forcedMediaType: 'tv'))
+            .toList(),
+      );
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Upcoming movies (Overseerr/Jellyseerr `/discover/movies/upcoming`).
+  Future<List<MediaPreview>> getDiscoverUpcomingMovies({int page = 1}) async {
+    try {
+      final response = await _client.get(
+        '/api/v1/discover/movies/upcoming',
         queryParameters: {'page': page},
       );
       final results = response.data['results'] as List<dynamic>;
@@ -111,10 +163,11 @@ class SeerrService {
     }
   }
 
-  Future<List<MediaPreview>> getDiscoverTV({int page = 1}) async {
+  /// Upcoming TV (Overseerr/Jellyseerr `/discover/tv/upcoming`).
+  Future<List<MediaPreview>> getDiscoverUpcomingTv({int page = 1}) async {
     try {
       final response = await _client.get(
-        '/api/v1/discover/tv',
+        '/api/v1/discover/tv/upcoming',
         queryParameters: {'page': page},
       );
       final results = response.data['results'] as List<dynamic>;
@@ -123,6 +176,28 @@ class SeerrService {
             .map((e) => MediaPreview.fromJson(e, forcedMediaType: 'tv'))
             .toList(),
       );
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Available movie genres (used to build per-genre discover rows).
+  Future<List<SeerrGenre>> getMovieGenres() => _getGenres('movie');
+
+  /// Available TV genres.
+  Future<List<SeerrGenre>> getTvGenres() => _getGenres('tv');
+
+  Future<List<SeerrGenre>> _getGenres(String mediaType) async {
+    try {
+      final response = await _client.get(
+        '/api/v1/discover/genreslider/$mediaType',
+      );
+      final results = (response.data as List<dynamic>);
+      return results
+          .whereType<Map<String, dynamic>>()
+          .map(SeerrGenre.fromJson)
+          .where((g) => g.id > 0 && g.name.isNotEmpty)
+          .toList();
     } catch (e) {
       return [];
     }
@@ -159,6 +234,42 @@ class SeerrService {
       return response.data;
     } catch (_) {
       return {};
+    }
+  }
+
+  /// TMDB person details (bio, department, birthday) proxied by Overseerr /
+  /// Jellyseerr. Returns `{}` on any error so the UI can degrade gracefully.
+  Future<Map<String, dynamic>> getPerson(int personId) async {
+    try {
+      final response = await _client.get('/api/v1/person/$personId');
+      return response.data as Map<String, dynamic>;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// A person's combined movie + TV cast filmography, de-duped by id and sorted
+  /// by rating so the strongest credits lead. Returns `[]` on error.
+  Future<List<MediaPreview>> getPersonCombinedCredits(int personId) async {
+    try {
+      final response = await _client.get(
+        '/api/v1/person/$personId/combinedCredits',
+      );
+      final cast = (response.data['cast'] as List<dynamic>? ?? const []);
+      final seen = <int>{};
+      final items = <MediaPreview>[];
+      for (final entry in cast) {
+        if (entry is! Map<String, dynamic>) continue;
+        final mediaType = entry['mediaType'] ?? entry['media_type'];
+        if (mediaType != 'movie' && mediaType != 'tv') continue;
+        final id = (entry['id'] as num?)?.toInt();
+        if (id == null || !seen.add(id)) continue;
+        items.add(MediaPreview.fromJson(entry));
+      }
+      items.sort((a, b) => (b.voteAverage ?? 0).compareTo(a.voteAverage ?? 0));
+      return items;
+    } catch (_) {
+      return const [];
     }
   }
 

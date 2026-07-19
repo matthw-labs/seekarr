@@ -283,6 +283,63 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
 
   Future<void> loadSelectedFolderItems() async {
     await _refreshSelectedFolderItems(clearItems: true);
+    await _applyTargetPreselection();
+  }
+
+  /// When the flow was launched from a specific movie/series/artist
+  /// ([ManualImportFlowState.targetId]), pre-assign that title as the match for
+  /// files the server could not identify — so the user doesn't have to re-match
+  /// what they already came from. Movies resolve fully; for series/artists this
+  /// only fills in files whose season+episode / album+track the server already
+  /// parsed. Anything ambiguous is left untouched for the Fix sheet.
+  ///
+  /// Crucially this reuses the exact same guarded path as the manual bulk-fix
+  /// ([applyBulkFixAssignments] + [libraryGuardError]) and only applies an
+  /// assignment that is already valid, so it can never produce a broken import
+  /// payload; the pre-filled matches remain fully editable before confirming.
+  Future<void> _applyTargetPreselection() async {
+    final service = state.service;
+    final targetId = state.targetId;
+    if (service == null || targetId == null || targetId <= 0) return;
+
+    final unmatched = state.items
+        .where((item) => item.isSelectable && !item.hasMatchFor(service))
+        .toList(growable: false);
+    if (unmatched.isEmpty) return;
+
+    ManualImportLookupResult? target;
+    try {
+      final matches = await getLibraryMatches();
+      for (final match in matches) {
+        if (match.id == targetId) {
+          target = match;
+          break;
+        }
+      }
+    } catch (_) {
+      return; // Best-effort: fall back to fully manual matching.
+    }
+    if (target == null) return;
+
+    final assignments = <ManualImportItem, ManualImportFixAssignment>{};
+    for (final item in unmatched) {
+      final parsed = _assignmentForItem(service, item);
+      final candidate = ManualImportFixAssignment(
+        match: target,
+        episode: parsed.episode,
+        episodes: parsed.episodes,
+        album: parsed.album,
+        track: parsed.track,
+        tracks: parsed.tracks,
+      );
+      if (libraryGuardError(service, candidate) == null) {
+        assignments[item] = candidate;
+      }
+    }
+
+    if (assignments.isNotEmpty) {
+      await applyBulkFixAssignments(assignments);
+    }
   }
 
   Future<List<ManualImportItem>> _refreshSelectedFolderItems({

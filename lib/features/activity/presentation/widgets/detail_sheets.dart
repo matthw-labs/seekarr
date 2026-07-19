@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/utils/arr_activity_display.dart';
-import 'package:seekarr/core/utils/sheet_utils.dart';
+import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/features/activity/presentation/activity_screen.dart';
 import 'package:seekarr/features/activity/presentation/widgets/activity_formatters.dart';
@@ -84,109 +83,31 @@ class DetailSheets {
     required String title,
     required List<_DetailSection> sections,
     String? subtitle,
-    Widget? footer,
   }) {
-    return SheetUtils.showSeekarrModalSheet<void>(
+    return AppBottomSheet.showScrollable<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        final theme = Theme.of(sheetContext);
-        final colorScheme = theme.colorScheme;
-
-        return DraggableScrollableSheet(
-          initialChildSize: 0.5,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppRadius.lg),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Center(
-                    child: Container(
-                      margin: const EdgeInsets.only(top: AppSpacing.md),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: colorScheme.onSurfaceVariant.withValues(
-                          alpha: 0.4,
-                        ),
-                        borderRadius: AppRadius.borderRadiusFull,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.lg,
-                      AppSpacing.sm,
-                      AppSpacing.lg,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (subtitle != null && subtitle.isNotEmpty) ...[
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  subtitle,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: ListView.separated(
-                      controller: scrollController,
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
-                        AppSpacing.lg,
-                        AppSpacing.lg,
-                        AppSpacing.xxxl,
-                      ),
-                      itemBuilder: (context, index) => AppCard.outlined(
-                        padding: EdgeInsets.zero,
-                        child: _SectionContent(section: sections[index]),
-                      ),
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: AppSpacing.lg),
-                      itemCount: sections.length,
-                    ),
-                  ),
-                  if (footer != null) footer,
-                ],
-              ),
-            );
-          },
+      title: title,
+      subtitle: subtitle,
+      showClose: true,
+      initialSize: 0.5,
+      minSize: 0.3,
+      maxSize: 0.9,
+      builder: (context, scrollController) {
+        return ListView.separated(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.xxxl,
+          ),
+          itemBuilder: (context, index) => AppCard.outlined(
+            padding: EdgeInsets.zero,
+            child: _SectionContent(section: sections[index]),
+          ),
+          separatorBuilder: (context, index) =>
+              const SizedBox(height: AppSpacing.lg),
+          itemCount: sections.length,
         );
       },
     );

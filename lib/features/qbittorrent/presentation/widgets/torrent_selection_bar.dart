@@ -116,8 +116,10 @@ Future<bool> confirmDeleteTorrents(
   final ok = await runTorrentAction(
     context,
     ref,
-    action: (service) =>
-        service.deleteTorrents(hashes.toList(), deleteFiles: result.deleteFiles),
+    action: (service) => service.deleteTorrents(
+      hashes.toList(),
+      deleteFiles: result.deleteFiles,
+    ),
     successMessage: result.deleteFiles
         ? 'Deleted $count torrent$plural and files'
         : 'Deleted $count torrent$plural',

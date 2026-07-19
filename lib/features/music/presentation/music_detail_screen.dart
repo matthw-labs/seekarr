@@ -73,7 +73,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
 
     return MediaDetailView(
-      heroTag: widget.heroTag,
+      accent: ServiceKey.lidarr.accent,
       posterUrl: viewModel.posterUrl,
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
@@ -145,6 +145,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     return [
       LibraryDetailActions(
         collapseFactor: 0,
+        accent: ServiceKey.lidarr.accent,
         isInLibrary: viewModel.isInLibrary,
         isMonitored: viewModel.isMonitored,
         addLabel: 'Add Artist',
@@ -196,7 +197,10 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const MediaDetailSectionHeader(title: 'Details'),
+              MediaDetailSectionHeader(
+                title: 'Details',
+                accent: ServiceKey.lidarr.accent,
+              ),
               SizedBox(
                 width: double.infinity,
                 child: MediaInfoCard(groups: infoGroups),
@@ -206,26 +210,13 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         ),
         const SizedBox(height: AppSpacing.lg),
       ],
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: MediaDetailUnavailableSection(
-          title: 'Where to Watch',
-          message: 'Watch provider info is not available from Lidarr details.',
-        ),
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: MediaDetailUnavailableSection(
-          title: 'Cast',
-          message: 'Cast info is not available from Lidarr details.',
-        ),
-      ),
-      const SizedBox(height: AppSpacing.lg),
       if (viewModel.genres.isNotEmpty) ...[
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: MediaDetailTagsSection(tags: viewModel.genres),
+          child: MediaDetailTagsSection(
+            tags: viewModel.genres,
+            accent: ServiceKey.lidarr.accent,
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
       ],
@@ -287,7 +278,10 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const MediaDetailSectionHeader(title: 'Albums'),
+            MediaDetailSectionHeader(
+              title: 'Albums',
+              accent: ServiceKey.lidarr.accent,
+            ),
             albumsAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.all(AppSpacing.lg),

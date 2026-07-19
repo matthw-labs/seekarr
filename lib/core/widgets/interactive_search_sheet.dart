@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/utils/grab_error_utils.dart';
 import 'package:seekarr/core/utils/release_utils.dart';
-import 'package:seekarr/core/utils/sheet_utils.dart';
+import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
+import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/core/widgets/release_list_widgets.dart';
 
 // Re-export ReleaseSortType for backwards compatibility
@@ -14,12 +15,14 @@ class InteractiveSearchSheet extends StatefulWidget {
   final List<dynamic> releases;
   final String title;
   final Future<void> Function(String guid, int indexerId) onGrabRelease;
+  final ScrollController scrollController;
 
   const InteractiveSearchSheet({
     super.key,
     required this.releases,
     required this.title,
     required this.onGrabRelease,
+    required this.scrollController,
   });
 
   /// Shows the interactive search sheet as a modal bottom sheet.
@@ -29,12 +32,19 @@ class InteractiveSearchSheet extends StatefulWidget {
     required String title,
     required Future<void> Function(String guid, int indexerId) onGrabRelease,
   }) {
-    return SheetUtils.showSeekarrModalSheet(
+    return AppBottomSheet.showScrollable(
       context: context,
-      builder: (context) => InteractiveSearchSheet(
+      title: 'Releases',
+      subtitle: title,
+      icon: Icons.search_rounded,
+      initialSize: 0.7,
+      minSize: 0.5,
+      maxSize: 0.95,
+      builder: (context, scrollController) => InteractiveSearchSheet(
         releases: releases,
         title: title,
         onGrabRelease: onGrabRelease,
+        scrollController: scrollController,
       ),
     );
   }
@@ -47,12 +57,19 @@ class InteractiveSearchSheet extends StatefulWidget {
     required Future<List<dynamic>> Function(CancelToken token) fetchReleases,
     required Future<void> Function(String guid, int indexerId) onGrabRelease,
   }) {
-    return SheetUtils.showSeekarrModalSheet(
+    return AppBottomSheet.showScrollable(
       context: context,
-      builder: (context) => _AsyncInteractiveSearchSheet(
+      title: 'Releases',
+      subtitle: title,
+      icon: Icons.search_rounded,
+      initialSize: 0.7,
+      minSize: 0.5,
+      maxSize: 0.95,
+      builder: (context, scrollController) => _AsyncInteractiveSearchSheet(
         title: title,
         fetchReleases: fetchReleases,
         onGrabRelease: onGrabRelease,
+        scrollController: scrollController,
       ),
     );
   }
@@ -88,104 +105,74 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
     final colorScheme = Theme.of(context).colorScheme;
     final filteredReleases = _filteredAndSortedReleases;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: AppSpacing.sm),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            // Header
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: colorScheme.outlineVariant),
+    return Column(
+      children: [
+        // Result count
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Row(
+            children: [
+              const Spacer(),
+              Text(
+                '${filteredReleases.length}/${widget.releases.length}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: Theme.of(context).textTheme.titleLarge,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Text(
-                    '${filteredReleases.length}/${widget.releases.length}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
+          ),
+        ),
 
-            // Sort & Filter controls
-            _buildSortFilterBar(context, colorScheme),
+        // Sort & Filter controls
+        _buildSortFilterBar(context, colorScheme),
 
-            // Releases list
-            Expanded(
-              child: filteredReleases.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.search_off_rounded,
-                            size: 48,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            _hideRejected || _selectedIndexer != null
-                                ? 'No releases match filters'
-                                : 'No releases found',
-                            style: Theme.of(context).textTheme.bodyLarge
-                                ?.copyWith(color: colorScheme.onSurfaceVariant),
-                          ),
-                          if (_hideRejected || _selectedIndexer != null) ...[
-                            const SizedBox(height: AppSpacing.sm),
-                            TextButton(
-                              onPressed: () => setState(() {
-                                _hideRejected = false;
-                                _selectedIndexer = null;
-                              }),
-                              child: const Text('Clear Filters'),
-                            ),
-                          ],
-                        ],
+        // Releases list
+        Expanded(
+          child: filteredReleases.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.search_off_rounded,
+                        size: 48,
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                    )
-                  : ListView.builder(
-                      controller: scrollController,
-                      itemCount: filteredReleases.length,
-                      itemBuilder: (context, index) {
-                        final release = filteredReleases[index];
-                        return ReleaseListItem(
-                          release: release,
-                          onGrab: () => _handleGrab(context, release),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        );
-      },
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        _hideRejected || _selectedIndexer != null
+                            ? 'No releases match filters'
+                            : 'No releases found',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (_hideRejected || _selectedIndexer != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _hideRejected = false;
+                            _selectedIndexer = null;
+                          }),
+                          child: const Text('Clear Filters'),
+                        ),
+                      ],
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  controller: widget.scrollController,
+                  itemCount: filteredReleases.length,
+                  itemBuilder: (context, index) {
+                    final release = filteredReleases[index];
+                    return ReleaseListItem(
+                      release: release,
+                      onGrab: () => _handleGrab(context, release),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -349,25 +336,15 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
     }
 
     // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
+    final result = await showAppConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Grab Release'),
-        content: Text('Download "$releaseTitle"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Download'),
-          ),
-        ],
-      ),
+      title: 'Grab Release',
+      message: 'Download "$releaseTitle"?',
+      confirmLabel: 'Download',
+      cancelLabel: 'Cancel',
     );
 
-    if (confirmed != true || !context.mounted) return;
+    if (!result.confirmed || !context.mounted) return;
 
     try {
       await widget.onGrabRelease(guid, indexerId);
@@ -403,11 +380,13 @@ class _AsyncInteractiveSearchSheet extends StatefulWidget {
   final String title;
   final Future<List<dynamic>> Function(CancelToken token) fetchReleases;
   final Future<void> Function(String guid, int indexerId) onGrabRelease;
+  final ScrollController scrollController;
 
   const _AsyncInteractiveSearchSheet({
     required this.title,
     required this.fetchReleases,
     required this.onGrabRelease,
+    required this.scrollController,
   });
 
   @override
@@ -468,45 +447,20 @@ class _AsyncInteractiveSearchSheetState
     }
 
     if (_releases == null) {
-      return DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) {
-          return Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: AppSpacing.sm),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Searching for releases...',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'Searching for releases...',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       );
     }
 
@@ -514,6 +468,7 @@ class _AsyncInteractiveSearchSheetState
       releases: _releases!,
       title: widget.title,
       onGrabRelease: widget.onGrabRelease,
+      scrollController: widget.scrollController,
     );
   }
 }

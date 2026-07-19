@@ -44,5 +44,9 @@ void main() {
         '/services/seerr/movie/1',
       );
     });
+
+    test('exposes the Bazarr service root', () {
+      expect(ServiceRoutes.bazarr, '/services/bazarr');
+    });
   });
 }

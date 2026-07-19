@@ -6,12 +6,23 @@ library;
 // Animation
 export 'animated_widgets.dart';
 export 'shimmer_placeholder.dart';
+export 'app_skeleton.dart';
+export 'staggered_entrance.dart';
+export 'pressable_scale.dart';
 
 // Cards
 export 'app_card.dart';
 export 'content_card.dart';
+export 'service_kpi_peek.dart';
+
+// States
+export 'app_empty_state.dart';
+export 'app_error_state.dart';
 
 // Layout
+export 'ambient_background.dart';
+export 'ambient_scaffold.dart';
+export 'glass_app_bar.dart';
 export 'section_header.dart';
 export 'media_grid.dart';
 export 'media_browse_scaffold.dart';
@@ -42,6 +53,8 @@ export 'async_value_widget.dart';
 export 'not_configured_placeholder.dart';
 
 // Dialogs & Sheets
+export 'app_bottom_sheet.dart';
+export 'app_dialog.dart';
 export 'delete_media_dialog.dart';
 export 'interactive_search_sheet.dart';
 export 'media_profile_selector.dart';

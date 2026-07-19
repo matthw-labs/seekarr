@@ -15,6 +15,7 @@ class SonarrSeries {
   final int year;
   final List<dynamic> images;
   final int tvdbId;
+  final int tmdbId;
   final int runtime;
   final String? network;
   final List<String> genres;
@@ -40,6 +41,7 @@ class SonarrSeries {
     required this.year,
     required this.images,
     required this.tvdbId,
+    this.tmdbId = 0,
     required this.runtime,
     this.network,
     required this.genres,
@@ -69,6 +71,7 @@ class SonarrSeries {
       year: json['year'] ?? 0,
       images: json['images'] ?? [],
       tvdbId: json['tvdbId'] ?? 0,
+      tmdbId: json['tmdbId'] ?? 0,
       runtime: json['runtime'] ?? 0,
       network: json['network'],
       genres: parseGenreList(json['genres']),

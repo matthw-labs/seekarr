@@ -51,4 +51,9 @@ class SettingsNotifier extends Notifier<SettingsModel> {
     await _service.saveSettings(newSettings);
     state = newSettings;
   }
+
+  Future<void> resetSettings() async {
+    await _service.clearAll();
+    state = const SettingsModel();
+  }
 }

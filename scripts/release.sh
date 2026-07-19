@@ -7,10 +7,10 @@ APP_NAME="Seekarr"
 APP_SLUG="seekarr"
 
 case "$TARGET" in
-  android|macos|all)
+  android|ios|macos|all)
     ;;
   *)
-    printf 'Usage: scripts/release.sh [android|macos|all]\n' >&2
+    printf 'Usage: scripts/release.sh [android|ios|macos|all]\n' >&2
     exit 1
     ;;
 esac
@@ -29,6 +29,9 @@ mkdir -p "$DIST_DIR"
 printf '==> Running flutter analyze...\n'
 flutter analyze --fatal-infos
 
+printf '==> Checking dart format...\n'
+dart format --output=none --set-exit-if-changed .
+
 printf '==> Running flutter test...\n'
 flutter test
 
@@ -36,6 +39,32 @@ if [[ "$TARGET" == "android" || "$TARGET" == "all" ]]; then
   printf '==> Building Android APK...\n'
   flutter build apk --release
   cp build/app/outputs/flutter-apk/app-release.apk "$DIST_DIR/${APP_SLUG}-${VERSION}.apk"
+fi
+
+if [[ "$TARGET" == "ios" || "$TARGET" == "all" ]]; then
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    printf 'iOS releases can only be built on macOS\n' >&2
+    exit 1
+  fi
+
+  printf '==> Building iOS IPA (unsigned, for sideloading)...\n'
+  flutter build ios --release --no-codesign
+
+  APP_PATH="build/ios/iphoneos/Runner.app"
+  IPA_PATH="$DIST_DIR/${APP_SLUG}-${VERSION}.ipa"
+
+  if [[ ! -d "$APP_PATH" ]]; then
+    printf 'Missing iOS app bundle at %s\n' "$APP_PATH" >&2
+    exit 1
+  fi
+
+  IPA_WORK_DIR=$(mktemp -d)
+  mkdir -p "$IPA_WORK_DIR/Payload"
+  cp -r "$APP_PATH" "$IPA_WORK_DIR/Payload/"
+  (cd "$IPA_WORK_DIR" && zip -qr - Payload/) > "$IPA_PATH"
+  rm -rf "$IPA_WORK_DIR"
+
+  printf '==> IPA pronto per il sideload: %s\n' "$IPA_PATH"
 fi
 
 if [[ "$TARGET" == "macos" || "$TARGET" == "all" ]]; then

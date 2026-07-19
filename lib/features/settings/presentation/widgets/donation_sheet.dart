@@ -138,19 +138,9 @@ class _DonationSheetState extends State<DonationSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.xl,
-        ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _thanked ? _buildThankYou(context) : _buildMain(context),
-        ),
-      ),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: _thanked ? _buildThankYou(context) : _buildMain(context),
     );
   }
 
@@ -163,20 +153,6 @@ class _DonationSheetState extends State<DonationSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Header ──────────────────────────────────────────────────────────
-        Row(
-          children: [
-            Icon(Icons.favorite_rounded, color: AppColors.lidarr, size: 24),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              'Support Development',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xs),
         Text(
           'Seekarr is free. If it saves you time, a tip helps keep it updated.',
           style: textTheme.bodyMedium?.copyWith(

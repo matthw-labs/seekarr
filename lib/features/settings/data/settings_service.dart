@@ -23,6 +23,8 @@ abstract interface class SecureSettingsStore {
   Future<void> write({required String key, required String value});
 
   Future<void> delete({required String key});
+
+  Future<void> deleteAll();
 }
 
 class FlutterSecureSettingsStore implements SecureSettingsStore {
@@ -43,6 +45,11 @@ class FlutterSecureSettingsStore implements SecureSettingsStore {
   @override
   Future<void> delete({required String key}) {
     return _storage.delete(key: key);
+  }
+
+  @override
+  Future<void> deleteAll() {
+    return _storage.deleteAll();
   }
 }
 
@@ -80,6 +87,16 @@ class SettingsService {
       legacyApiKey: '',
       secureApiKey: 'secure_qbittorrent_password',
       username: 'qbittorrent_username',
+    ),
+    ServiceKey.bazarr: _ServiceStorageKeys(
+      url: 'bazarr_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_bazarr_api_key',
+    ),
+    ServiceKey.truenas: _ServiceStorageKeys(
+      url: 'truenas_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_truenas_api_key',
     ),
   };
 
@@ -143,6 +160,33 @@ class SettingsService {
     await _prefs.setBool(_kOnboardingComplete, true);
   }
 
+  /// Wipes all Seekarr-persisted data: SharedPreferences keys (service URLs,
+  /// credentials, region, theme, onboarding flag, legacy keys) and every
+  /// secure-storage entry. Clears secure storage first so a Keychain failure
+  /// leaves prefs intact and the caller can surface an error.
+  Future<void> clearAll() async {
+    await _secureStore.deleteAll();
+
+    for (final storageKeys in _serviceStorageKeys.values) {
+      await _prefs.remove(storageKeys.url);
+      await _prefs.remove(storageKeys.legacyApiKey);
+      if (storageKeys.legacyUrl != null) {
+        await _prefs.remove(storageKeys.legacyUrl!);
+      }
+      if (storageKeys.legacyPlaintextApiKey != null) {
+        await _prefs.remove(storageKeys.legacyPlaintextApiKey!);
+      }
+      if (storageKeys.username != null) {
+        await _prefs.remove(storageKeys.username!);
+      }
+    }
+
+    await _prefs.remove(_kRegion);
+    await _prefs.remove(_kThemeMode);
+    await _prefs.remove(_kOnboardingComplete);
+    await _prefs.remove('hidden_tabs');
+  }
+
   Future<SettingsModel> loadSettings() async {
     final serviceSettings = await _loadServiceSettings();
     final qbKeys = _serviceStorageKeys[ServiceKey.qbittorrent]!;
@@ -161,6 +205,10 @@ class SettingsService {
       qbittorrentUrl: serviceSettings[ServiceKey.qbittorrent]!.$1,
       qbittorrentUsername: qbUsername,
       qbittorrentPassword: qbPassword,
+      bazarrUrl: serviceSettings[ServiceKey.bazarr]!.$1,
+      bazarrApiKey: serviceSettings[ServiceKey.bazarr]!.$2,
+      truenasUrl: serviceSettings[ServiceKey.truenas]!.$1,
+      truenasApiKey: serviceSettings[ServiceKey.truenas]!.$2,
       region: _loadRegion(),
       themeMode: AppThemeMode.fromName(_prefs.getString(_kThemeMode)),
     );

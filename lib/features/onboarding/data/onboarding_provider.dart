@@ -43,3 +43,10 @@ Future<void> markOnboardingComplete(WidgetRef ref) async {
   await service.saveOnboardingComplete();
   ref.read(onboardingCompletedProvider.notifier).state = true;
 }
+
+/// Flips [onboardingCompletedProvider] to false so the router redirect sends
+/// the user back to onboarding. The persisted flag is expected to already be
+/// cleared (e.g. via [SettingsService.clearAll]).
+Future<void> markOnboardingIncomplete(WidgetRef ref) async {
+  ref.read(onboardingCompletedProvider.notifier).state = false;
+}

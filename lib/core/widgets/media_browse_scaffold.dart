@@ -9,9 +9,11 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
+import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/core/widgets/media_grid.dart';
 import 'package:seekarr/core/widgets/search_bar_header.dart';
 import 'package:seekarr/core/widgets/status_badge.dart';
@@ -59,6 +61,9 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
   final bool showAppBar;
   final double topPadding;
 
+  /// Optional KPI peek rail shown under the search bar (hidden while searching).
+  final Widget? kpiPeek;
+
   const MediaBrowseScaffold({
     super.key,
     required this.title,
@@ -85,6 +90,7 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
     this.coverTypes,
     this.showAppBar = true,
     this.topPadding = 0,
+    this.kpiPeek,
   });
 
   @override
@@ -116,9 +122,10 @@ class _MediaBrowseScaffoldState<T>
       }
     });
 
-    return Scaffold(
+    return AmbientScaffold(
+      accent: widget.accentColor,
       appBar: widget.showAppBar
-          ? AppBar(
+          ? GlassAppBar(
               leading: isSearching
                   ? IconButton(
                       icon: const Icon(Icons.arrow_back),
@@ -139,35 +146,44 @@ class _MediaBrowseScaffoldState<T>
               ],
             )
           : null,
-      body: Column(
-        children: [
+      // The header (search + KPI + filters) lives in the NestedScrollView
+      // header slivers as non-pinned adapters, so it scrolls away with the
+      // content instead of staying fixed above the list.
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
           if (widget.topPadding > 0)
-            SizedBox(
-              height: widget.topPadding + MediaQuery.paddingOf(context).top,
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: widget.topPadding + MediaQuery.paddingOf(context).top,
+              ),
             ),
-          SearchBarHeader(
-            hintText: widget.searchHint,
-            onQueryChanged: (query) {
-              ref.read(widget.searchQueryProvider.notifier).state = query;
-            },
-          ),
-          if (!isSearching)
-            _MediaBrowseFilterChips(
-              selectedFilter: _selectedFilter,
-              color:
-                  widget.accentColor ?? Theme.of(context).colorScheme.primary,
-              onSelected: (filter) {
-                setState(() {
-                  _selectedFilter = filter;
-                });
+          SliverToBoxAdapter(
+            child: SearchBarHeader(
+              hintText: widget.searchHint,
+              onQueryChanged: (query) {
+                ref.read(widget.searchQueryProvider.notifier).state = query;
               },
             ),
-          Expanded(
-            child: isSearching
-                ? _buildSearchResults(context)
-                : _buildLibraryContent(context),
           ),
+          if (!isSearching && widget.kpiPeek != null)
+            SliverToBoxAdapter(child: widget.kpiPeek!),
+          if (!isSearching)
+            SliverToBoxAdapter(
+              child: _MediaBrowseFilterChips(
+                selectedFilter: _selectedFilter,
+                color:
+                    widget.accentColor ?? Theme.of(context).colorScheme.primary,
+                onSelected: (filter) {
+                  setState(() {
+                    _selectedFilter = filter;
+                  });
+                },
+              ),
+            ),
         ],
+        body: isSearching
+            ? _buildSearchResults(context)
+            : _buildLibraryContent(context),
       ),
     );
   }

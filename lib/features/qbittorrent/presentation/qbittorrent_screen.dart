@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/search_bar_header.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
@@ -11,6 +12,7 @@ import 'package:seekarr/features/qbittorrent/presentation/widgets/speed_stats_ba
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_list_controls.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_selection_bar.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_tile.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
 
 class QbittorrentScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -58,22 +60,38 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen>
     final torrentsAsync = ref.watch(torrentsProvider);
     final selectedHashes = ref.watch(selectedTorrentHashesProvider);
 
-    return Scaffold(
+    return AmbientScaffold(
+      accent: ServiceKey.qbittorrent.accent,
       body: Column(
         children: [
-          if (widget.topPadding > 0) SizedBox(height: widget.topPadding),
-          _buildStatsBar(),
-          SearchBarHeader(
-            hintText: 'Search torrents...',
-            onQueryChanged: (query) {
-              ref.read(torrentSearchQueryProvider.notifier).state = query;
-            },
-          ),
-          const TorrentFilterChipsRow(),
-          const TorrentFilterPillsRow(),
-          const TorrentSortRow(),
+          // Stats + search + filter/sort rows scroll away with the torrent
+          // list; the selection action bar stays pinned at the bottom.
           Expanded(
-            child: _buildTorrentList(context, torrentsAsync, selectedHashes),
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                if (widget.topPadding > 0)
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height:
+                          widget.topPadding + MediaQuery.paddingOf(context).top,
+                    ),
+                  ),
+                SliverToBoxAdapter(child: _buildStatsBar()),
+                SliverToBoxAdapter(
+                  child: SearchBarHeader(
+                    hintText: 'Search torrents...',
+                    onQueryChanged: (query) {
+                      ref.read(torrentSearchQueryProvider.notifier).state =
+                          query;
+                    },
+                  ),
+                ),
+                const SliverToBoxAdapter(child: TorrentFilterChipsRow()),
+                const SliverToBoxAdapter(child: TorrentFilterPillsRow()),
+                const SliverToBoxAdapter(child: TorrentSortRow()),
+              ],
+              body: _buildTorrentList(context, torrentsAsync, selectedHashes),
+            ),
           ),
           TorrentSelectionBar(
             onConfirmDelete: () =>

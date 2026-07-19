@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/presentation/discover_navigation_utils.dart';
 import 'package:seekarr/features/discover/presentation/manage_media_provider.dart';
 import 'package:seekarr/features/discover/presentation/widgets/manage_media_sections.dart';
@@ -19,6 +19,10 @@ class ManageMediaSheet extends ConsumerWidget {
   final String mediaType; // 'movie' or 'tv'
   final int tmdbId;
   final int? tvdbId;
+
+  /// Provided by [AppBottomSheet.showScrollable]; null when the widget is used
+  /// standalone (e.g. in tests), in which case the ListView uses its own.
+  final ScrollController? scrollController;
   final VoidCallback onDataChanged;
 
   const ManageMediaSheet({
@@ -28,6 +32,7 @@ class ManageMediaSheet extends ConsumerWidget {
     required this.mediaType,
     required this.tmdbId,
     this.tvdbId,
+    this.scrollController,
     required this.onDataChanged,
   });
 
@@ -45,114 +50,48 @@ class ManageMediaSheet extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final isMovie = mediaType == 'movie';
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppRadius.lg),
-            ),
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state.error != null) {
+      return Center(
+        child: Text(state.error!, style: TextStyle(color: colorScheme.error)),
+      );
+    }
+
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      children: [
+        RequestsSection(
+          requests: state.requests,
+          onDeleteRequest: (requestId) {
+            _deleteRequest(context, ref, args, requestId);
+          },
+        ),
+        if (notifier.showMediaSection) ...[
+          const SizedBox(height: AppSpacing.xl),
+          MediaSection(
+            isMovie: isMovie,
+            hasExternalService: notifier.hasExternalService,
+            isDeleting: state.isDeleting,
+            onOpen: () => _openInService(context, ref),
+            onRemove: () {
+              _removeFromService(context, ref, args);
+            },
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: AppSpacing.md),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isMovie ? 'Manage Movie' : 'Manage Series',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            mediaTitle,
-                            style: theme.textTheme.bodyMedium,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: state.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : state.error != null
-                    ? Center(
-                        child: Text(
-                          state.error!,
-                          style: TextStyle(color: colorScheme.error),
-                        ),
-                      )
-                    : ListView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(AppSpacing.xl),
-                        children: [
-                          RequestsSection(
-                            requests: state.requests,
-                            onDeleteRequest: (requestId) {
-                              _deleteRequest(context, ref, args, requestId);
-                            },
-                          ),
-                          if (notifier.showMediaSection) ...[
-                            const SizedBox(height: AppSpacing.xl),
-                            MediaSection(
-                              isMovie: isMovie,
-                              hasExternalService: notifier.hasExternalService,
-                              isDeleting: state.isDeleting,
-                              onOpen: () => _openInService(context, ref),
-                              onRemove: () {
-                                _removeFromService(context, ref, args);
-                              },
-                            ),
-                          ],
-                          const SizedBox(height: AppSpacing.xl),
-                          AdvancedSection(
-                            isMovie: isMovie,
-                            isDeleting: state.isDeleting,
-                            onClear: () {
-                              _clearAllData(context, ref, args);
-                            },
-                          ),
-                          const SizedBox(height: AppSpacing.xxxl),
-                        ],
-                      ),
-              ),
-            ],
-          ),
-        );
-      },
+        ],
+        const SizedBox(height: AppSpacing.xl),
+        AdvancedSection(
+          isMovie: isMovie,
+          isDeleting: state.isDeleting,
+          onClear: () {
+            _clearAllData(context, ref, args);
+          },
+        ),
+        const SizedBox(height: AppSpacing.xxxl),
+      ],
     );
   }
 
@@ -193,33 +132,17 @@ class ManageMediaSheet extends ConsumerWidget {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final result = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          'Remove from ${mediaType == 'movie' ? 'Radarr' : 'Sonarr'}',
-        ),
-        content: Text(
+      title: 'Remove from ${mediaType == 'movie' ? 'Radarr' : 'Sonarr'}',
+      message:
           'This will irreversibly remove this ${mediaType == 'movie' ? 'movie' : 'series'} from '
           '${mediaType == 'movie' ? 'Radarr' : 'Sonarr'}, including all files.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(dialogContext).colorScheme.error,
-            ),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Remove',
+      destructive: true,
     );
 
-    if (confirmed != true || !context.mounted) {
+    if (!result.confirmed || !context.mounted) {
       return;
     }
 
@@ -260,32 +183,18 @@ class ManageMediaSheet extends ConsumerWidget {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final result = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Clear Data'),
-        content: Text(
+      title: 'Clear Data',
+      message:
           'This will irreversibly remove all data for this ${mediaType == 'movie' ? 'movie' : 'series'}, '
           'including any requests. If this item exists in your Jellyfin library, '
           'the media information will be recreated during the next scan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(dialogContext).colorScheme.error,
-            ),
-            child: const Text('Clear Data'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Clear Data',
+      destructive: true,
     );
 
-    if (confirmed != true || !context.mounted) {
+    if (!result.confirmed || !context.mounted) {
       return;
     }
 

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/utils/sheet_utils.dart';
-import 'package:seekarr/core/widgets/header_action_row.dart';
+import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
 import 'package:seekarr/features/discover/presentation/discover_detail_extras_provider.dart';
 import 'package:seekarr/features/discover/presentation/discover_details_provider.dart';
@@ -120,8 +120,11 @@ class DiscoverActionButtons extends ConsumerWidget {
   }
 
   void _showRequestSheet(BuildContext context, WidgetRef ref) {
-    SheetUtils.showSeekarrModalSheet(
+    AppBottomSheet.show(
       context: context,
+      title: _normalizedMediaType == 'tv' ? 'Request TV Show' : 'Request Movie',
+      icon: Icons.download_rounded,
+      accent: AppColors.seerr,
       builder: (sheetContext) => RequestBottomSheet(
         mediaId: mediaId,
         mediaType: _normalizedMediaType,
@@ -145,15 +148,19 @@ class DiscoverActionButtons extends ConsumerWidget {
       return;
     }
 
-    SheetUtils.showSeekarrModalSheet(
+    AppBottomSheet.showScrollable(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => ManageMediaSheet(
+      title: 'Manage',
+      subtitle: title,
+      icon: Icons.settings_outlined,
+      accent: AppColors.seerr,
+      builder: (sheetContext, scrollController) => ManageMediaSheet(
         mediaInfo: currentMediaInfo,
         mediaTitle: title,
         mediaType: _normalizedMediaType,
         tmdbId: mediaId,
         tvdbId: tvdbId,
+        scrollController: scrollController,
         onDataChanged: () => _invalidateDetailProviders(ref),
       ),
     );

@@ -22,10 +22,10 @@ void main() {
 
       expect(find.text('Services'), findsOneWidget);
       expect(find.byType(SettingsGroupCard), findsOneWidget);
-      expect(find.byType(SettingsCard), findsNWidgets(5));
+      expect(find.byType(SettingsCard), findsNWidgets(7));
       expect(find.text('seerr.local'), findsOneWidget);
       expect(find.text('radarr.local:7878'), findsOneWidget);
-      expect(find.text('Not configured'), findsNWidgets(3));
+      expect(find.text('Not configured'), findsNWidgets(5));
       expect(_textColor(tester, 'radarr.local:7878'), isNot(AppColors.radarr));
     });
 

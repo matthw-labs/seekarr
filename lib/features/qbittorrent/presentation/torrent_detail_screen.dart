@@ -7,7 +7,7 @@ import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/route_utils.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/async_value_widget.dart';
+import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_file.dart';
@@ -503,28 +503,28 @@ class _FileRow extends ConsumerWidget {
   }
 
   Future<void> _showPriorityMenu(BuildContext context, WidgetRef ref) async {
-    final picked = await showModalBottomSheet<int>(
+    final picked = await AppBottomSheet.show<int>(
       context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: _priorityLabels.entries
-              .map(
-                (e) => ListTile(
-                  dense: true,
-                  title: Text(e.value),
-                  trailing: file.priority == e.key
-                      ? Icon(
-                          Icons.check_rounded,
-                          color: AppColors.qbittorrent,
-                          size: 18,
-                        )
-                      : null,
-                  onTap: () => Navigator.of(ctx).pop(e.key),
-                ),
-              )
-              .toList(growable: false),
-        ),
+      title: 'Priority',
+      icon: Icons.low_priority_rounded,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: _priorityLabels.entries
+            .map(
+              (e) => ListTile(
+                dense: true,
+                title: Text(e.value),
+                trailing: file.priority == e.key
+                    ? Icon(
+                        Icons.check_rounded,
+                        color: AppColors.qbittorrent,
+                        size: 18,
+                      )
+                    : null,
+                onTap: () => Navigator.of(ctx).pop(e.key),
+              ),
+            )
+            .toList(growable: false),
       ),
     );
     if (picked == null) return;
@@ -860,8 +860,9 @@ class _ActionsTab extends ConsumerWidget {
       final ok = await runTorrentAction(
         context,
         ref,
-        action: (service) =>
-            service.deleteTorrents([torrent.hash], deleteFiles: result.deleteFiles),
+        action: (service) => service.deleteTorrents([
+          torrent.hash,
+        ], deleteFiles: result.deleteFiles),
         successMessage: result.deleteFiles
             ? 'Deleted torrent and files'
             : 'Deleted torrent',

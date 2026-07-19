@@ -6,8 +6,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
+import 'package:seekarr/core/widgets/app_dialog.dart';
+import 'package:seekarr/core/widgets/glass_app_bar.dart';
+import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/settings/data/donation_service.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
@@ -39,10 +44,12 @@ class SettingsHomeScreen extends ConsumerWidget {
       ..._buildServicesSection(context, ref, settings),
       const SizedBox(height: AppSpacing.lg),
       ..._buildAboutSection(context),
+      const SizedBox(height: AppSpacing.lg),
+      ..._buildDangerZoneSection(context, ref),
     ];
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings'), elevation: 0),
+    return AmbientScaffold(
+      appBar: const GlassAppBar(title: Text('Settings')),
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -220,6 +227,49 @@ class SettingsHomeScreen extends ConsumerWidget {
     ];
   }
 
+  List<Widget> _buildDangerZoneSection(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return [
+      const _SettingsSectionLabel('Danger Zone'),
+      const SizedBox(height: AppSpacing.sm),
+      SettingsGroupCard(
+        children: [
+          SettingsCard.grouped(
+            leading: const Icon(Icons.restart_alt_rounded),
+            title: 'Reset app data',
+            subtitle: 'Clear all services, settings, and restart onboarding',
+            accentColor: colorScheme.error,
+            onTap: () => _confirmReset(context, ref),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
+    final result = await showAppConfirmDialog(
+      context: context,
+      icon: Icons.warning_amber_rounded,
+      title: 'Reset all data?',
+      message:
+          'This clears all saved services, credentials, and preferences. '
+          'Onboarding will restart. This cannot be undone.',
+      confirmLabel: 'Reset',
+      destructive: true,
+    );
+
+    if (!result.confirmed) return;
+
+    try {
+      await ref.read(settingsProvider.notifier).resetSettings();
+      await markOnboardingIncomplete(ref);
+    } catch (e) {
+      if (!context.mounted) return;
+      SnackBarHelper.error(context, "Couldn't reset app data. ($e)");
+    }
+  }
+
   String _getServiceSubtitle(SettingsModel settings, ServiceKey service) {
     final url = settings.urlFor(service);
     return url.isEmpty ? 'Not configured' : service.extractHost(url) ?? url;
@@ -249,15 +299,10 @@ class SettingsHomeScreen extends ConsumerWidget {
 
   Future<void> _openDonation(BuildContext context) async {
     if (DonationService.usesIAP) {
-      final useFallback = await showModalBottomSheet<bool>(
+      final useFallback = await AppBottomSheet.show<bool>(
         context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.lg),
-          ),
-        ),
+        title: 'Support Seekarr',
+        icon: Icons.favorite_rounded,
         builder: (_) => const DonationSheet(),
       );
       // Sheet returned true when IAP products aren't available — open Ko-fi.

@@ -15,6 +15,7 @@ import 'package:seekarr/features/discover/presentation/widgets/discover_release_
 import 'package:seekarr/features/discover/presentation/widgets/discover_seasons_list.dart';
 import 'package:seekarr/features/discover/presentation/widgets/discover_watch_providers.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
 
 class DiscoverDetailScreen extends ConsumerWidget {
   final int mediaId;
@@ -38,15 +39,22 @@ class DiscoverDetailScreen extends ConsumerWidget {
       discoverDetailProvider((id: mediaId, type: normalizedMediaType)),
     );
 
+    final hasInitialPoster =
+        initialPosterUrl != null && initialPosterUrl!.isNotEmpty;
+
     return detailsAsync.when(
       loading: () => MediaDetailLoadingView(
-        posterCard: initialPosterUrl != null
+        // Guard against an empty (non-null) poster URL: ImageUtils returns ''
+        // when there is no posterPath, which would otherwise spawn a blank
+        // destination Hero with no source counterpart and fade in.
+        posterCard: hasInitialPoster
             ? MediaPosterCard(
                 heroTag: heroTag,
                 imageUrl: initialPosterUrl,
                 fallbackIcon: Icons.movie_outlined,
               )
             : null,
+        backdropPosterUrl: hasInitialPoster ? initialPosterUrl : null,
       ),
       error: (error, stackTrace) => _DiscoverDetailErrorState(error: error),
       data: (details) {
@@ -92,7 +100,7 @@ class DiscoverDetailScreen extends ConsumerWidget {
         );
 
         return MediaDetailView(
-          heroTag: heroTag,
+          accent: ServiceKey.seerr.accent,
           posterUrl: viewModel.posterUrl,
           backdropUrl: viewModel.backdropUrl,
           posterRow: (collapseFactor) => MediaDetailPosterRow(
@@ -285,7 +293,10 @@ class _DiscoverKeywordsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const MediaDetailSectionHeader(title: 'Tags'),
+          MediaDetailSectionHeader(
+            title: 'Tags',
+            accent: ServiceKey.seerr.accent,
+          ),
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,

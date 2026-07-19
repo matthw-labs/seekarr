@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
+import 'package:seekarr/core/widgets/app_dialog.dart';
+import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
@@ -16,8 +19,8 @@ class SettingsServicesScreen extends ConsumerWidget {
     final settings = ref.watch(currentSettingsProvider);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Services')),
+    return AmbientScaffold(
+      appBar: const GlassAppBar(title: Text('Services')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
@@ -96,31 +99,17 @@ class _DeleteButton extends StatelessWidget {
     );
   }
 
-  void _showConfirmation(BuildContext context) {
-    showDialog<void>(
+  Future<void> _showConfirmation(BuildContext context) async {
+    final result = await showAppConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Remove $serviceName'),
-        content: Text(
+      title: 'Remove $serviceName',
+      message:
           'This will delete all saved credentials and disconnect $serviceName.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(ctx).colorScheme.error,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              onConfirm();
-            },
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Remove',
+      destructive: true,
     );
+    if (result.confirmed) {
+      onConfirm();
+    }
   }
 }

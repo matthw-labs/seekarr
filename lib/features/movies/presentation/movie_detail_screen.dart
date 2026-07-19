@@ -7,6 +7,7 @@ import 'package:seekarr/core/api/quality_profile_mixin.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
+import 'package:seekarr/features/discover/presentation/widgets/arr_media_extras_section.dart';
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
@@ -68,7 +69,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
 
     return MediaDetailView(
-      heroTag: widget.heroTag,
+      accent: ServiceKey.radarr.accent,
       posterUrl: viewModel.posterUrl,
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
@@ -78,6 +79,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         viewModel,
         infoGroups,
         movie.id > 0 ? movie.id : widget.movieId,
+        movie.tmdbId,
       ),
     );
   }
@@ -120,12 +122,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     MovieDetailViewModel viewModel,
     List<MediaInfoGroup> infoGroups,
     int movieId,
+    int tmdbId,
   ) {
     final detailInfoGroups = _detailInfoGroups(infoGroups);
 
     return [
       LibraryDetailActions(
         collapseFactor: 0,
+        accent: ServiceKey.radarr.accent,
         isInLibrary: viewModel.isInLibrary,
         isMonitored: viewModel.isMonitored,
         addLabel: 'Add Movie',
@@ -173,6 +177,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
           child: FileInfoSection(
             path: viewModel.path,
             filename: viewModel.filename,
+            accent: ServiceKey.radarr.accent,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -183,7 +188,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const MediaDetailSectionHeader(title: 'Details'),
+              MediaDetailSectionHeader(
+                title: 'Details',
+                accent: ServiceKey.radarr.accent,
+              ),
               SizedBox(
                 width: double.infinity,
                 child: MediaInfoCard(groups: detailInfoGroups),
@@ -193,26 +201,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         ),
         const SizedBox(height: AppSpacing.lg),
       ],
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: MediaDetailUnavailableSection(
-          title: 'Where to Watch',
-          message: 'Watch provider info is not available from Radarr details.',
-        ),
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: MediaDetailUnavailableSection(
-          title: 'Cast',
-          message: 'Cast info is not available from Radarr details.',
-        ),
-      ),
-      const SizedBox(height: AppSpacing.lg),
+      ArrMediaExtrasSection(tmdbId: tmdbId, mediaType: 'movie'),
       if (viewModel.genres.isNotEmpty) ...[
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: MediaDetailTagsSection(tags: viewModel.genres),
+          child: MediaDetailTagsSection(
+            tags: viewModel.genres,
+            accent: ServiceKey.radarr.accent,
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
       ],

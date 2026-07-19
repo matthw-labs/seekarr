@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/utils/sheet_utils.dart';
+import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
 import 'package:seekarr/core/widgets/header_action_row.dart';
 import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
 
@@ -59,43 +58,33 @@ class _DiscoverVideosIconButton extends StatelessWidget {
 void _showVideosSheet(BuildContext context, List<RelatedVideo> videos) {
   final sortedVideos = [...videos]..sort(_compareVideos);
 
-  SheetUtils.showSeekarrModalSheet<void>(
+  AppBottomSheet.show<void>(
     context: context,
-    builder: (sheetContext) => Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Videos', style: Theme.of(sheetContext).textTheme.titleLarge),
-          const SizedBox(height: AppSpacing.lg),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 420),
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: sortedVideos.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (_, index) {
-                final video = sortedVideos[index];
-
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.play_arrow_rounded),
-                  title: Text(video.name),
-                  subtitle: Text('${video.type} • ${video.site}'),
-                  onTap: video.url.isEmpty
-                      ? null
-                      : () => _openVideo(
-                          pageContext: context,
-                          sheetContext: sheetContext,
-                          video: video,
-                        ),
-                );
-              },
+    title: 'Videos',
+    icon: Icons.play_circle_outline,
+    builder: (sheetContext) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var index = 0; index < sortedVideos.length; index++) ...[
+          if (index > 0) const Divider(height: 1),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.play_arrow_rounded),
+            title: Text(sortedVideos[index].name),
+            subtitle: Text(
+              '${sortedVideos[index].type} • ${sortedVideos[index].site}',
             ),
+            onTap: sortedVideos[index].url.isEmpty
+                ? null
+                : () => _openVideo(
+                    pageContext: context,
+                    sheetContext: sheetContext,
+                    video: sortedVideos[index],
+                  ),
           ),
         ],
-      ),
+      ],
     ),
   );
 }

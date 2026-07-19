@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
 
 class DiscoverReleaseInfoCard extends StatelessWidget {
   final List<MediaFact> releaseEntries;
@@ -129,7 +130,10 @@ class DiscoverReleaseInfoCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const MediaDetailSectionHeader(title: 'Details'),
+        MediaDetailSectionHeader(
+          title: 'Details',
+          accent: ServiceKey.seerr.accent,
+        ),
         MediaInfoCard(groups: sectionChildren),
       ],
     );

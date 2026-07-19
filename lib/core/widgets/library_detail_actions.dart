@@ -56,6 +56,10 @@ class LibraryDetailActions extends StatelessWidget {
   /// Called when the user taps the manual Import icon button.
   final VoidCallback? onImport;
 
+  /// Per-service accent used for the primary action button. Falls back to the
+  /// theme primary when null.
+  final Color? accent;
+
   const LibraryDetailActions({
     super.key,
     required this.collapseFactor,
@@ -71,14 +75,24 @@ class LibraryDetailActions extends StatelessWidget {
     required this.onProfileSelected,
     required this.onDelete,
     this.onImport,
+    this.accent,
     this.currentProfileName,
     this.currentProfileId,
     this.qualityProfiles = const [],
   });
 
+  /// Legible foreground for a filled [accent] button — dark text on light
+  /// accents (e.g. Radarr amber), white on darker ones.
+  static Color _onAccent(Color accent) =>
+      accent.computeLuminance() > 0.55 ? Colors.black : Colors.white;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final accentColor = accent ?? colorScheme.primary;
+    final onAccent = accent == null
+        ? colorScheme.onPrimary
+        : _onAccent(accentColor);
     final primaryLabel = !isInLibrary
         ? addLabel
         : isMonitored
@@ -137,14 +151,14 @@ class LibraryDetailActions extends StatelessWidget {
                     dimension: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: colorScheme.onPrimary,
+                      color: onAccent,
                     ),
                   )
                 : Icon(primaryIcon, size: 18),
             label: Text(primaryLabel),
             style: HeaderActionRow.expandedButtonStyle(
-              foregroundColor: colorScheme.onPrimary,
-              backgroundColor: colorScheme.primary,
+              foregroundColor: onAccent,
+              backgroundColor: accentColor,
             ),
           ),
           if (isInLibrary) ...[

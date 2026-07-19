@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
+import 'package:seekarr/core/widgets/app_empty_state.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/core/widgets/pressable_scale.dart';
+import 'package:seekarr/core/widgets/staggered_entrance.dart';
 import 'package:seekarr/core/widgets/status_badge.dart';
 
 /// Callback signature for when a media item is tapped.
@@ -82,27 +85,10 @@ class MediaGrid<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.movie_filter_outlined,
-              size: 64,
-              color: colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'No items found',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+      return const AppEmptyState(
+        icon: Icons.movie_filter_outlined,
+        title: 'No items found',
       );
     }
 
@@ -153,14 +139,18 @@ class MediaGrid<T> extends StatelessWidget {
           }
         }
 
-        return GestureDetector(
-          onTap: onItemTap != null ? () => onItemTap!(item, heroTag) : null,
-          child: Hero(
-            tag: heroTag,
-            child: ContentCard(
-              imageUrl: imageSource.url,
-              httpHeaders: imageSource.headers,
-              badge: badge,
+        return StaggeredEntrance(
+          index: index,
+          wrapCount: crossAxisCount * 4,
+          child: PressableScale(
+            onTap: onItemTap != null ? () => onItemTap!(item, heroTag) : null,
+            child: Hero(
+              tag: heroTag,
+              child: ContentCard(
+                imageUrl: imageSource.url,
+                httpHeaders: imageSource.headers,
+                badge: badge,
+              ),
             ),
           ),
         );

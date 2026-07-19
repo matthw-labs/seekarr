@@ -8,13 +8,18 @@ import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
 import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
+import 'package:seekarr/core/widgets/app_empty_state.dart';
+import 'package:seekarr/core/widgets/app_skeleton.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/core/widgets/search_bar_header.dart';
 import 'package:seekarr/features/search/domain/global_search_result.dart';
 import 'package:seekarr/features/search/presentation/global_search_provider.dart';
+import 'package:seekarr/features/search/presentation/recent_searches_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
 class SearchScreen extends ConsumerWidget {
@@ -38,8 +43,21 @@ class SearchScreen extends ConsumerWidget {
       ref.read(_globalSearchResetVersionProvider.notifier).state++;
     });
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Search')),
+    // Record queries that returned results as recent searches.
+    ref.listen<AsyncValue<List<GlobalSearchServiceResults>>>(
+      globalSearchResultsProvider,
+      (previous, next) {
+        next.whenData((groups) {
+          final q = ref.read(globalSearchQueryProvider).trim();
+          if (q.isNotEmpty && groups.any((g) => g.results.isNotEmpty)) {
+            ref.read(recentSearchesProvider.notifier).add(q);
+          }
+        });
+      },
+    );
+
+    return AmbientScaffold(
+      appBar: const GlassAppBar(title: Text('Search')),
       body: Column(
         children: [
           SearchBarHeader(
@@ -68,6 +86,10 @@ class SearchScreen extends ConsumerWidget {
                 : AsyncValueWidget<List<GlobalSearchServiceResults>>(
                     value: results,
                     serviceName: 'search',
+                    skeleton: Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.md),
+                      child: AppSkeleton.listRows(),
+                    ),
                     data: (groups) => _SearchResultsList(
                       groups: groups,
                       selectedService: selectedService,
@@ -460,52 +482,127 @@ class _NoResultsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Text(
-          'No results found',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
-        ),
-      ),
+    return const AppEmptyState(
+      icon: Icons.search_off_rounded,
+      title: 'No results found',
+      message: 'Try a different title or spelling.',
     );
   }
 }
 
-class _SearchEmptyState extends StatelessWidget {
+class _SearchEmptyState extends ConsumerWidget {
   const _SearchEmptyState();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final recents = ref.watch(recentSearchesProvider);
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      children: [
+        const SizedBox(height: AppSpacing.xl),
+        Icon(
+          Icons.search_rounded,
+          size: 48,
+          color: colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Search across every service',
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Enter a title, show, or artist to query Seerr, Radarr, Sonarr, Lidarr, and Bazarr.',
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+        ),
+        if (recents.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xxl),
+          Row(
+            children: [
+              Text(
+                'RECENT',
+                style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => ref.read(recentSearchesProvider.notifier).clear(),
+                child: Text(
+                  'Clear',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              for (final query in recents)
+                _RecentChip(
+                  label: query,
+                  onTap: () {
+                    ref.read(globalSearchQueryProvider.notifier).state = query;
+                    ref
+                        .read(_globalSearchResetVersionProvider.notifier)
+                        .state++;
+                  },
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _RecentChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _RecentChip({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: colorScheme.outlineVariant),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.search_rounded,
-              size: 48,
+              Icons.history_rounded,
+              size: 14,
               color: colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(width: AppSpacing.xs),
             Text(
-              'Search across every service',
+              label,
               style: Theme.of(
                 context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Enter a title, show, or artist to query Seerr, Radarr, Sonarr, and Lidarr.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+              ).textTheme.labelMedium?.copyWith(color: colorScheme.onSurface),
             ),
           ],
         ),

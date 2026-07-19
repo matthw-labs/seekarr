@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/discover/presentation/widgets/request_bottom_sheet.dart';
 
@@ -201,10 +202,15 @@ Future<void> _pumpSheetDirect(
         home: Scaffold(
           body: SizedBox(
             height: 800,
-            child: RequestBottomSheet(
-              mediaId: mediaId,
-              mediaType: mediaType,
-              onRequestComplete: onRequestComplete ?? () {},
+            // Mirror real usage: the title lives in the shared AppBottomSheet
+            // header (per media type), not inside RequestBottomSheet.
+            child: AppBottomSheet(
+              title: mediaType == 'tv' ? 'Request TV Show' : 'Request Movie',
+              child: RequestBottomSheet(
+                mediaId: mediaId,
+                mediaType: mediaType,
+                onRequestComplete: onRequestComplete ?? () {},
+              ),
             ),
           ),
         ),

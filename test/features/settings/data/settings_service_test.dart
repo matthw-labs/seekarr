@@ -94,6 +94,8 @@ void main() {
         sonarrApiKey: 'sonarr-key',
         lidarrUrl: 'https://lidarr.example.com',
         lidarrApiKey: 'lidarr-key',
+        bazarrUrl: 'https://bazarr.example.com',
+        bazarrApiKey: 'bazarr-key',
         region: 'IT',
         themeMode: AppThemeMode.dark,
       );
@@ -110,6 +112,8 @@ void main() {
       expect(loaded.sonarrApiKey, settings.sonarrApiKey);
       expect(loaded.lidarrUrl, settings.lidarrUrl);
       expect(loaded.lidarrApiKey, settings.lidarrApiKey);
+      expect(loaded.bazarrUrl, settings.bazarrUrl);
+      expect(loaded.bazarrApiKey, settings.bazarrApiKey);
       expect(loaded.region, settings.region);
       expect(loaded.themeMode, settings.themeMode);
     });
@@ -125,7 +129,22 @@ void main() {
       expect(loaded.sonarrApiKey, isEmpty);
       expect(loaded.lidarrUrl, isEmpty);
       expect(loaded.lidarrApiKey, isEmpty);
+      expect(loaded.bazarrUrl, isEmpty);
+      expect(loaded.bazarrApiKey, isEmpty);
       expect(loaded.themeMode, AppThemeMode.system);
+    });
+
+    test('loadSettings reads Bazarr API key from secure storage', () async {
+      await prefs.setString('bazarr_url', 'https://bazarr.example.com');
+      await secureStore.write(
+        key: 'secure_bazarr_api_key',
+        value: 'bazarr-key',
+      );
+
+      final loaded = await service.loadSettings();
+
+      expect(loaded.bazarrUrl, 'https://bazarr.example.com');
+      expect(loaded.bazarrApiKey, 'bazarr-key');
     });
 
     test('loadSettings falls back to legacy Jellyseerr keys', () async {
@@ -157,6 +176,63 @@ void main() {
       await service.saveOnboardingComplete();
 
       expect(await service.loadOnboardingComplete(), isTrue);
+    });
+
+    test('clearAll wipes settings, credentials, and onboarding flag', () async {
+      const settings = SettingsModel(
+        seerrUrl: 'https://jelly.example.com',
+        seerrApiKey: 'jelly-key',
+        radarrUrl: 'https://radarr.example.com',
+        radarrApiKey: 'radarr-key',
+        qbittorrentUsername: 'admin',
+        qbittorrentPassword: 'pass',
+        region: 'IT',
+        themeMode: AppThemeMode.dark,
+      );
+      await service.saveSettings(settings);
+      await service.saveOnboardingComplete();
+
+      await service.clearAll();
+
+      final loaded = await service.loadSettings();
+      expect(loaded.seerrUrl, isEmpty);
+      expect(loaded.seerrApiKey, isEmpty);
+      expect(loaded.radarrUrl, isEmpty);
+      expect(loaded.radarrApiKey, isEmpty);
+      expect(loaded.qbittorrentUsername, isEmpty);
+      expect(loaded.qbittorrentPassword, isEmpty);
+      expect(loaded.themeMode, AppThemeMode.system);
+
+      expect(await secureStore.read(key: 'secure_seerr_api_key'), isNull);
+      expect(await secureStore.read(key: 'secure_radarr_api_key'), isNull);
+      expect(
+        await secureStore.read(key: 'secure_qbittorrent_password'),
+        isNull,
+      );
+
+      expect(prefs.getString('seerr_url'), isNull);
+      expect(prefs.getString('region'), isNull);
+      expect(prefs.getString('theme_mode'), isNull);
+      expect(prefs.getString('qbittorrent_username'), isNull);
+
+      expect(await service.loadOnboardingComplete(), isFalse);
+    });
+
+    test('clearAll removes legacy keys too', () async {
+      await prefs.setString('jellyseerr_url', 'https://legacy.example.com');
+      await prefs.setString('jellyseerr_api_key', 'legacy-key');
+      await prefs.setString('radarr_api_key', 'plaintext-key');
+      await secureStore.write(
+        key: 'secure_jellyseerr_api_key',
+        value: 'legacy-seerr-key',
+      );
+
+      await service.clearAll();
+
+      expect(prefs.getString('jellyseerr_url'), isNull);
+      expect(prefs.getString('jellyseerr_api_key'), isNull);
+      expect(prefs.getString('radarr_api_key'), isNull);
+      expect(await secureStore.read(key: 'secure_jellyseerr_api_key'), isNull);
     });
   });
 }

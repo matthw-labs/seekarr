@@ -1,7 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/app_elevation.dart';
+import 'package:seekarr/core/app_gradients.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/widgets/pressable_scale.dart';
 
 /// A card widget for displaying media content with cached images.
 ///
@@ -36,53 +39,44 @@ class ContentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        onTap: onTap,
+    final card = Container(
+      decoration: BoxDecoration(
         borderRadius: AppRadius.borderRadiusMd,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: AppRadius.borderRadiusMd,
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.shadow.withValues(alpha: 0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Image
-              _buildImage(context, colorScheme),
+        boxShadow: AppElevation.level2(colorScheme),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Image
+          _buildImage(context, colorScheme),
 
-              // Gradient overlay for better badge visibility
-              if (badge != null)
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        center: Alignment.topRight,
-                        radius: 1.5,
-                        colors: [
-                          colorScheme.shadow.withValues(alpha: 0.4),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    child: badge!,
+          // Gradient overlay for better badge visibility
+          if (badge != null)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: AppGradients.serviceGlow(
+                    colorScheme.shadow,
+                    radius: 1.5,
                   ),
                 ),
-            ],
-          ),
-        ),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                child: badge!,
+              ),
+            ),
+        ],
       ),
+    );
+
+    if (onTap == null) return card;
+
+    return PressableScale(
+      onTap: onTap,
+      borderRadius: AppRadius.borderRadiusMd,
+      child: card,
     );
   }
 
