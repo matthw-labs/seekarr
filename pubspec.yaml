@@ -52,6 +52,12 @@ dependencies:
   url_launcher: ^6.3.2
   in_app_purchase: ^3.2.3
   file_picker: ^8.1.4
+  socket_io_client: ^3.1.0
+  # Referenced directly for the custom WebSocket connector that pins a trusted
+  # self-signed certificate on the Dockge Socket.IO connection.
+  web_socket: ^1.0.1
+  # SHA-256 fingerprints for trust-on-first-use TLS certificate pinning.
+  crypto: ^3.0.0
 
 dependency_overrides:
   # path_provider_foundation 2.6.0 pulls in objective_c native assets,

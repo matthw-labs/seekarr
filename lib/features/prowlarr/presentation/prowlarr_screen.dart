@@ -1,0 +1,414 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/utils/service_routes.dart';
+import 'package:seekarr/core/widgets/widgets.dart';
+import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_history_format.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_indexer_tile.dart';
+import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_list_shimmer.dart';
+import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
+import 'package:seekarr/features/services/presentation/services_provider.dart';
+import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
+
+/// Prowlarr service dashboard: indexer overview, usage stats and recent
+/// activity. Read-only (Fase 3); indexer actions land in a later phase.
+class ProwlarrScreen extends ConsumerWidget {
+  const ProwlarrScreen({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  });
+
+  final bool showAppBar;
+  final double topPadding;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(currentSettingsProvider);
+    final isConfigured = settings.isServiceConfigured(ServiceKey.prowlarr);
+
+    return AmbientScaffold(
+      accent: AppColors.prowlarr,
+      appBar: showAppBar ? const GlassAppBar(title: Text('Prowlarr')) : null,
+      body: SafeArea(
+        child: isConfigured
+            ? _ProwlarrDashboard(topPadding: topPadding)
+            : _ProwlarrNotConfigured(
+                onOpenSettings: () => _openSettings(context),
+              ),
+      ),
+    );
+  }
+
+  void _openSettings(BuildContext context) {
+    context.go('/settings/service/${ServiceKey.prowlarr.routeParam}');
+  }
+}
+
+class _ProwlarrNotConfigured extends StatelessWidget {
+  const _ProwlarrNotConfigured({required this.onOpenSettings});
+
+  final VoidCallback onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.travel_explore_rounded,
+              size: 48,
+              color: AppColors.prowlarr,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Prowlarr is not configured yet.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: onOpenSettings,
+              child: const Text('Open settings'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProwlarrDashboard extends ConsumerWidget {
+  const _ProwlarrDashboard({required this.topPadding});
+
+  final double topPadding;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final indexersAsync = ref.watch(prowlarrIndexersProvider);
+    final historyAsync = ref.watch(prowlarrRecentHistoryProvider);
+    final healthAsync = ref.watch(prowlarrHealthProvider);
+    final statusAsync = ref.watch(prowlarrIndexerStatusProvider);
+    final disabledIds = statusAsync.maybeWhen(
+      data: (statuses) => statuses.map((s) => s.indexerId).toSet(),
+      orElse: () => const <int>{},
+    );
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(prowlarrIndexersProvider);
+        ref.invalidate(prowlarrIndexerStatsProvider);
+        ref.invalidate(prowlarrIndexerStatusProvider);
+        ref.invalidate(prowlarrRecentHistoryProvider);
+        ref.invalidate(prowlarrHealthProvider);
+        ref.invalidate(serviceKpiProvider(ServiceKey.prowlarr));
+        ref.invalidate(serviceSummaryProvider(ServiceKey.prowlarr));
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          if (topPadding > 0) SizedBox(height: topPadding),
+          ServiceKpiPeek(
+            kpis: ref.watch(serviceKpiProvider(ServiceKey.prowlarr)),
+            accent: AppColors.prowlarr,
+          ),
+          const SizedBox(height: 8),
+          _HealthBanner(healthAsync: healthAsync),
+          SectionHeader(
+            title: 'Indexers',
+            showChevron: true,
+            onTap: () => context.push(ServiceRoutes.prowlarrLibrary),
+          ),
+          const SizedBox(height: 2),
+          _IndexerList(indexersAsync: indexersAsync, disabledIds: disabledIds),
+          const SizedBox(height: 8),
+          const SectionHeader(title: 'Recent Activity', showChevron: false),
+          const SizedBox(height: 2),
+          _HistoryList(historyAsync: historyAsync),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact health summary shown only when Prowlarr reports issues.
+class _HealthBanner extends StatelessWidget {
+  const _HealthBanner({required this.healthAsync});
+
+  final AsyncValue<List<ProwlarrHealthIssue>> healthAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return healthAsync.maybeWhen(
+      data: (issues) {
+        if (issues.isEmpty) return const SizedBox.shrink();
+        final errors = issues.where((i) => i.isError).length;
+        final colorScheme = Theme.of(context).colorScheme;
+        final accent = errors > 0 ? AppColors.error : AppColors.warning;
+        final label = errors > 0
+            ? '$errors error${errors == 1 ? '' : 's'}, ${issues.length} issue${issues.length == 1 ? '' : 's'}'
+            : '${issues.length} warning${issues.length == 1 ? '' : 's'}';
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.1),
+              borderRadius: AppRadius.borderRadiusMd,
+              border: Border.all(color: accent.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, size: 18, color: accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    issues.first.message ?? 'Health issues detected',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.15),
+                    borderRadius: AppRadius.borderRadiusSm,
+                  ),
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: accent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _IndexerList extends ConsumerWidget {
+  const _IndexerList({required this.indexersAsync, required this.disabledIds});
+
+  final AsyncValue<List<ProwlarrIndexer>> indexersAsync;
+  final Set<int> disabledIds;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return indexersAsync.when(
+      data: (indexers) {
+        if (indexers.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Text('No indexers configured.'),
+          );
+        }
+        final sorted = [...indexers]
+          ..sort(
+            (a, b) => (a.name ?? '').toLowerCase().compareTo(
+              (b.name ?? '').toLowerCase(),
+            ),
+          );
+        // Dashboard shows a preview; the full list lives in the library screen.
+        return Column(
+          children: sorted
+              .take(5)
+              .map(
+                (indexer) => ProwlarrIndexerTile(
+                  indexer: indexer,
+                  failing: disabledIds.contains(indexer.id),
+                ),
+              )
+              .toList(),
+        );
+      },
+      loading: () => const ProwlarrListShimmer(),
+      error: (error, _) => _ErrorRetry(
+        message: 'Failed to load indexers',
+        onRetry: () => ref.invalidate(prowlarrIndexersProvider),
+      ),
+    );
+  }
+}
+
+class _HistoryList extends ConsumerWidget {
+  const _HistoryList({required this.historyAsync});
+
+  final AsyncValue<ProwlarrHistoryPage> historyAsync;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return historyAsync.when(
+      data: (page) {
+        if (page.records.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Text('No recent activity yet.'),
+          );
+        }
+        return Column(
+          children: page.records
+              .take(10)
+              .map((item) => _HistoryTile(item: item))
+              .toList(),
+        );
+      },
+      loading: () => const ProwlarrListShimmer(),
+      error: (error, _) => _ErrorRetry(
+        message: 'Failed to load recent activity',
+        onRetry: () => ref.invalidate(prowlarrRecentHistoryProvider),
+      ),
+    );
+  }
+}
+
+class _HistoryTile extends StatelessWidget {
+  const _HistoryTile({required this.item});
+
+  final ProwlarrHistoryItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final event = prowlarrEventStyle(item);
+    final source = prowlarrHistorySource(item);
+    final title = prowlarrHistoryTitle(item);
+    final subtitleParts = <String>[
+      if (source != null) source,
+      if (item.date != null) prowlarrRelativeTime(item.date!),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Material(
+        color: colorScheme.surface,
+        borderRadius: AppRadius.borderRadiusMd,
+        child: Container(
+          padding: const EdgeInsets.all(11),
+          decoration: BoxDecoration(
+            border: Border.all(color: colorScheme.outlineVariant),
+            borderRadius: AppRadius.borderRadiusMd,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: event.color.withValues(alpha: 0.12),
+                  borderRadius: AppRadius.borderRadiusSm,
+                ),
+                alignment: Alignment.center,
+                child: Icon(event.icon, size: 16, color: event.color),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (subtitleParts.isNotEmpty)
+                      Text(
+                        subtitleParts.join(' · '),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: event.color.withValues(alpha: 0.12),
+                  borderRadius: AppRadius.borderRadiusSm,
+                ),
+                child: Text(
+                  event.label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: event.color,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Inline error placeholder with a retry action so failures are
+/// distinguishable from the loading shimmer state.
+class _ErrorRetry extends StatelessWidget {
+  const _ErrorRetry({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      height: 120,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer.withValues(alpha: 0.4),
+        borderRadius: AppRadius.borderRadiusMd,
+        border: Border.all(color: colorScheme.error.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, color: colorScheme.error),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+}

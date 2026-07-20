@@ -8,6 +8,45 @@ class ServiceRoutes {
   static const lidarr = '$services/lidarr';
   static const qbittorrent = '$services/qbittorrent';
   static const bazarr = '$services/bazarr';
+  static const truenas = '$services/truenas';
+  static const dockge = '$services/dockge';
+  static const prowlarr = '$services/prowlarr';
+
+  // ── TrueNAS sections ──────────────────────────────────────────────────────
+  static const truenasDashboard = '$truenas/dashboard';
+  static const truenasStorage = '$truenas/storage';
+  static const truenasPoolBase = '$truenasStorage/pool';
+  static const truenasDatasets = '$truenas/datasets';
+  static const truenasDatasetDetail = '$truenasDatasets/detail';
+  static const truenasShares = '$truenas/shares';
+  static const truenasDataProtection = '$truenas/data-protection';
+  static const truenasContainers = '$truenas/containers';
+  static const truenasContainerBase = '$truenasContainers/instance';
+  static const truenasVms = '$truenas/vms';
+  static const truenasVmBase = '$truenasVms/instance';
+  static const truenasApps = '$truenas/apps';
+  static const truenasAppBase = '$truenasApps/app';
+  static const truenasReporting = '$truenas/reporting';
+  static const truenasSystem = '$truenas/system';
+
+  /// Pool detail, e.g. `/services/truenas/storage/pool/tank`.
+  static String truenasPool(String name) => '$truenasPoolBase/$name';
+
+  /// Dataset detail. ZFS ids contain `/`, so the id travels as a query
+  /// parameter rather than a path segment.
+  static String truenasDataset(String id) =>
+      _withQuery(truenasDatasetDetail, {'id': id});
+
+  /// Container/VM instance detail (Incus instance name is a single segment).
+  static String truenasContainer(String id) => '$truenasContainerBase/$id';
+  static String truenasVm(String id) => '$truenasVmBase/$id';
+
+  /// Installed app detail by app name.
+  static String truenasApp(String name) => '$truenasAppBase/$name';
+
+  /// A System sub-section, e.g. `/services/truenas/system/network`.
+  static String truenasSystemSection(String section) =>
+      '$truenasSystem/$section';
 
   static const seerrRequests = '$seerr/requests';
   static const seerrMoviesAll = '$seerr/movies/all';
@@ -51,6 +90,23 @@ class ServiceRoutes {
   static const bazarrLibrary = '$bazarr/library';
   static const bazarrSeriesBase = '$bazarr/series';
   static const bazarrMovieBase = '$bazarr/movie';
+
+  // ── Prowlarr ──────────────────────────────────────────────────────────────
+  static const prowlarrLibrary = '$prowlarr/library';
+  static const prowlarrIndexerBase = '$prowlarr/indexer';
+
+  /// Indexer detail, e.g. `/services/prowlarr/indexer/3`.
+  static String prowlarrIndexer(int id) => '$prowlarrIndexerBase/$id';
+
+  // ── Dockge ────────────────────────────────────────────────────────────────
+  static const dockgeStackBase = '$dockge/stack';
+  static const dockgeNewStack = '$dockge/new';
+
+  /// Stack detail, e.g. `/services/dockge/stack/immich`.
+  static String dockgeStack(String name) => '$dockgeStackBase/$name';
+
+  /// Compose editor for a stack, e.g. `/services/dockge/stack/immich/edit`.
+  static String dockgeStackEdit(String name) => '$dockgeStackBase/$name/edit';
 
   static String radarrMovie(int id, {String? heroTag}) {
     return _withQuery('$radarrMovieBase/$id', {'heroTag': heroTag});

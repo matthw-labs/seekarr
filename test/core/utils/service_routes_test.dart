@@ -48,5 +48,11 @@ void main() {
     test('exposes the Bazarr service root', () {
       expect(ServiceRoutes.bazarr, '/services/bazarr');
     });
+
+    test('builds Prowlarr library and indexer detail routes', () {
+      expect(ServiceRoutes.prowlarr, '/services/prowlarr');
+      expect(ServiceRoutes.prowlarrLibrary, '/services/prowlarr/library');
+      expect(ServiceRoutes.prowlarrIndexer(3), '/services/prowlarr/indexer/3');
+    });
   });
 }

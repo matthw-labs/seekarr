@@ -337,5 +337,23 @@ Future<ServiceSummary> _summaryBuilder(Ref ref, ServiceKey service) async {
         itemCount: null,
         itemLabel: 'pools',
       );
+    case ServiceKey.dockge:
+      return const ServiceSummary(
+        service: ServiceKey.dockge,
+        status: ServiceSummaryStatus.offline,
+        host: '',
+        version: null,
+        itemCount: null,
+        itemLabel: 'stacks',
+      );
+    case ServiceKey.prowlarr:
+      return const ServiceSummary(
+        service: ServiceKey.prowlarr,
+        status: ServiceSummaryStatus.offline,
+        host: '',
+        version: null,
+        itemCount: null,
+        itemLabel: 'indexers',
+      );
   }
 }

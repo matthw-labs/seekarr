@@ -33,6 +33,8 @@ class AppColors {
   static const Color qbittorrent = Color(0xFF2F67BA);
   static const Color bazarr = Color(0xFF25A7DF);
   static const Color truenas = Color(0xFF0095D5); // TrueNAS blue
+  static const Color dockge = Color(0xFF058373); // Dockge teal
+  static const Color prowlarr = Color(0xFFE66000); // Prowlarr orange
 
   // === PRIMARY (Seerr Indigo) ===
   static const Color primary = seerr;

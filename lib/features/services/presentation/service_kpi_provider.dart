@@ -4,9 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:seekarr/core/models/service_kpi.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:seekarr/features/dockge/domain/models/dockge_stack.dart';
+import 'package:seekarr/features/dockge/presentation/dockge_provider.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 import 'package:seekarr/features/movies/presentation/movies_provider.dart';
+import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:seekarr/features/music/presentation/music_provider.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
@@ -37,6 +41,10 @@ final serviceKpiProvider = FutureProvider.autoDispose
           return _bazarrKpis(ref);
         case ServiceKey.truenas:
           return _truenasKpis(ref);
+        case ServiceKey.dockge:
+          return _dockgeKpis(ref);
+        case ServiceKey.prowlarr:
+          return _prowlarrKpis(ref);
       }
     });
 
@@ -257,6 +265,40 @@ Future<List<ServiceKpi>> _truenasKpis(Ref ref) async {
   ];
 }
 
+Future<List<ServiceKpi>> _dockgeKpis(Ref ref) async {
+  final stacks = await ref.watch(dockgeStackListProvider.future);
+  final running = stacks
+      .where((s) => s.status == DockgeStackStatus.running)
+      .length;
+  final exited = stacks
+      .where((s) => s.status == DockgeStackStatus.exited)
+      .length;
+  final inactive = stacks.length - running - exited;
+  return [
+    ServiceKpi(
+      label: 'Stacks',
+      value: '${stacks.length}',
+      icon: Icons.layers_rounded,
+    ),
+    ServiceKpi(
+      label: 'Running',
+      value: '$running',
+      icon: Icons.play_circle_rounded,
+    ),
+    ServiceKpi(
+      label: 'Exited',
+      value: '$exited',
+      icon: Icons.stop_circle_rounded,
+      accent: _warnIf(exited > 0),
+    ),
+    ServiceKpi(
+      label: 'Inactive',
+      value: '$inactive',
+      icon: Icons.pause_circle_rounded,
+    ),
+  ];
+}
+
 Future<List<ServiceKpi>> _bazarrKpis(Ref ref) async {
   final b = await ref.watch(bazarrBadgesProvider.future);
   return [
@@ -280,6 +322,40 @@ Future<List<ServiceKpi>> _bazarrKpis(Ref ref) async {
       label: 'Providers',
       value: '${b.providers}',
       icon: Icons.cloud_rounded,
+    ),
+  ];
+}
+
+Future<List<ServiceKpi>> _prowlarrKpis(Ref ref) async {
+  // The two fetches are independent; run them in parallel.
+  final results = await Future.wait([
+    ref.watch(prowlarrIndexersProvider.future),
+    ref.watch(prowlarrIndexerStatsProvider.future),
+  ]);
+  final indexers = results[0] as List<ProwlarrIndexer>;
+  final stats = results[1] as ProwlarrIndexerStats;
+  final active = indexers.where((i) => i.enable).length;
+  return [
+    ServiceKpi(
+      label: 'Indexers',
+      value: '$active',
+      icon: Icons.travel_explore_rounded,
+    ),
+    ServiceKpi(
+      label: 'Queries',
+      value: '${stats.totalQueries}',
+      icon: Icons.search_rounded,
+    ),
+    ServiceKpi(
+      label: 'Grabs',
+      value: '${stats.totalGrabs}',
+      icon: Icons.download_rounded,
+    ),
+    ServiceKpi(
+      label: 'Fails',
+      value: '${stats.totalFailures}',
+      icon: Icons.error_outline_rounded,
+      accent: _warnIf(stats.totalFailures > 0),
     ),
   ];
 }

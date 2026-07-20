@@ -97,6 +97,19 @@ class SettingsService {
       url: 'truenas_url',
       legacyApiKey: '',
       secureApiKey: 'secure_truenas_api_key',
+      certFingerprint: 'truenas_cert_fingerprint',
+    ),
+    ServiceKey.dockge: _ServiceStorageKeys(
+      url: 'dockge_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_dockge_password',
+      username: 'dockge_username',
+      certFingerprint: 'dockge_cert_fingerprint',
+    ),
+    ServiceKey.prowlarr: _ServiceStorageKeys(
+      url: 'prowlarr_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_prowlarr_api_key',
     ),
   };
 
@@ -179,6 +192,9 @@ class SettingsService {
       if (storageKeys.username != null) {
         await _prefs.remove(storageKeys.username!);
       }
+      if (storageKeys.certFingerprint != null) {
+        await _prefs.remove(storageKeys.certFingerprint!);
+      }
     }
 
     await _prefs.remove(_kRegion);
@@ -192,6 +208,10 @@ class SettingsService {
     final qbKeys = _serviceStorageKeys[ServiceKey.qbittorrent]!;
     final qbUsername = _prefs.getString(qbKeys.username!) ?? '';
     final qbPassword = await _loadApiKey(qbKeys.secureApiKey);
+    final dockgeKeys = _serviceStorageKeys[ServiceKey.dockge]!;
+    final dockgeUsername = _prefs.getString(dockgeKeys.username!) ?? '';
+    final dockgePassword = await _loadApiKey(dockgeKeys.secureApiKey);
+    final truenasKeys = _serviceStorageKeys[ServiceKey.truenas]!;
 
     return SettingsModel(
       seerrUrl: serviceSettings[ServiceKey.seerr]!.$1,
@@ -209,6 +229,15 @@ class SettingsService {
       bazarrApiKey: serviceSettings[ServiceKey.bazarr]!.$2,
       truenasUrl: serviceSettings[ServiceKey.truenas]!.$1,
       truenasApiKey: serviceSettings[ServiceKey.truenas]!.$2,
+      dockgeUrl: serviceSettings[ServiceKey.dockge]!.$1,
+      dockgeUsername: dockgeUsername,
+      dockgePassword: dockgePassword,
+      prowlarrUrl: serviceSettings[ServiceKey.prowlarr]!.$1,
+      prowlarrApiKey: serviceSettings[ServiceKey.prowlarr]!.$2,
+      truenasCertFingerprint:
+          _prefs.getString(truenasKeys.certFingerprint!) ?? '',
+      dockgeCertFingerprint:
+          _prefs.getString(dockgeKeys.certFingerprint!) ?? '',
       region: _loadRegion(),
       themeMode: AppThemeMode.fromName(_prefs.getString(_kThemeMode)),
     );
@@ -230,6 +259,33 @@ class SettingsService {
     } else {
       await _prefs.remove(qbKeys.username!);
     }
+
+    final dockgeKeys = _serviceStorageKeys[ServiceKey.dockge]!;
+    if (settings.dockgeUsername.isNotEmpty) {
+      await _prefs.setString(dockgeKeys.username!, settings.dockgeUsername);
+    } else {
+      await _prefs.remove(dockgeKeys.username!);
+    }
+
+    await _saveCertFingerprint(
+      ServiceKey.truenas,
+      settings.truenasCertFingerprint,
+    );
+    await _saveCertFingerprint(
+      ServiceKey.dockge,
+      settings.dockgeCertFingerprint,
+    );
+  }
+
+  Future<void> _saveCertFingerprint(ServiceKey service, String value) async {
+    final key = _serviceStorageKeys[service]!.certFingerprint;
+    if (key == null) return;
+    final normalized = value.trim();
+    if (normalized.isEmpty) {
+      await _prefs.remove(key);
+    } else {
+      await _prefs.setString(key, normalized);
+    }
   }
 
   Future<Map<ServiceKey, (String, String)>> _loadServiceSettings() async {
@@ -245,11 +301,11 @@ class SettingsService {
       }
 
       // Load API key, falling back to legacy secure key.
-      // qBittorrent uses username/password instead of API key, so its
-      // secure key is loaded separately in loadSettings() to avoid a
+      // qBittorrent and Dockge use username/password instead of an API key, so
+      // their secure keys are loaded separately in loadSettings() to avoid a
       // second secure store read here.
       var apiKey = '';
-      if (service != ServiceKey.qbittorrent) {
+      if (service != ServiceKey.qbittorrent && service != ServiceKey.dockge) {
         apiKey = await _loadApiKey(storageKeys.secureApiKey);
         if (apiKey.isEmpty && storageKeys.legacySecureApiKey != null) {
           apiKey = await _loadApiKey(storageKeys.legacySecureApiKey!);
@@ -282,6 +338,10 @@ class SettingsService {
           storageKeys.secureApiKey,
           settings.qbittorrentPassword,
         );
+        continue;
+      }
+      if (service == ServiceKey.dockge) {
+        await _saveApiKey(storageKeys.secureApiKey, settings.dockgePassword);
         continue;
       }
       await _saveApiKey(storageKeys.secureApiKey, settings.apiKeyFor(service));
@@ -334,8 +394,12 @@ class _ServiceStorageKeys {
   /// Legacy secure API key from before the rename.
   final String? legacySecureApiKey;
 
-  /// Prefs key for the username (used by qBittorrent).
+  /// Prefs key for the username (used by qBittorrent and Dockge).
   final String? username;
+
+  /// Prefs key for a trusted self-signed cert fingerprint (TrueNAS, Dockge).
+  /// Not a secret, so kept in SharedPreferences rather than secure storage.
+  final String? certFingerprint;
 
   const _ServiceStorageKeys({
     required this.url,
@@ -345,5 +409,6 @@ class _ServiceStorageKeys {
     this.legacyPlaintextApiKey,
     this.legacySecureApiKey,
     this.username,
+    this.certFingerprint,
   });
 }

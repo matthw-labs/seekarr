@@ -1,36 +1,30 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:seekarr/features/truenas/data/storage_api.dart';
+import 'package:seekarr/features/truenas/data/system_api.dart';
 import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
-import 'package:seekarr/features/truenas/domain/models/truenas_models.dart';
+import 'package:seekarr/features/truenas/domain/models/alert.dart';
+import 'package:seekarr/features/truenas/domain/models/dashboard.dart';
+import 'package:seekarr/features/truenas/domain/models/pool.dart';
+import 'package:seekarr/features/truenas/domain/models/service_item.dart';
+import 'package:seekarr/features/truenas/domain/models/system_info.dart';
 
-/// Typed operations over a [TrueNasWsClient].
+/// Thin facade preserving the original dashboard/KPI surface, delegating to the
+/// domain-grouped API classes over the shared [TrueNasWsClient].
 class TrueNasService {
   final TrueNasWsClient client;
+  final TrueNasSystemApi _system;
+  final TrueNasStorageApi _storage;
 
-  TrueNasService(this.client);
+  TrueNasService(this.client)
+    : _system = TrueNasSystemApi(client),
+      _storage = TrueNasStorageApi(client);
 
-  Future<TrueNasSystemInfo> getSystemInfo() async {
-    final result = await client.call('system.info');
-    final map = mapOrNull(result);
-    if (map == null) {
-      throw const TrueNasException('Unexpected system.info response');
-    }
-    return TrueNasSystemInfo.fromJson(map);
-  }
+  Future<TrueNasSystemInfo> getSystemInfo() => _system.getSystemInfo();
 
-  Future<List<TrueNasPool>> getPools() async {
-    final result = await client.call('pool.query');
-    return TrueNasDashboard.parseList(result, TrueNasPool.fromJson);
-  }
+  Future<List<TrueNasPool>> getPools() => _storage.getPools();
 
-  Future<List<TrueNasAlert>> getAlerts() async {
-    final result = await client.call('alert.list');
-    return TrueNasDashboard.parseList(result, TrueNasAlert.fromJson);
-  }
+  Future<List<TrueNasAlert>> getAlerts() => _system.getAlerts();
 
-  Future<List<TrueNasServiceItem>> getServices() async {
-    final result = await client.call('service.query');
-    return TrueNasDashboard.parseList(result, TrueNasServiceItem.fromJson);
-  }
+  Future<List<TrueNasServiceItem>> getServices() => _system.getServices();
 
   /// Loads the full dashboard in parallel over the shared connection.
   Future<TrueNasDashboard> loadDashboard() async {
@@ -54,11 +48,9 @@ class TrueNasService {
     return true;
   }
 
-  Future<void> startService(String name) =>
-      client.call('service.start', [name]);
+  Future<void> startService(String name) => _system.startService(name);
 
-  Future<void> stopService(String name) => client.call('service.stop', [name]);
+  Future<void> stopService(String name) => _system.stopService(name);
 
-  Future<void> dismissAlert(String uuid) =>
-      client.call('alert.dismiss', [uuid]);
+  Future<void> dismissAlert(String uuid) => _system.dismissAlert(uuid);
 }

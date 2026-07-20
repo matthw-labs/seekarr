@@ -6,11 +6,14 @@ import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
+import 'package:seekarr/features/dockge/data/dockge_client.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:seekarr/features/settings/presentation/widgets/cert_trust_dialog.dart';
 import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
+import 'package:seekarr/features/truenas/domain/truenas_version.dart';
 
 // ─── Design tokens (pixel-faithful to prototype) ───────────────────────────
 const _bg = Color(0xFF07080D);
@@ -43,6 +46,11 @@ String _healthEndpoint(ServiceKey service) {
     case ServiceKey.truenas:
       // TrueNAS verifies over WebSocket, not a REST endpoint.
       return '';
+    case ServiceKey.dockge:
+      // Dockge verifies over Socket.IO, not a REST endpoint.
+      return '';
+    case ServiceKey.prowlarr:
+      return '/api/v1/system/status';
   }
 }
 
@@ -52,7 +60,29 @@ Future<ServiceConnectionStatus> _verifyService(
   required String apiKey,
   required String username,
   required String password,
+  String certFingerprint = '',
 }) async {
+  final pin = certFingerprint.trim().isEmpty ? null : certFingerprint.trim();
+  if (service == ServiceKey.dockge) {
+    final urlTrimmed = url.trim();
+    if (urlTrimmed.isEmpty) return ServiceConnectionStatus.notConfigured;
+    final client = DockgeClient(
+      baseUrl: urlTrimmed,
+      username: username.trim().isEmpty ? null : username.trim(),
+      password: password.isEmpty ? null : password,
+      certFingerprint: pin,
+    );
+    try {
+      final ok = await client.ping().timeout(const Duration(seconds: 8));
+      return ok
+          ? ServiceConnectionStatus.connected
+          : ServiceConnectionStatus.disconnected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      await client.close();
+    }
+  }
   if (!service.usesApiKey) {
     final urlTrimmed = url.trim();
     if (urlTrimmed.isEmpty) return ServiceConnectionStatus.notConfigured;
@@ -74,7 +104,11 @@ Future<ServiceConnectionStatus> _verifyService(
     return ServiceConnectionStatus.notConfigured;
   }
   if (service == ServiceKey.truenas) {
-    final client = TrueNasWsClient(baseUrl: url.trim(), apiKey: apiKey.trim());
+    final client = TrueNasWsClient(
+      baseUrl: url.trim(),
+      apiKey: apiKey.trim(),
+      certFingerprint: pin,
+    );
     try {
       await client.call('core.ping').timeout(const Duration(seconds: 6));
       return ServiceConnectionStatus.connected;
@@ -136,6 +170,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     for (final k in ServiceKey.values) k: false,
   };
 
+  /// Self-signed certificate fingerprints the user chose to trust during
+  /// onboarding, persisted to settings on continue. Only TrueNAS and Dockge
+  /// (the WebSocket clients) support pinning.
+  final Map<ServiceKey, String> _certFingerprint = {};
+
+  static bool _supportsCertPinning(ServiceKey service) =>
+      service == ServiceKey.truenas || service == ServiceKey.dockge;
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -158,13 +200,44 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _doVerify(ServiceKey service) async {
     setState(() => _verifying[service] = true);
-    final status = await _verifyService(
+    var status = await _verifyService(
       service,
       url: _urlCtrl[service]!.text,
       apiKey: _apiKeyCtrl[service]!.text,
       username: _usernameCtrl[service]!.text,
       password: _passwordCtrl[service]!.text,
+      certFingerprint: _certFingerprint[service] ?? '',
     );
+
+    // TLS exception flow: if a pinning-capable service failed specifically
+    // because of an untrusted certificate, offer to trust it, then re-verify.
+    if (status == ServiceConnectionStatus.disconnected &&
+        _supportsCertPinning(service) &&
+        mounted) {
+      final cert = await probeUntrustedCertificate(
+        _urlCtrl[service]!.text,
+        pinnedFingerprint: _certFingerprint[service] ?? '',
+      );
+      if (cert != null && mounted) {
+        final trust = await showCertTrustDialog(
+          context,
+          serviceTitle: service.title,
+          certificate: cert,
+        );
+        if (trust && mounted) {
+          _certFingerprint[service] = cert.fingerprint;
+          status = await _verifyService(
+            service,
+            url: _urlCtrl[service]!.text,
+            apiKey: _apiKeyCtrl[service]!.text,
+            username: _usernameCtrl[service]!.text,
+            password: _passwordCtrl[service]!.text,
+            certFingerprint: cert.fingerprint,
+          );
+        }
+      }
+    }
+
     if (!mounted) return;
     if (status == ServiceConnectionStatus.connected) {
       HapticFeedback.mediumImpact();
@@ -188,6 +261,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             username: _usernameCtrl[k]!.text.trim(),
             password: _passwordCtrl[k]!.text,
           );
+        } else if (k == ServiceKey.dockge) {
+          updated = updated.copyWithDockge(
+            url: _urlCtrl[k]!.text.trim(),
+            username: _usernameCtrl[k]!.text.trim(),
+            password: _passwordCtrl[k]!.text,
+          );
         } else {
           updated = updated.copyWithService(
             k,
@@ -205,6 +284,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         } else {
           updated = updated.copyWithService(k, url: '', apiKey: '');
         }
+      }
+      // Persist (or clear) any trusted self-signed certificate fingerprint.
+      if (_supportsCertPinning(k)) {
+        updated = updated.copyWithCertFingerprint(
+          k,
+          _isServiceReady(k) ? (_certFingerprint[k] ?? '') : '',
+        );
       }
     }
     try {
@@ -897,6 +983,18 @@ class _ServiceConfig extends StatelessWidget {
                 const Text(
                   'Leave credentials empty if your qBittorrent instance does not require authentication.',
                   style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: _muted,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+              if (serviceKey == ServiceKey.truenas) ...[
+                const SizedBox(height: 10),
+                Text(
+                  'Requires TrueNAS SCALE $kTrueNasMinVersion or newer.',
+                  style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
                     color: _muted,

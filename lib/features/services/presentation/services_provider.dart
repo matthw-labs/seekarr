@@ -4,6 +4,8 @@ import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/core/utils/arr_activity_display.dart';
 import 'package:seekarr/core/utils/dynamic_map_utils.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:seekarr/features/dockge/presentation/dockge_provider.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
@@ -110,6 +112,13 @@ Future<String?> _loadVersion(
     return info.version;
   }
 
+  if (service == ServiceKey.dockge) {
+    return ref
+        .watch(dockgeServiceProvider)
+        .fetchVersion()
+        .timeout(const Duration(seconds: 8));
+  }
+
   final createClient = ref.watch(serviceStatusClientFactoryProvider);
   final client = createClient(
     baseUrl: settings.urlFor(service),
@@ -150,6 +159,11 @@ String _statusEndpointFor(ServiceKey service) {
     case ServiceKey.truenas:
       // Handled over WebSocket in _loadVersion; no REST endpoint.
       return '';
+    case ServiceKey.dockge:
+      // Handled over Socket.IO in _loadVersion; no REST endpoint.
+      return '';
+    case ServiceKey.prowlarr:
+      return '/api/v1/system/status';
   }
 }
 
@@ -169,6 +183,10 @@ Future<int> _loadItemCount(Ref ref, ServiceKey service) async {
       return (await ref.watch(bazarrServiceProvider).getBadges()).totalWanted;
     case ServiceKey.truenas:
       return (await ref.watch(truenasServiceProvider).getPools()).length;
+    case ServiceKey.dockge:
+      return (await ref.watch(dockgeServiceProvider).fetchStacks()).length;
+    case ServiceKey.prowlarr:
+      return (await ref.watch(prowlarrServiceProvider).getIndexers()).length;
   }
 }
 
@@ -321,7 +339,9 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
       ServiceKey.lidarr ||
       ServiceKey.qbittorrent ||
       ServiceKey.bazarr ||
-      ServiceKey.truenas => const <dynamic>[],
+      ServiceKey.truenas ||
+      ServiceKey.dockge ||
+      ServiceKey.prowlarr => const <dynamic>[],
     };
     return items
         .whereType<Map>()
@@ -363,7 +383,9 @@ String _queueTypeLabel(ServiceKey service) {
     ServiceKey.seerr ||
     ServiceKey.qbittorrent ||
     ServiceKey.bazarr ||
-    ServiceKey.truenas => service.title,
+    ServiceKey.truenas ||
+    ServiceKey.dockge ||
+    ServiceKey.prowlarr => service.title,
   };
 }
 

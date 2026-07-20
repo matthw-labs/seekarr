@@ -41,9 +41,31 @@ import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_library_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_movie_detail_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_screen.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_screen.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_library_screen.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_indexer_detail_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_series_detail_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_wanted_screen.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_screen.dart';
+import 'package:seekarr/features/dockge/presentation/dockge_screen.dart';
+import 'package:seekarr/features/dockge/presentation/dockge_stack_detail_screen.dart';
+import 'package:seekarr/features/dockge/presentation/dockge_stack_edit_screen.dart';
+import 'package:seekarr/features/truenas/presentation/truenas_hub_screen.dart';
+import 'package:seekarr/features/truenas/presentation/dashboard/truenas_dashboard_screen.dart';
+import 'package:seekarr/features/truenas/presentation/storage/truenas_storage_screen.dart';
+import 'package:seekarr/features/truenas/presentation/storage/truenas_pool_detail_screen.dart';
+import 'package:seekarr/features/truenas/presentation/datasets/truenas_datasets_screen.dart';
+import 'package:seekarr/features/truenas/presentation/datasets/truenas_dataset_detail_screen.dart';
+import 'package:seekarr/features/truenas/presentation/shares/truenas_shares_screen.dart';
+import 'package:seekarr/features/truenas/presentation/data_protection/truenas_data_protection_screen.dart';
+import 'package:seekarr/features/truenas/presentation/virt/truenas_virt_screen.dart';
+import 'package:seekarr/features/truenas/presentation/virt/truenas_virt_detail_screen.dart';
+import 'package:seekarr/features/truenas/presentation/apps/truenas_apps_screen.dart';
+import 'package:seekarr/features/truenas/presentation/apps/truenas_app_detail_screen.dart';
+import 'package:seekarr/features/truenas/presentation/reporting/truenas_reporting_screen.dart';
+import 'package:seekarr/features/truenas/presentation/system/truenas_system_hub_screen.dart';
+import 'package:seekarr/features/truenas/presentation/system/truenas_services_screen.dart';
+import 'package:seekarr/features/truenas/presentation/system/truenas_credentials_screen.dart';
+import 'package:seekarr/features/truenas/presentation/system/truenas_system_config_screens.dart';
 import 'package:seekarr/features/discover/presentation/person_detail_screen.dart';
 import 'package:seekarr/features/discover/presentation/collection_detail_screen.dart';
 
@@ -460,6 +482,90 @@ GoRoute _bazarrRoutes({required String path}) {
   );
 }
 
+GoRoute _dockgeRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.dockge,
+        child: const DockgeScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+    routes: [
+      GoRoute(
+        path: 'new',
+        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          child: const DockgeStackEditScreen(),
+        ),
+      ),
+      GoRoute(
+        path: 'stack/:name',
+        pageBuilder: (context, state) {
+          final name = state.pathParameters['name'] ?? '';
+          return RouteUtils.cupertinoPage(
+            key: state.pageKey,
+            child: DockgeStackDetailScreen(name: name),
+          );
+        },
+        routes: [
+          GoRoute(
+            path: 'edit',
+            pageBuilder: (context, state) {
+              final name = state.pathParameters['name'] ?? '';
+              return RouteUtils.cupertinoPage(
+                key: state.pageKey,
+                child: DockgeStackEditScreen(name: name),
+              );
+            },
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+GoRoute _prowlarrRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.prowlarr,
+        child: const ProwlarrScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+    routes: [
+      GoRoute(
+        path: 'library',
+        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          child: const ProwlarrLibraryScreen(),
+        ),
+      ),
+      GoRoute(
+        path: 'indexer/:id',
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+        pageBuilder: (context, state) {
+          final id = RouteUtils.safeIntParam(state, 'id')!;
+          return RouteUtils.cupertinoPage(
+            key: state.pageKey,
+            child: ProwlarrIndexerDetailScreen(indexerId: id),
+          );
+        },
+      ),
+    ],
+  );
+}
+
 GoRoute _truenasRoutes({required String path}) {
   return GoRoute(
     path: path,
@@ -467,13 +573,147 @@ GoRoute _truenasRoutes({required String path}) {
       key: state.pageKey,
       child: ServiceDashboardScreen(
         service: ServiceKey.truenas,
-        child: const TrueNasScreen(
+        child: const TrueNasHubScreen(
           showAppBar: false,
           topPadding: _serviceDashboardTopPadding,
         ),
       ),
     ),
+    routes: _truenasSectionRoutes(),
   );
+}
+
+/// Child routes for each TrueNAS management section.
+List<GoRoute> _truenasSectionRoutes() {
+  GoRoute page(String path, Widget child) => GoRoute(
+    path: path,
+    pageBuilder: (context, state) =>
+        RouteUtils.cupertinoPage(key: state.pageKey, child: child),
+  );
+
+  return <GoRoute>[
+    page('dashboard', const TrueNasDashboardScreen()),
+    GoRoute(
+      path: 'storage',
+      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+        key: state.pageKey,
+        child: const TrueNasStorageScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'pool/:name',
+          pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+            key: state.pageKey,
+            child: TrueNasPoolDetailScreen(
+              poolName: state.pathParameters['name']!,
+            ),
+          ),
+        ),
+      ],
+    ),
+    GoRoute(
+      path: 'datasets',
+      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+        key: state.pageKey,
+        child: const TrueNasDatasetsScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'detail',
+          redirect: (context, state) =>
+              (state.uri.queryParameters['id'] ?? '').isEmpty
+              ? '/services/truenas/datasets'
+              : null,
+          pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+            key: state.pageKey,
+            child: TrueNasDatasetDetailScreen(
+              datasetId: state.uri.queryParameters['id']!,
+            ),
+          ),
+        ),
+      ],
+    ),
+    page('shares', const TrueNasSharesScreen()),
+    page('data-protection', const TrueNasDataProtectionScreen()),
+    GoRoute(
+      path: 'containers',
+      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+        key: state.pageKey,
+        child: const TrueNasVirtScreen(
+          type: 'CONTAINER',
+          title: 'Containers',
+          experimental: true,
+        ),
+      ),
+      routes: [
+        GoRoute(
+          path: 'instance/:id',
+          pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+            key: state.pageKey,
+            child: TrueNasVirtDetailScreen(
+              id: state.pathParameters['id']!,
+              type: 'CONTAINER',
+            ),
+          ),
+        ),
+      ],
+    ),
+    GoRoute(
+      path: 'vms',
+      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+        key: state.pageKey,
+        child: const TrueNasVirtScreen(type: 'VM', title: 'Virtual Machines'),
+      ),
+      routes: [
+        GoRoute(
+          path: 'instance/:id',
+          pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+            key: state.pageKey,
+            child: TrueNasVirtDetailScreen(
+              id: state.pathParameters['id']!,
+              type: 'VM',
+            ),
+          ),
+        ),
+      ],
+    ),
+    GoRoute(
+      path: 'apps',
+      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+        key: state.pageKey,
+        child: const TrueNasAppsScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'app/:name',
+          pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+            key: state.pageKey,
+            child: TrueNasAppDetailScreen(name: state.pathParameters['name']!),
+          ),
+        ),
+      ],
+    ),
+    page('reporting', const TrueNasReportingScreen()),
+    GoRoute(
+      path: 'system',
+      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+        key: state.pageKey,
+        child: const TrueNasSystemHubScreen(),
+      ),
+      routes: [
+        page('general', const TrueNasGeneralScreen()),
+        page('advanced', const TrueNasAdvancedScreen()),
+        page('services', const TrueNasServicesScreen()),
+        page('network', const TrueNasNetworkScreen()),
+        page('credentials', const TrueNasCredentialsScreen()),
+        page('certificates', const TrueNasCertificatesScreen()),
+        page('email', const TrueNasEmailScreen()),
+        page('update', const TrueNasUpdateScreen()),
+        page('ntp', const TrueNasNtpScreen()),
+        page('alert-settings', const TrueNasAlertSettingsScreen()),
+      ],
+    ),
+  ];
 }
 
 String? _redirectLegacyDiscover(GoRouterState state) {
@@ -553,6 +793,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               _qbittorrentRoutes(path: 'qbittorrent'),
               _bazarrRoutes(path: 'bazarr'),
               _truenasRoutes(path: 'truenas'),
+              _dockgeRoutes(path: 'dockge'),
+              _prowlarrRoutes(path: 'prowlarr'),
             ],
           ),
           GoRoute(

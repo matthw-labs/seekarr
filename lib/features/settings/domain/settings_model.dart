@@ -43,6 +43,19 @@ class SettingsModel {
   final String bazarrApiKey;
   final String truenasUrl;
   final String truenasApiKey;
+  final String dockgeUrl;
+  final String dockgeUsername;
+  final String dockgePassword;
+  final String prowlarrUrl;
+  final String prowlarrApiKey;
+
+  /// SHA-256 fingerprint of a self-signed/untrusted TLS certificate the user
+  /// explicitly chose to trust for this server (trust-on-first-use). Empty
+  /// means standard certificate verification applies. Not a secret, so stored
+  /// in plain [SharedPreferences] alongside the URL.
+  final String truenasCertFingerprint;
+  final String dockgeCertFingerprint;
+
   final String region;
   final AppThemeMode themeMode;
 
@@ -92,6 +105,18 @@ class SettingsModel {
           update: (settings, {url, apiKey}) =>
               settings.copyWith(truenasUrl: url, truenasApiKey: apiKey),
         ),
+        ServiceKey.dockge: _ServiceSettingsAccess(
+          url: (settings) => settings.dockgeUrl,
+          apiKey: (settings) => settings.dockgePassword,
+          update: (settings, {url, apiKey}) =>
+              settings.copyWith(dockgeUrl: url, dockgePassword: apiKey),
+        ),
+        ServiceKey.prowlarr: _ServiceSettingsAccess(
+          url: (settings) => settings.prowlarrUrl,
+          apiKey: (settings) => settings.prowlarrApiKey,
+          update: (settings, {url, apiKey}) =>
+              settings.copyWith(prowlarrUrl: url, prowlarrApiKey: apiKey),
+        ),
       };
 
   static String normalizeRegion(String? region) {
@@ -115,6 +140,13 @@ class SettingsModel {
     this.bazarrApiKey = '',
     this.truenasUrl = '',
     this.truenasApiKey = '',
+    this.dockgeUrl = '',
+    this.dockgeUsername = '',
+    this.dockgePassword = '',
+    this.prowlarrUrl = '',
+    this.prowlarrApiKey = '',
+    this.truenasCertFingerprint = '',
+    this.dockgeCertFingerprint = '',
     this.region = 'US',
     this.themeMode = AppThemeMode.system,
   });
@@ -135,6 +167,13 @@ class SettingsModel {
     String? bazarrApiKey,
     String? truenasUrl,
     String? truenasApiKey,
+    String? dockgeUrl,
+    String? dockgeUsername,
+    String? dockgePassword,
+    String? prowlarrUrl,
+    String? prowlarrApiKey,
+    String? truenasCertFingerprint,
+    String? dockgeCertFingerprint,
     String? region,
     AppThemeMode? themeMode,
   }) {
@@ -154,6 +193,15 @@ class SettingsModel {
       bazarrApiKey: bazarrApiKey ?? this.bazarrApiKey,
       truenasUrl: truenasUrl ?? this.truenasUrl,
       truenasApiKey: truenasApiKey ?? this.truenasApiKey,
+      dockgeUrl: dockgeUrl ?? this.dockgeUrl,
+      dockgeUsername: dockgeUsername ?? this.dockgeUsername,
+      dockgePassword: dockgePassword ?? this.dockgePassword,
+      prowlarrUrl: prowlarrUrl ?? this.prowlarrUrl,
+      prowlarrApiKey: prowlarrApiKey ?? this.prowlarrApiKey,
+      truenasCertFingerprint:
+          truenasCertFingerprint ?? this.truenasCertFingerprint,
+      dockgeCertFingerprint:
+          dockgeCertFingerprint ?? this.dockgeCertFingerprint,
       region: region ?? this.region,
       themeMode: themeMode ?? this.themeMode,
     );
@@ -196,19 +244,57 @@ class SettingsModel {
     );
   }
 
+  SettingsModel copyWithDockge({
+    String? url,
+    String? username,
+    String? password,
+  }) {
+    return copyWith(
+      dockgeUrl: url,
+      dockgeUsername: username,
+      dockgePassword: password,
+    );
+  }
+
   String usernameFor(ServiceKey service) {
     if (service == ServiceKey.qbittorrent) return qbittorrentUsername;
+    if (service == ServiceKey.dockge) return dockgeUsername;
     return '';
   }
 
   String passwordFor(ServiceKey service) {
     if (service == ServiceKey.qbittorrent) return qbittorrentPassword;
+    if (service == ServiceKey.dockge) return dockgePassword;
     return '';
   }
 
+  /// Trusted self-signed certificate fingerprint for [service], if any.
+  /// Only the WebSocket-based services (TrueNAS, Dockge) support pinning.
+  String certFingerprintFor(ServiceKey service) {
+    if (service == ServiceKey.truenas) return truenasCertFingerprint;
+    if (service == ServiceKey.dockge) return dockgeCertFingerprint;
+    return '';
+  }
+
+  /// Returns a copy with the trusted certificate fingerprint updated for
+  /// [service]. Ignored for services that do not support pinning.
+  SettingsModel copyWithCertFingerprint(
+    ServiceKey service,
+    String fingerprint,
+  ) {
+    return switch (service) {
+      ServiceKey.truenas => copyWith(truenasCertFingerprint: fingerprint),
+      ServiceKey.dockge => copyWith(dockgeCertFingerprint: fingerprint),
+      _ => this,
+    };
+  }
+
   bool isServiceConfigured(ServiceKey service) {
-    if (service == ServiceKey.qbittorrent) {
-      return qbittorrentUrl.isNotEmpty;
+    // qBittorrent and Dockge authenticate with username/password (Dockge can
+    // even run without auth behind a reverse proxy), so only the URL is
+    // strictly required to consider them configured.
+    if (service == ServiceKey.qbittorrent || service == ServiceKey.dockge) {
+      return urlFor(service).isNotEmpty;
     }
     return urlFor(service).isNotEmpty && apiKeyFor(service).isNotEmpty;
   }

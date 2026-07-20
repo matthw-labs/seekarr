@@ -2,7 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/theme.dart';
 
-enum ServiceKey { seerr, radarr, sonarr, lidarr, qbittorrent, bazarr, truenas }
+enum ServiceKey {
+  seerr,
+  radarr,
+  sonarr,
+  lidarr,
+  qbittorrent,
+  bazarr,
+  truenas,
+  dockge,
+  prowlarr,
+}
 
 extension ServiceKeyExtension on ServiceKey {
   String get title {
@@ -21,6 +31,10 @@ extension ServiceKeyExtension on ServiceKey {
         return 'Bazarr';
       case ServiceKey.truenas:
         return 'TrueNAS';
+      case ServiceKey.dockge:
+        return 'Dockge';
+      case ServiceKey.prowlarr:
+        return 'Prowlarr';
     }
   }
 
@@ -40,6 +54,10 @@ extension ServiceKeyExtension on ServiceKey {
         return Icons.subtitles_rounded;
       case ServiceKey.truenas:
         return Icons.storage_rounded;
+      case ServiceKey.dockge:
+        return Icons.layers_rounded;
+      case ServiceKey.prowlarr:
+        return Icons.travel_explore_rounded;
     }
   }
 
@@ -59,11 +77,15 @@ extension ServiceKeyExtension on ServiceKey {
         return AppColors.bazarr;
       case ServiceKey.truenas:
         return AppColors.truenas;
+      case ServiceKey.dockge:
+        return AppColors.dockge;
+      case ServiceKey.prowlarr:
+        return AppColors.prowlarr;
     }
   }
 
   bool get usesApiKey {
-    return this != ServiceKey.qbittorrent;
+    return this != ServiceKey.qbittorrent && this != ServiceKey.dockge;
   }
 
   bool get isSearchable {
@@ -94,6 +116,10 @@ extension ServiceKeyExtension on ServiceKey {
         return 'v1';
       case ServiceKey.truenas:
         return 'v25';
+      case ServiceKey.dockge:
+        return 'Socket.IO';
+      case ServiceKey.prowlarr:
+        return 'v1';
     }
   }
 
@@ -113,6 +139,10 @@ extension ServiceKeyExtension on ServiceKey {
         return 'subtitles';
       case ServiceKey.truenas:
         return 'pools';
+      case ServiceKey.dockge:
+        return 'stacks';
+      case ServiceKey.prowlarr:
+        return 'indexers';
     }
   }
 
@@ -126,6 +156,8 @@ extension ServiceKeyExtension on ServiceKey {
       case ServiceKey.qbittorrent:
       case ServiceKey.bazarr:
       case ServiceKey.truenas:
+      case ServiceKey.dockge:
+      case ServiceKey.prowlarr:
         return name;
     }
   }
