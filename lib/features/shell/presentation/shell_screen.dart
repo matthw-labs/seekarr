@@ -17,18 +17,40 @@ class ShellScreen extends ConsumerWidget {
 
   const ShellScreen({super.key, required this.child});
 
+  /// Width at or above which navigation moves from a bottom bar to a side
+  /// rail. Tablets and desktop windows get the rail; phones keep the bar.
+  static const double _railBreakpoint = 600;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hideBottomNav = _isImportRoute(context);
+    final hideNav = _isImportRoute(context);
+    final selectedIndex = hideNav ? -1 : _calculateSelectedIndex(context);
+    final useRail = MediaQuery.sizeOf(context).width >= _railBreakpoint;
+
+    if (useRail) {
+      return Scaffold(
+        body: Row(
+          children: [
+            if (!hideNav)
+              _ServicesNavRail(
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (int idx) =>
+                    _onItemTapped(idx, context, ref, selectedIndex),
+              ),
+            Expanded(child: child),
+          ],
+        ),
+      );
+    }
+
     final destinations = NavTab.values
         .map(_destinationFor)
         .toList(growable: false);
-    final selectedIndex = hideBottomNav ? -1 : _calculateSelectedIndex(context);
 
     return Scaffold(
-      extendBody: !hideBottomNav,
+      extendBody: !hideNav,
       body: child,
-      bottomNavigationBar: hideBottomNav
+      bottomNavigationBar: hideNav
           ? null
           : FloatingBottomNavBar(
               selectedIndex: selectedIndex,
@@ -99,5 +121,39 @@ class ShellScreen extends ConsumerWidget {
       case NavTab.settings:
         return null;
     }
+  }
+}
+
+/// Side navigation shown on tablet and desktop widths. Mirrors the bottom bar's
+/// destinations so the information architecture is identical across form
+/// factors — only the presentation adapts.
+class _ServicesNavRail extends StatelessWidget {
+  const _ServicesNavRail({
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return NavigationRail(
+      selectedIndex: selectedIndex >= 0 ? selectedIndex : null,
+      onDestinationSelected: onDestinationSelected,
+      labelType: NavigationRailLabelType.all,
+      backgroundColor: colorScheme.surfaceContainerLow,
+      indicatorColor: colorScheme.secondaryContainer,
+      destinations: [
+        for (final tab in NavTab.values)
+          NavigationRailDestination(
+            icon: Icon(tab.icon),
+            selectedIcon: Icon(tab.selectedIcon),
+            label: Text(tab.label),
+          ),
+      ],
+    );
   }
 }

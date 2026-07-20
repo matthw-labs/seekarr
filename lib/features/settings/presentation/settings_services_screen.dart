@@ -6,6 +6,7 @@ import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/app_dialog.dart';
+import 'package:seekarr/core/widgets/domain_section.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -22,49 +23,62 @@ class SettingsServicesScreen extends ConsumerWidget {
     return AmbientScaffold(
       appBar: const GlassAppBar(title: Text('Services')),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
         children: [
-          SettingsGroupCard(
-            children: [
-              for (final service in ServiceKey.values)
-                SettingsCard.grouped(
-                  leading: Icon(service.icon),
-                  title: service.title,
-                  subtitle: _serviceSubtitle(settings, service),
-                  accentColor: service.accent,
-                  onTap: () =>
-                      context.push('/settings/service/${service.routeParam}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_isConfigured(settings, service))
-                        _DeleteButton(
-                          serviceName: service.title,
-                          onConfirm: () async {
-                            final cleared = service == ServiceKey.qbittorrent
-                                ? settings.copyWithQbittorrent(
-                                    url: '',
-                                    username: '',
-                                    password: '',
-                                  )
-                                : settings.copyWithService(
-                                    service,
-                                    url: '',
-                                    apiKey: '',
-                                  );
-                            await ref
-                                .read(settingsProvider.notifier)
-                                .updateSettings(cleared);
-                          },
-                        ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+          for (final domain in ServiceDomain.values) ...[
+            DomainSectionHeader(label: domain.label),
+            SettingsGroupCard(
+              children: [
+                for (final service in domain.services)
+                  _serviceRow(context, ref, settings, theme, service),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _serviceRow(
+    BuildContext context,
+    WidgetRef ref,
+    SettingsModel settings,
+    ThemeData theme,
+    ServiceKey service,
+  ) {
+    return SettingsCard.grouped(
+      leading: Icon(service.icon),
+      title: service.title,
+      subtitle: _serviceSubtitle(settings, service),
+      accentColor: service.accent,
+      onTap: () => context.push('/settings/service/${service.routeParam}'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_isConfigured(settings, service))
+            _DeleteButton(
+              serviceName: service.title,
+              onConfirm: () async {
+                final cleared = service == ServiceKey.qbittorrent
+                    ? settings.copyWithQbittorrent(
+                        url: '',
+                        username: '',
+                        password: '',
+                      )
+                    : settings.copyWithService(service, url: '', apiKey: '');
+                await ref
+                    .read(settingsProvider.notifier)
+                    .updateSettings(cleared);
+              },
+            ),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ],
       ),

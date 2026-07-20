@@ -6,6 +6,7 @@ import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
+import 'package:seekarr/core/widgets/domain_section.dart';
 import 'package:seekarr/features/services/domain/service_summary.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
@@ -37,13 +38,172 @@ class ServicesOnlineSummary extends ConsumerWidget {
   }
 }
 
-class ServiceStatusGrid extends ConsumerWidget {
-  const ServiceStatusGrid({super.key});
+/// Groups the configured services by [ServiceDomain] and renders each domain
+/// as a collapsible section. Media is expanded by default; the remaining
+/// domains start collapsed with a compact preview so the picker stays short as
+/// the number of services grows.
+class ServicePicker extends ConsumerWidget {
+  const ServicePicker({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
-    final services = ServiceKey.values
+
+    final sections = <Widget>[];
+    for (final domain in ServiceDomain.values) {
+      final configured = domain.services
+          .where(settings.isServiceConfigured)
+          .toList(growable: false);
+      if (configured.isEmpty) continue;
+
+      sections.add(
+        CollapsibleDomainSection(
+          label: domain.label,
+          initiallyExpanded: domain == ServiceDomain.media,
+          trailing: _DomainOnlineCount(services: configured),
+          collapsedPreview: _DomainChipRow(services: configured),
+          child: ServiceStatusGrid(domain: domain),
+        ),
+      );
+    }
+
+    if (sections.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: sections,
+      ),
+    );
+  }
+}
+
+/// A muted "n online" summary for a single domain's configured services.
+class _DomainOnlineCount extends ConsumerWidget {
+  const _DomainOnlineCount({required this.services});
+
+  final List<ServiceKey> services;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final online = services
+        .where(
+          (s) => ref.watch(serviceSummaryProvider(s)).asData?.value.isOnline ??
+              false,
+        )
+        .length;
+    final theme = Theme.of(context);
+
+    return Text(
+      '$online/${services.length}',
+      style: theme.textTheme.labelSmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w700,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    );
+  }
+}
+
+/// Compact icon row shown while a domain section is collapsed. Each chip is
+/// tappable and opens the corresponding service.
+class _DomainChipRow extends ConsumerWidget {
+  const _DomainChipRow({required this.services});
+
+  final List<ServiceKey> services;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: [
+          for (final service in services)
+            _ServiceChip(
+              service: service,
+              isOnline:
+                  ref.watch(serviceSummaryProvider(service)).asData?.value
+                      .isOnline ??
+                  false,
+              onTap: () => context.push('/services/${service.routeParam}'),
+              colorScheme: colorScheme,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceChip extends StatelessWidget {
+  const _ServiceChip({
+    required this.service,
+    required this.isOnline,
+    required this.onTap,
+    required this.colorScheme,
+  });
+
+  final ServiceKey service;
+  final bool isOnline;
+  final VoidCallback onTap;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard.outlined(
+      onTap: onTap,
+      backgroundColor: colorScheme.surfaceContainer,
+      borderColor: colorScheme.outlineVariant,
+      borderRadius: AppRadius.borderRadiusMd,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(service.icon, size: 15, color: service.accent),
+          const SizedBox(width: 6),
+          Text(
+            service.title,
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(
+              color: isOnline ? AppColors.success : colorScheme.error,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ServiceStatusGrid extends ConsumerWidget {
+  const ServiceStatusGrid({super.key, this.domain});
+
+  /// When set, only services belonging to this domain are shown. When null,
+  /// all configured services are shown (legacy behaviour).
+  final ServiceDomain? domain;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(currentSettingsProvider);
+    final pool = domain?.services ?? ServiceKey.values;
+    final services = pool
         .where((s) => settings.isServiceConfigured(s))
         .toList(growable: false);
 

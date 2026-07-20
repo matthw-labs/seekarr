@@ -14,7 +14,52 @@ enum ServiceKey {
   prowlarr,
 }
 
+/// High-level grouping used to organise services across the app.
+///
+/// Seekarr started as a media companion but is growing into a homelab hub, so
+/// services are grouped by the kind of job they do. This enum is the single
+/// source of truth for that grouping — the Home dashboard, Settings and the
+/// onboarding flow all read from it, so a new service only needs a [domain]
+/// assignment in one place.
+enum ServiceDomain {
+  media(label: 'Media'),
+  downloads(label: 'Downloads'),
+  infrastructure(label: 'Infrastructure');
+
+  const ServiceDomain({required this.label});
+
+  final String label;
+
+  /// The configured services belonging to this domain, in declaration order.
+  List<ServiceKey> get services =>
+      ServiceKey.values.where((s) => s.domain == this).toList(growable: false);
+}
+
 extension ServiceKeyExtension on ServiceKey {
+  /// Which [ServiceDomain] this service belongs to. See [ServiceDomain].
+  ServiceDomain get domain {
+    switch (this) {
+      case ServiceKey.seerr:
+      case ServiceKey.radarr:
+      case ServiceKey.sonarr:
+      case ServiceKey.lidarr:
+      case ServiceKey.bazarr:
+        return ServiceDomain.media;
+      case ServiceKey.qbittorrent:
+      case ServiceKey.prowlarr:
+        return ServiceDomain.downloads;
+      case ServiceKey.truenas:
+      case ServiceKey.dockge:
+        return ServiceDomain.infrastructure;
+    }
+  }
+
+  /// Whether tapping this service opens a full multi-screen console (with its
+  /// own inner navigation) rather than a single detail screen. Heavy services
+  /// like TrueNAS and Dockge are effectively sub-apps.
+  bool get isFullConsole =>
+      this == ServiceKey.truenas || this == ServiceKey.dockge;
+
   String get title {
     switch (this) {
       case ServiceKey.seerr:

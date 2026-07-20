@@ -499,7 +499,7 @@ class _HeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Manage your self-hosted media services from one place.',
+            'Your whole homelab, managed from one place.',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 34,
@@ -511,7 +511,7 @@ class _HeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Seekarr is the control surface for the services you run yourself, starting from the Arr stack and giving you one UI to manage requests, libraries, and activity.',
+            'Seekarr is the control surface for the services you run yourself — media, downloads and infrastructure — in one UI, from wherever you are.',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
@@ -538,9 +538,9 @@ class _HeroCard extends StatelessWidget {
           _StackDivider(),
           const SizedBox(height: 12),
           _StackRow(
-            color: Color(0xFF8B5CF6),
-            name: 'Sonarr',
-            sub: 'Series automation on your instance',
+            color: AppColors.truenas,
+            name: 'TrueNAS',
+            sub: 'Storage, apps and datasets on your NAS',
           ),
           const SizedBox(height: 12),
           _StackDivider(),
@@ -709,25 +709,34 @@ class _ServicesStep extends StatelessWidget {
           Expanded(
             child: SingleChildScrollView(
               child: Column(
-                children: ServiceKey.values
-                    .map(
-                      (k) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _ServiceCard(
-                          serviceKey: k,
-                          isEnabled: enabled[k]!,
-                          urlCtrl: urlCtrl[k]!,
-                          apiKeyCtrl: apiKeyCtrl[k]!,
-                          usernameCtrl: usernameCtrl[k]!,
-                          passwordCtrl: passwordCtrl[k]!,
-                          verifyStatus: verifyStatus[k],
-                          verifying: verifying[k]!,
-                          onToggle: (v) => onToggle(k, v),
-                          onVerify: () => onVerify(k),
-                        ),
+                children: [
+                  for (final domain in ServiceDomain.values)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _OnboardingDomainSection(
+                        label: domain.label,
+                        initiallyExpanded: domain == ServiceDomain.media,
+                        enabledCount: domain.services
+                            .where((k) => enabled[k]!)
+                            .length,
+                        serviceCards: [
+                          for (final k in domain.services)
+                            _ServiceCard(
+                              serviceKey: k,
+                              isEnabled: enabled[k]!,
+                              urlCtrl: urlCtrl[k]!,
+                              apiKeyCtrl: apiKeyCtrl[k]!,
+                              usernameCtrl: usernameCtrl[k]!,
+                              passwordCtrl: passwordCtrl[k]!,
+                              verifyStatus: verifyStatus[k],
+                              verifying: verifying[k]!,
+                              onToggle: (v) => onToggle(k, v),
+                              onVerify: () => onVerify(k),
+                            ),
+                        ],
                       ),
-                    )
-                    .toList(),
+                    ),
+                ],
               ),
             ),
           ),
@@ -747,6 +756,110 @@ class _ServicesStep extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Collapsible domain group for the onboarding connect step. Styled with the
+/// onboarding's dark tokens (rather than the shared Material [DomainSection])
+/// so it matches the surrounding gradient UI. Media starts expanded; the other
+/// domains start collapsed to keep the initial scroll short.
+class _OnboardingDomainSection extends StatefulWidget {
+  const _OnboardingDomainSection({
+    required this.label,
+    required this.serviceCards,
+    required this.enabledCount,
+    this.initiallyExpanded = false,
+  });
+
+  final String label;
+  final List<Widget> serviceCards;
+  final int enabledCount;
+  final bool initiallyExpanded;
+
+  @override
+  State<_OnboardingDomainSection> createState() =>
+      _OnboardingDomainSectionState();
+}
+
+class _OnboardingDomainSectionState extends State<_OnboardingDomainSection> {
+  late bool _expanded = widget.initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+            child: Row(
+              children: [
+                AnimatedRotation(
+                  turns: _expanded ? 0.25 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: _muted,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    widget.label.toUpperCase(),
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.08 * 11,
+                      color: _muted2,
+                    ),
+                  ),
+                ),
+                if (widget.enabledCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: const Color(0x1F22C55E),
+                    ),
+                    child: Text(
+                      '${widget.enabledCount} on',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.06 * 10,
+                        color: Color(0xFFBFE9CA),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 220),
+          crossFadeState: _expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          firstChild: const SizedBox(width: double.infinity),
+          secondChild: Column(
+            children: [
+              for (final card in widget.serviceCards)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: card,
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -55,7 +55,7 @@ class ServicesScreen extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.only(bottom: bottomPadding),
                 children: const [
-                  ServiceStatusGrid(),
+                  ServicePicker(),
                   ServicesTrendingSection(),
                   ServicesRecentRequestsSection(),
                   ServicesRecentlyAddedMoviesSection(),
