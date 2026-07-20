@@ -1,36 +1,41 @@
 import 'package:flutter/material.dart';
 
-/// A translucent "glass" surface: a translucent fill (so the ambient gradient
-/// reads through) plus a hairline bottom border.
+/// A near-transparent app-bar surface that lets the page's ambient gradient
+/// read continuously behind it — no opaque strip and no hairline border that
+/// would visually "cut" the gradient.
+///
+/// Instead of a flat translucent fill it paints a soft top-anchored scrim that
+/// fades to fully transparent: just enough tint under the status bar / title to
+/// keep icons and text legible where list content scrolls beneath, while the
+/// lower edge blends seamlessly into the background.
 ///
 /// Deliberately does NOT use a [BackdropFilter] blur — a real backdrop blur
 /// re-rasterises everything behind it every frame, which visibly janks scroll
-/// on screens whose content scrolls under the app bar. The translucent fill
-/// gives a frosted look at zero per-frame cost. It is kept fairly opaque so the
-/// title/icons stay legible even where list content scrolls beneath it.
+/// on screens whose content scrolls under the app bar. The gradient scrim gives
+/// the same legibility protection at zero per-frame cost.
 class GlassSurface extends StatelessWidget {
   final Widget? child;
-  final bool bottomBorder;
 
-  const GlassSurface({super.key, this.child, this.bottomBorder = true});
+  const GlassSurface({super.key, this.child});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
-    final glass = colorScheme.surface.withValues(alpha: isDark ? 0.82 : 0.86);
+    final scrim = colorScheme.surface;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: glass,
-        border: bottomBorder
-            ? Border(
-                bottom: BorderSide(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-                  width: 0.5,
-                ),
-              )
-            : null,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            scrim.withValues(alpha: isDark ? 0.55 : 0.6),
+            scrim.withValues(alpha: isDark ? 0.28 : 0.32),
+            scrim.withValues(alpha: 0),
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ),
       ),
       child: child,
     );

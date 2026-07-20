@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
@@ -105,31 +108,83 @@ final truenasDashboardMetricsProvider =
       );
     });
 
-class TrueNasDashboardScreen extends ConsumerWidget {
+class TrueNasDashboardScreen extends ConsumerStatefulWidget {
   const TrueNasDashboardScreen({super.key});
 
-  void _refresh(WidgetRef ref) {
+  @override
+  ConsumerState<TrueNasDashboardScreen> createState() =>
+      _TrueNasDashboardScreenState();
+}
+
+class _TrueNasDashboardScreenState extends ConsumerState<TrueNasDashboardScreen>
+    with WidgetsBindingObserver {
+  Timer? _timer;
+
+  /// Fast cadence for live metrics (CPU / memory / network).
+  static const _liveInterval = Duration(seconds: 3);
+
+  /// The heavier system/pools/alerts snapshot refreshes every [_slowEvery]
+  /// live ticks (~15s) so it stays fresh without hammering the server.
+  static const _slowEvery = 5;
+  int _tick = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Pause live polling while the app is backgrounded to save battery and
+    // avoid needless WebSocket traffic.
+    if (state == AppLifecycleState.resumed) {
+      _startTimer();
+    } else {
+      _timer?.cancel();
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(_liveInterval, (_) {
+      ref.invalidate(truenasDashboardMetricsProvider);
+      _tick++;
+      if (_tick % _slowEvery == 0) {
+        ref.invalidate(truenasDashboardProvider);
+      }
+    });
+  }
+
+  void _refresh() {
     ref.invalidate(truenasDashboardProvider);
     ref.invalidate(truenasDashboardMetricsProvider);
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final dashboard = ref.watch(truenasDashboardProvider);
 
     return TrueNasSectionScaffold(
       title: 'Dashboard',
       body: RefreshIndicator(
-        onRefresh: () async => _refresh(ref),
+        onRefresh: () async => _refresh(),
         child: dashboard.when(
+          skipLoadingOnReload: true,
           loading: () => ListView(
             padding: const EdgeInsets.only(top: AppSpacing.md),
             children: [AppSkeleton.listRows()],
           ),
           error: (error, _) => ListView(
-            children: [
-              AppErrorState(error: error, onRetry: () => _refresh(ref)),
-            ],
+            children: [AppErrorState(error: error, onRetry: () => _refresh())],
           ),
           data: (data) => _DashboardBody(data: data),
         ),
@@ -150,11 +205,11 @@ class _DashboardBody extends ConsumerWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.md,
         AppSpacing.lg,
-        AppSpacing.xxl,
+        FloatingNavBarMetrics.getScrollViewBottomPadding(context),
       ),
       children: [
         // System summary.
@@ -240,7 +295,7 @@ class _CpuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final usage = metrics.asData?.value.cpuUsage;
+    final usage = metrics.value?.cpuUsage;
     final cores = system.cores ?? 1;
     final load = system.loadAvg1m;
     // Prefer measured CPU %, fall back to a load-per-core proxy.
@@ -276,7 +331,7 @@ class _MemoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final usage = metrics.asData?.value.memoryUsage;
+    final usage = metrics.value?.memoryUsage;
     final total = system.physmemBytes;
     final label = usage != null ? '${(usage * 100).round()}%' : '—';
     final caption = (usage != null && total != null)
@@ -309,6 +364,7 @@ class _NetworkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return metrics.when(
+      skipLoadingOnReload: true,
       loading: () => AppSkeleton.listRows(count: 2),
       error: (_, __) => AppCard.surfaceOutlined(
         child: Text(

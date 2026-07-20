@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -102,11 +103,11 @@ class _DetailBody extends ConsumerWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.md,
         AppSpacing.lg,
-        AppSpacing.xxl,
+        FloatingNavBarMetrics.getScrollViewBottomPadding(context),
       ),
       children: [
         AppCard.surfaceOutlined(

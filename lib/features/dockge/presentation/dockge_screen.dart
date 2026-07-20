@@ -55,6 +55,9 @@ class _DockgeDashboard extends ConsumerWidget {
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(
+          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+        ),
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           ServiceKpiPeek(
@@ -81,7 +84,6 @@ class _DockgeDashboard extends ConsumerWidget {
               onRetry: () => ref.invalidate(dockgeStackListProvider),
             ),
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );

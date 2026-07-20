@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
@@ -34,11 +35,11 @@ class TrueNasDataProtectionScreen extends ConsumerWidget {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
             AppSpacing.md,
             AppSpacing.lg,
-            AppSpacing.xxl,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
             for (final kind in TrueNasTaskKind.values) _TaskGroup(kind: kind),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -48,11 +49,11 @@ class TrueNasDatasetsScreen extends ConsumerWidget {
                 )
               : ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(
+                  padding: EdgeInsets.fromLTRB(
                     AppSpacing.lg,
                     AppSpacing.md,
                     AppSpacing.lg,
-                    AppSpacing.xxl,
+                    FloatingNavBarMetrics.getScrollViewBottomPadding(context),
                   ),
                   children: [
                     for (final root in roots)
@@ -103,8 +104,11 @@ class _DatasetNode extends StatelessWidget {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.info_outline_rounded, size: 18),
+          icon: const Icon(Icons.info_outline_rounded, size: 16),
           tooltip: 'Details',
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           onPressed: () =>
               context.push(ServiceRoutes.truenasDataset(dataset.id)),
         ),
@@ -113,8 +117,10 @@ class _DatasetNode extends StatelessWidget {
 
     if (dataset.children.isEmpty) {
       return ListTile(
-        contentPadding: EdgeInsets.only(left: depth * 12.0),
+        contentPadding: EdgeInsets.only(left: depth * 10.0),
         dense: true,
+        visualDensity: VisualDensity.compact,
+        minVerticalPadding: 2,
         title: tileTitle,
         subtitle: Text(subtitle, style: theme.textTheme.labelSmall),
         onTap: () => context.push(ServiceRoutes.truenasDataset(dataset.id)),
@@ -122,10 +128,12 @@ class _DatasetNode extends StatelessWidget {
     }
 
     return Padding(
-      padding: EdgeInsets.only(left: depth * 12.0),
+      padding: EdgeInsets.only(left: depth * 10.0),
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
         childrenPadding: EdgeInsets.zero,
+        visualDensity: VisualDensity.compact,
+        minTileHeight: 40,
         shape: const Border(),
         collapsedShape: const Border(),
         initiallyExpanded: depth == 0,

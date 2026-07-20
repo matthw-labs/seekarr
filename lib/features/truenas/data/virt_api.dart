@@ -10,12 +10,32 @@ class TrueNasVirtApi extends TrueNasApiBase {
       fetchObject('virt.global.config', TrueNasVirtGlobalConfig.fromJson);
 
   /// Instances of a given [type] (`CONTAINER` or `VM`).
+  ///
+  /// Containers come from Incus (`virt.instance.query`). VMs are gathered from
+  /// BOTH the legacy KVM subsystem (`vm.query`) and Incus VMs, since a server
+  /// can have either kind — legacy VMs never appear in `virt.instance.query`.
   Future<List<TrueNasVirtInstance>> getInstances(String type) async {
-    // TODO: push the type filter server-side via a query-filter
-    // (`[["type","=",type]]`) once we can confirm the exact stored casing of
-    // the `type` field across API versions. Kept client-side for now — a
-    // case-mismatched server filter would silently return zero instances,
-    // whereas the local `toUpperCase()` compare is tolerant.
+    if (type.toUpperCase() == 'VM') {
+      final results = <TrueNasVirtInstance>[];
+      try {
+        results.addAll(
+          await queryList('vm.query', TrueNasVirtInstance.fromLegacyVm),
+        );
+      } catch (_) {
+        // Legacy VM subsystem may be absent on some builds; ignore.
+      }
+      try {
+        final incus = await queryList(
+          'virt.instance.query',
+          TrueNasVirtInstance.fromJson,
+        );
+        results.addAll(incus.where((i) => i.isVm));
+      } catch (_) {
+        // Incus virtualization may not be configured; ignore.
+      }
+      return results;
+    }
+
     final all = await queryList(
       'virt.instance.query',
       TrueNasVirtInstance.fromJson,
@@ -26,16 +46,40 @@ class TrueNasVirtApi extends TrueNasApiBase {
   }
 
   Future<TrueNasVirtInstance?> getInstance(String id) async {
+    // Incus instance first.
     final result = await client.call('virt.instance.query', [
       [
         ['id', '=', id],
       ],
     ]);
-    if (result is! List || result.isEmpty) return null;
-    final map = result.first;
-    if (map is! Map) return null;
-    return TrueNasVirtInstance.fromJson(Map<String, dynamic>.from(map));
+    if (result is List && result.isNotEmpty && result.first is Map) {
+      return TrueNasVirtInstance.fromJson(
+        Map<String, dynamic>.from(result.first as Map),
+      );
+    }
+    // Fall back to a legacy KVM VM matched by name (== id) or numeric id.
+    try {
+      final vms = await queryList('vm.query', TrueNasVirtInstance.fromLegacyVm);
+      for (final vm in vms) {
+        if (vm.id == id || vm.legacyVmId?.toString() == id) return vm;
+      }
+    } catch (_) {
+      // Ignore when the legacy subsystem is unavailable.
+    }
+    return null;
   }
+
+  // ── Legacy KVM VM lifecycle (`vm.*`) ──────────────────────────────────────
+
+  Future<dynamic> vmStart(int id) => client.call('vm.start', [id]);
+
+  Future<dynamic> vmStop(int id, {bool force = false}) =>
+      client.callJob('vm.stop', [
+        id,
+        {'force': force},
+      ]);
+
+  Future<dynamic> vmRestart(int id) => client.callJob('vm.restart', [id]);
 
   Future<List<TrueNasVirtDevice>> getDevices(String id) =>
       queryList('virt.instance.device_list', TrueNasVirtDevice.fromJson, [id]);

@@ -61,7 +61,8 @@ class TrueNasVirtDevice {
   }
 }
 
-/// An Incus instance (LXC container or VM) from `virt.instance.query`.
+/// An Incus instance (LXC container or VM) from `virt.instance.query`, or a
+/// legacy KVM VM from `vm.query` (see [TrueNasVirtInstance.fromLegacyVm]).
 class TrueNasVirtInstance {
   final String id;
   final String name;
@@ -72,6 +73,10 @@ class TrueNasVirtInstance {
   final bool autostart;
   final String? image;
 
+  /// Numeric id when this is a legacy KVM VM (`vm.*` subsystem); null for Incus
+  /// instances. Lifecycle calls must route to `vm.*` with this id.
+  final int? legacyVmId;
+
   const TrueNasVirtInstance({
     required this.id,
     required this.name,
@@ -81,10 +86,38 @@ class TrueNasVirtInstance {
     this.memoryBytes,
     this.autostart = false,
     this.image,
+    this.legacyVmId,
   });
 
   bool get isRunning => status.toUpperCase() == 'RUNNING';
   bool get isVm => type.toUpperCase() == 'VM';
+
+  /// Whether this is a legacy KVM VM (managed via the `vm.*` API).
+  bool get isLegacyVm => legacyVmId != null;
+
+  /// A legacy KVM VM from `vm.query`. Memory there is in MiB and vCPU count is
+  /// `vcpus * cores * threads`; state lives under `status.state`.
+  factory TrueNasVirtInstance.fromLegacyVm(Map<String, dynamic> json) {
+    final vcpus = intOrNull(json['vcpus']) ?? 1;
+    final cores = intOrNull(json['cores']) ?? 1;
+    final threads = intOrNull(json['threads']) ?? 1;
+    final memMib = intOrNull(json['memory']);
+    final state =
+        stringOrNull(mapOrNull(json['status'])?['state']) ?? 'STOPPED';
+    final numericId = intOrNull(json['id']);
+    final description = stringOrNull(json['description']);
+    return TrueNasVirtInstance(
+      id: stringOrNull(json['name']) ?? numericId?.toString() ?? '',
+      name: stringOrNull(json['name']) ?? '',
+      type: 'VM',
+      status: state,
+      cpuCount: vcpus * cores * threads,
+      memoryBytes: memMib != null ? memMib * 1024 * 1024 : null,
+      autostart: json['autostart'] == true,
+      image: (description != null && description.isNotEmpty) ? description : null,
+      legacyVmId: numericId,
+    );
+  }
 
   factory TrueNasVirtInstance.fromJson(Map<String, dynamic> json) {
     final imageJson = mapOrNull(json['image']);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
@@ -7,6 +8,7 @@ import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/pressable_scale.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:seekarr/features/truenas/presentation/system/truenas_diagnostics_screen.dart';
 import 'package:seekarr/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 
 class _SystemEntry {
@@ -63,11 +65,11 @@ class TrueNasSystemHubScreen extends StatelessWidget {
     return TrueNasSectionScaffold(
       title: 'System',
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.md,
           AppSpacing.lg,
-          AppSpacing.xxl,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         children: [
           GridView.count(
@@ -78,6 +80,17 @@ class TrueNasSystemHubScreen extends StatelessWidget {
             crossAxisSpacing: AppSpacing.md,
             childAspectRatio: 1.4,
             children: [for (final entry in _entries) _SystemTile(entry: entry)],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Debug-only entry point for inspecting raw JSON-RPC responses.
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const TrueNasDiagnosticsScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.bug_report_rounded, size: 18),
+            label: const Text('Diagnostics (debug)'),
           ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/truenas/presentation/widgets/truenas_version_banner.dart';
@@ -28,6 +29,12 @@ class TrueNasSectionScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // These section screens are pushed *inside* the app shell, so the floating
+    // bottom nav bar overlays them. The body's own scroll view is responsible
+    // for reserving bottom space (via
+    // `FloatingNavBarMetrics.getScrollViewBottomPadding`) so content scrolls
+    // *under* the translucent bar — exactly like the TrueNAS hub. Here we only
+    // lift the FAB so it can't be hidden behind the bar.
     return AmbientScaffold(
       accent: ServiceKey.truenas.accent,
       appBar: GlassAppBar(
@@ -35,7 +42,14 @@ class TrueNasSectionScaffold extends StatelessWidget {
         actions: actions,
         bottom: appBarBottom,
       ),
-      floatingActionButton: floatingActionButton,
+      floatingActionButton: floatingActionButton == null
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(
+                bottom: FloatingNavBarMetrics.totalHeight,
+              ),
+              child: floatingActionButton,
+            ),
       body: Column(
         children: [
           if (showVersionBanner) const TrueNasVersionBanner(),

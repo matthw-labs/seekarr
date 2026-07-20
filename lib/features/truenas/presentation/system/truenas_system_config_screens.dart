@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
@@ -7,6 +8,7 @@ import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/app_error_state.dart';
 import 'package:seekarr/core/widgets/app_skeleton.dart';
 import 'package:seekarr/core/widgets/section_header.dart';
+import 'package:seekarr/features/truenas/presentation/system/truenas_config_edit.dart';
 import 'package:seekarr/features/truenas/presentation/system/truenas_system_providers.dart';
 import 'package:seekarr/features/truenas/presentation/truenas_actions.dart';
 import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
@@ -47,11 +49,11 @@ class _AsyncSection<T> extends StatelessWidget {
           ),
           data: (data) => ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
+            padding: EdgeInsets.fromLTRB(
               AppSpacing.lg,
               AppSpacing.md,
               AppSpacing.lg,
-              AppSpacing.xxl,
+              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
             ),
             children: [builder(data)],
           ),
@@ -80,11 +82,14 @@ class TrueNasGeneralScreen extends ConsumerWidget {
         IconButton(
           icon: const Icon(Icons.edit_outlined),
           tooltip: 'Edit',
-          onPressed: () async {
+          onPressed: () {
             final data = config.asData?.value ?? const {};
-            final values = await showTrueNasFormSheet(
+            editTrueNasConfig(
               context: context,
+              ref: ref,
               title: 'Edit general',
+              current: data,
+              labels: const {'timezone': 'Timezone', 'language': 'Language'},
               fields: [
                 TrueNasFormField(
                   key: 'timezone',
@@ -97,16 +102,8 @@ class TrueNasGeneralScreen extends ConsumerWidget {
                   initialValue: stringOrNull(data['language']),
                 ),
               ],
-            );
-            if (values == null || !context.mounted) return;
-            await runTrueNasAction(
-              context,
-              ref,
-              action: () => ref
-                  .read(truenasSystemApiProvider)
-                  .updateGeneralConfig(values),
-              successMessage: 'Settings saved',
-              failureMessage: 'Could not save',
+              apply: (patch) =>
+                  ref.read(truenasSystemApiProvider).updateGeneralConfig(patch),
               invalidate: [truenasGeneralConfigProvider],
             );
           },
@@ -146,6 +143,62 @@ class TrueNasAdvancedScreen extends ConsumerWidget {
       title: 'Advanced',
       value: config,
       onRefresh: () => ref.invalidate(truenasAdvancedConfigProvider),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.edit_outlined),
+          tooltip: 'Edit',
+          onPressed: () {
+            final data = config.asData?.value ?? const {};
+            editTrueNasConfig(
+              context: context,
+              ref: ref,
+              title: 'Edit advanced',
+              current: data,
+              labels: const {
+                'consolemenu': 'Console menu',
+                'serialconsole': 'Serial console',
+                'sysloglevel': 'Syslog level',
+                'syslogserver': 'Syslog server',
+                'motd': 'Motd',
+              },
+              fields: [
+                TrueNasFormField(
+                  key: 'consolemenu',
+                  label: 'Console menu',
+                  boolField: true,
+                  initialBool: data['consolemenu'] == true,
+                ),
+                TrueNasFormField(
+                  key: 'serialconsole',
+                  label: 'Serial console',
+                  boolField: true,
+                  initialBool: data['serialconsole'] == true,
+                ),
+                TrueNasFormField(
+                  key: 'sysloglevel',
+                  label: 'Syslog level',
+                  initialValue: stringOrNull(data['sysloglevel']),
+                  hint: 'e.g. F_INFO',
+                ),
+                TrueNasFormField(
+                  key: 'syslogserver',
+                  label: 'Syslog server',
+                  initialValue: stringOrNull(data['syslogserver']),
+                ),
+                TrueNasFormField(
+                  key: 'motd',
+                  label: 'Motd',
+                  initialValue: stringOrNull(data['motd']),
+                ),
+              ],
+              apply: (patch) => ref
+                  .read(truenasSystemApiProvider)
+                  .updateAdvancedConfig(patch),
+              invalidate: [truenasAdvancedConfigProvider],
+            );
+          },
+        ),
+      ],
       builder: (data) => _infoCard([
         TrueNasInfoRow(
           label: 'Console menu',
@@ -258,6 +311,60 @@ class TrueNasEmailScreen extends ConsumerWidget {
       value: config,
       onRefresh: () => ref.invalidate(truenasMailConfigProvider),
       actions: [
+        IconButton(
+          icon: const Icon(Icons.edit_outlined),
+          tooltip: 'Edit',
+          onPressed: () {
+            final data = config.asData?.value ?? const {};
+            editTrueNasConfig(
+              context: context,
+              ref: ref,
+              title: 'Edit email',
+              current: data,
+              intKeys: const {'port'},
+              labels: const {
+                'fromemail': 'From',
+                'outgoingserver': 'Server',
+                'port': 'Port',
+                'security': 'Security',
+                'user': 'Username',
+              },
+              fields: [
+                TrueNasFormField(
+                  key: 'fromemail',
+                  label: 'From',
+                  initialValue: stringOrNull(data['fromemail']),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                TrueNasFormField(
+                  key: 'outgoingserver',
+                  label: 'Server',
+                  initialValue: stringOrNull(data['outgoingserver']),
+                ),
+                TrueNasFormField(
+                  key: 'port',
+                  label: 'Port',
+                  initialValue: intOrNull(data['port'])?.toString(),
+                  keyboardType: TextInputType.number,
+                ),
+                TrueNasFormField(
+                  key: 'security',
+                  label: 'Security',
+                  initialValue: stringOrNull(data['security']),
+                  hint: 'PLAIN · SSL · TLS',
+                ),
+                TrueNasFormField(
+                  key: 'user',
+                  label: 'Username',
+                  initialValue: stringOrNull(data['user']),
+                ),
+              ],
+              apply: (patch) =>
+                  ref.read(truenasSystemApiProvider).updateMailConfig(patch),
+              invalidate: [truenasMailConfigProvider],
+            );
+          },
+        ),
         IconButton(
           icon: const Icon(Icons.send_rounded),
           tooltip: 'Send test email',

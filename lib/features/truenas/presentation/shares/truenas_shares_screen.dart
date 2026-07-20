@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
@@ -433,11 +434,11 @@ class _ShareTabScaffold extends StatelessWidget {
           onRefresh: () async => onRefresh(),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
+            padding: EdgeInsets.fromLTRB(
               AppSpacing.lg,
               AppSpacing.md,
               AppSpacing.lg,
-              AppSpacing.xxxl,
+              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
             ),
             children: [serviceBanner, child],
           ),

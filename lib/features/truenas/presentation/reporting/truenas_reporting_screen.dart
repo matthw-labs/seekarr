@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
@@ -12,7 +13,12 @@ import 'package:seekarr/features/truenas/presentation/widgets/charts/line_area_c
 import 'package:seekarr/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 
 /// Reporting graphs to show, in order.
-const _graphNames = ['cpu', 'memory', 'load', 'disk', 'interface'];
+///
+/// Limited to graphs that don't require a per-device `identifier`. `load` and
+/// `disk` (which need an identifier per disk) were making the batched
+/// `reporting.netdata_graph` call reject and spin forever; the reporting API
+/// now also degrades gracefully per-graph as a safety net.
+const _graphNames = ['cpu', 'memory', 'interface'];
 
 const _seriesPalette = [
   AppColors.truenas,
@@ -63,11 +69,11 @@ class _TrueNasReportingScreenState
         onRefresh: () async => ref.invalidate(_reportingProvider(query)),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
             AppSpacing.md,
             AppSpacing.lg,
-            AppSpacing.xxl,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
             Center(

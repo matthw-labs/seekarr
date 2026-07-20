@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/features/truenas/domain/models/app.dart';
 import 'package:seekarr/features/truenas/presentation/apps/truenas_apps_providers.dart';
@@ -8,6 +9,48 @@ import 'package:seekarr/features/truenas/presentation/truenas_actions.dart';
 import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
 
 enum AppAction { start, stop, upgrade, delete }
+
+/// Upgrades every app that has an update available, one after another, then
+/// reports a combined outcome. No-op (with a friendly note) when everything is
+/// already up to date.
+Future<void> updateAllApps(
+  BuildContext context,
+  WidgetRef ref, {
+  required List<TrueNasApp> apps,
+}) async {
+  final upgradable = apps.where((a) => a.upgradeAvailable).toList();
+  if (upgradable.isEmpty) {
+    SnackBarHelper.success(context, 'All apps are up to date');
+    return;
+  }
+
+  final plural = upgradable.length > 1 ? 's' : '';
+  final result = await showAppConfirmDialog(
+    context: context,
+    title: 'Update ${upgradable.length} app$plural?',
+    message: upgradable.map((a) => a.title).join(', '),
+    confirmLabel: 'Update all',
+  );
+  if (!result.confirmed || !context.mounted) return;
+
+  final api = ref.read(truenasAppsApiProvider);
+  final failures = <String>[];
+  for (final app in upgradable) {
+    try {
+      await api.upgrade(app.name);
+    } catch (_) {
+      failures.add(app.title);
+    }
+  }
+
+  ref.invalidate(truenasAppsProvider);
+  if (!context.mounted) return;
+  if (failures.isEmpty) {
+    SnackBarHelper.success(context, 'Updated ${upgradable.length} app$plural');
+  } else {
+    SnackBarHelper.error(context, 'Failed to update: ${failures.join(', ')}');
+  }
+}
 
 /// Runs an app lifecycle action, confirming destructive ones. Returns true on
 /// success (callers pop the detail screen after a delete).

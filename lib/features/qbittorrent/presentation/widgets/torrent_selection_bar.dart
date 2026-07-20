@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_actions.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
@@ -24,7 +25,14 @@ class TorrentSelectionBar extends ConsumerWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // Lift the action row above the floating bottom nav bar so its
+          // buttons are never covered by it.
+          padding: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 8,
+            bottom: 8 + FloatingNavBarMetrics.totalHeight,
+          ),
           child: Row(
             children: [
               TextButton(

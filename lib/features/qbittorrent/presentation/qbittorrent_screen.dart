@@ -4,12 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/core/widgets/search_bar_header.dart';
+import 'package:seekarr/core/widgets/service_kpi_peek.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/transfer_info.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/speed_stats_bar.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_list_controls.dart';
+import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_selection_bar.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_tile.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -76,7 +77,14 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen>
                           widget.topPadding + MediaQuery.paddingOf(context).top,
                     ),
                   ),
-                SliverToBoxAdapter(child: _buildStatsBar()),
+                SliverToBoxAdapter(
+                  child: ServiceKpiPeek(
+                    kpis: ref.watch(
+                      serviceKpiProvider(ServiceKey.qbittorrent),
+                    ),
+                    accent: ServiceKey.qbittorrent.accent,
+                  ),
+                ),
                 SliverToBoxAdapter(
                   child: SearchBarHeader(
                     hintText: 'Search torrents...',
@@ -102,25 +110,6 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen>
     );
   }
 
-  Widget _buildStatsBar() {
-    final transferAsync = ref.watch(transferInfoProvider);
-    final torrentsAsync = ref.watch(torrentsProvider);
-
-    TransferInfo? info;
-    transferAsync.whenOrNull(data: (d) => info = d);
-
-    int total = 0;
-    int active = 0;
-    torrentsAsync.whenOrNull(
-      data: (list) {
-        total = list.length;
-        active = list.where((t) => t.parsedState.isActive).length;
-      },
-    );
-
-    return SpeedStatsBar(info: info, torrentCount: total, activeCount: active);
-  }
-
   Widget _buildTorrentList(
     BuildContext context,
     AsyncValue<List<Torrent>> torrentsAsync,
@@ -142,7 +131,10 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen>
           },
           child: ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(top: 4, bottom: 80),
+            padding: EdgeInsets.only(
+              top: 4,
+              bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+            ),
             itemCount: torrents.length,
             itemBuilder: (context, index) {
               final torrent = torrents[index];

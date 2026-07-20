@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -61,7 +62,9 @@ class TrueNasVirtScreen extends ConsumerWidget {
               ),
             ],
           ),
-          data: (cfg) => !cfg.isReady
+          // Legacy KVM VMs don't need Incus to be configured, so only gate
+          // containers (and Incus VMs) on the virtualization pool being ready.
+          data: (cfg) => (type.toUpperCase() != 'VM' && !cfg.isReady)
               ? ListView(
                   children: const [
                     Padding(
@@ -116,11 +119,11 @@ class _InstanceList extends ConsumerWidget {
       ),
       data: (list) => ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.md,
           AppSpacing.lg,
-          AppSpacing.xxxl,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         children: [
           if (experimental)
@@ -202,11 +205,22 @@ class _InstanceCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    instance.name,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          instance.name,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (instance.autostart) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        const _AutostartBadge(),
+                      ],
+                    ],
                   ),
                   if (specs.isNotEmpty)
                     Text(
@@ -222,6 +236,43 @@ class _InstanceCard extends ConsumerWidget {
             VirtLifecycleButton(instance: instance, type: type),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Small pill indicating the instance is set to auto-start on boot.
+class _AutostartBadge extends StatelessWidget {
+  const _AutostartBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.truenas.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.power_settings_new_rounded,
+            size: 11,
+            color: AppColors.truenas,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            'AUTOSTART',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.truenas,
+              fontWeight: FontWeight.w800,
+              fontSize: 9,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -259,10 +310,20 @@ class VirtLifecycleButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final api = ref.read(truenasVirtApiProvider);
+    final legacyId = instance.legacyVmId;
     void invalidate() {
       ref.invalidate(truenasVirtInstancesProvider(type));
       ref.invalidate(truenasVirtInstanceProvider(instance.id));
     }
+
+    // Route lifecycle calls to the legacy `vm.*` API for KVM VMs, or to Incus
+    // (`virt.instance.*`) otherwise.
+    Future<dynamic> doStop() =>
+        legacyId != null ? api.vmStop(legacyId) : api.stop(instance.id);
+    Future<dynamic> doRestart() =>
+        legacyId != null ? api.vmRestart(legacyId) : api.restart(instance.id);
+    Future<dynamic> doStart() =>
+        legacyId != null ? api.vmStart(legacyId) : api.start(instance.id);
 
     if (instance.isRunning) {
       return PopupMenuButton<String>(
@@ -270,9 +331,7 @@ class VirtLifecycleButton extends ConsumerWidget {
         onSelected: (value) => runTrueNasAction(
           context,
           ref,
-          action: () => value == 'restart'
-              ? api.restart(instance.id)
-              : api.stop(instance.id),
+          action: () => value == 'restart' ? doRestart() : doStop(),
           successMessage: value == 'restart' ? 'Restarting' : 'Stopping',
           failureMessage: 'Action failed',
         ).then((_) => invalidate()),
@@ -289,7 +348,7 @@ class VirtLifecycleButton extends ConsumerWidget {
       onPressed: () => runTrueNasAction(
         context,
         ref,
-        action: () => api.start(instance.id),
+        action: () => doStart(),
         successMessage: 'Starting ${instance.name}',
         failureMessage: 'Could not start',
       ).then((_) => invalidate()),

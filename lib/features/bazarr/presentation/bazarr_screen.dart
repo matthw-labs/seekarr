@@ -97,6 +97,9 @@ class _BazarrDashboard extends ConsumerWidget {
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(
+          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+        ),
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           // Stat row — shared premium KPI peek
@@ -127,7 +130,6 @@ class _BazarrDashboard extends ConsumerWidget {
           const SizedBox(height: 16),
           // CTA
           _BazarrCta(accent: AppColors.bazarr),
-          const SizedBox(height: 24),
         ],
       ),
     );

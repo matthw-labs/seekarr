@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,9 +23,22 @@ class TrueNasAppsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final apps = ref.watch(truenasAppsProvider);
+    final appList = apps.value ?? const <TrueNasApp>[];
+    final upgradableCount = appList.where((a) => a.upgradeAvailable).length;
 
     return TrueNasSectionScaffold(
       title: 'Apps',
+      actions: [
+        if (upgradableCount > 0)
+          IconButton(
+            tooltip: 'Update all ($upgradableCount)',
+            icon: Badge(
+              label: Text('$upgradableCount'),
+              child: const Icon(Icons.system_update_alt_rounded),
+            ),
+            onPressed: () => updateAllApps(context, ref, apps: appList),
+          ),
+      ],
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(truenasAppsProvider),
         child: apps.when(
@@ -49,11 +63,11 @@ class TrueNasAppsScreen extends ConsumerWidget {
                 )
               : ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(
+                  padding: EdgeInsets.fromLTRB(
                     AppSpacing.lg,
                     AppSpacing.md,
                     AppSpacing.lg,
-                    AppSpacing.xxl,
+                    FloatingNavBarMetrics.getScrollViewBottomPadding(context),
                   ),
                   children: [
                     for (final app in list)

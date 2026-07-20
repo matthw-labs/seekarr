@@ -115,6 +115,9 @@ class _ProwlarrDashboard extends ConsumerWidget {
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(
+          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+        ),
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           ServiceKpiPeek(
@@ -134,7 +137,6 @@ class _ProwlarrDashboard extends ConsumerWidget {
           const SectionHeader(title: 'Recent Activity', showChevron: false),
           const SizedBox(height: 2),
           _HistoryList(historyAsync: historyAsync),
-          const SizedBox(height: 24),
         ],
       ),
     );
