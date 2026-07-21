@@ -68,7 +68,9 @@ class QbittorrentClient {
     if (normalized.isEmpty) return '';
     if (!normalized.startsWith('http://') &&
         !normalized.startsWith('https://')) {
-      normalized = 'http://$normalized';
+      // Default a scheme-less URL to HTTPS so credentials are not sent in the
+      // clear when the user omits the scheme. An explicit http:// is honoured.
+      normalized = 'https://$normalized';
     }
     if (normalized.endsWith('/')) {
       normalized = normalized.substring(0, normalized.length - 1);

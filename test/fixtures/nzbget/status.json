@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "DownloadRate": 2097152,
+    "RemainingSizeMB": 1500,
+    "RemainingSizeLo": 0,
+    "RemainingSizeHi": 0,
+    "DownloadPaused": false
+  },
+  "id": 1
+}

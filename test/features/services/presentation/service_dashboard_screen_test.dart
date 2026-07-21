@@ -91,17 +91,19 @@ GoRouter _buildRouter(String initialLocation) {
       GoRoute(
         path: '/services',
         builder: (context, state) => Scaffold(
-          body: Column(
-            children: [
-              const Text('Services home'),
-              for (final service in ServiceKey.values)
-                TextButton(
-                  key: ValueKey('open-service-${service.routeParam}'),
-                  onPressed: () =>
-                      context.push('/services/${service.routeParam}'),
-                  child: Text('Open ${service.title}'),
-                ),
-            ],
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                const Text('Services home'),
+                for (final service in ServiceKey.values)
+                  TextButton(
+                    key: ValueKey('open-service-${service.routeParam}'),
+                    onPressed: () =>
+                        context.push('/services/${service.routeParam}'),
+                    child: Text('Open ${service.title}'),
+                  ),
+              ],
+            ),
           ),
         ),
         routes: [

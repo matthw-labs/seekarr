@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "authorName": "Brandon Sanderson",
+    "monitored": true,
+    "status": "continuing",
+    "statistics": {"bookCount": 20, "bookFileCount": 15, "totalBookCount": 25}
+  },
+  {
+    "id": 2,
+    "authorName": "J.R.R. Tolkien",
+    "monitored": false,
+    "statistics": {"bookCount": 10, "bookFileCount": 10}
+  }
+]

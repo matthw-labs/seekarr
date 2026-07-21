@@ -355,5 +355,41 @@ Future<ServiceSummary> _summaryBuilder(Ref ref, ServiceKey service) async {
         itemCount: null,
         itemLabel: 'indexers',
       );
+    case ServiceKey.readarr:
+      return const ServiceSummary(
+        service: ServiceKey.readarr,
+        status: ServiceSummaryStatus.offline,
+        host: '',
+        version: null,
+        itemCount: null,
+        itemLabel: 'authors',
+      );
+    case ServiceKey.sabnzbd:
+      return const ServiceSummary(
+        service: ServiceKey.sabnzbd,
+        status: ServiceSummaryStatus.offline,
+        host: '',
+        version: null,
+        itemCount: null,
+        itemLabel: 'downloads',
+      );
+    case ServiceKey.nzbget:
+      return const ServiceSummary(
+        service: ServiceKey.nzbget,
+        status: ServiceSummaryStatus.offline,
+        host: '',
+        version: null,
+        itemCount: null,
+        itemLabel: 'downloads',
+      );
+    case ServiceKey.unraid:
+      return const ServiceSummary(
+        service: ServiceKey.unraid,
+        status: ServiceSummaryStatus.offline,
+        host: '',
+        version: null,
+        itemCount: null,
+        itemLabel: 'containers',
+      );
   }
 }

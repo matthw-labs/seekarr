@@ -1,0 +1,21 @@
+{
+  "queue": {
+    "paused": false,
+    "status": "Downloading",
+    "kbpersec": "2048.5",
+    "mbleft": "1500.0",
+    "mb": "3000.0",
+    "timeleft": "0:12:30",
+    "slots": [
+      {
+        "nzo_id": "SABnzbd_nzo_abc",
+        "filename": "Ubuntu.24.04.iso",
+        "status": "Downloading",
+        "percentage": "50",
+        "cat": "software",
+        "timeleft": "0:12:30",
+        "mbleft": "1500.0"
+      }
+    ]
+  }
+}

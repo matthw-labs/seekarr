@@ -35,6 +35,10 @@ class AppColors {
   static const Color truenas = Color(0xFF0095D5); // TrueNAS blue
   static const Color dockge = Color(0xFF058373); // Dockge teal
   static const Color prowlarr = Color(0xFFE66000); // Prowlarr orange
+  static const Color readarr = Color(0xFFC0392B); // Readarr red
+  static const Color sabnzbd = Color(0xFFF0A800); // SABnzbd amber/gold
+  static const Color nzbget = Color(0xFF0F9D58); // NZBGet green
+  static const Color unraid = Color(0xFFFF8C2B); // Unraid orange
 
   // === PRIMARY (Seerr Indigo) ===
   static const Color primary = seerr;

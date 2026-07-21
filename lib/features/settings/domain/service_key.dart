@@ -12,6 +12,10 @@ enum ServiceKey {
   truenas,
   dockge,
   prowlarr,
+  readarr,
+  sabnzbd,
+  nzbget,
+  unraid,
 }
 
 /// High-level grouping used to organise services across the app.
@@ -44,12 +48,16 @@ extension ServiceKeyExtension on ServiceKey {
       case ServiceKey.sonarr:
       case ServiceKey.lidarr:
       case ServiceKey.bazarr:
+      case ServiceKey.readarr:
         return ServiceDomain.media;
       case ServiceKey.qbittorrent:
       case ServiceKey.prowlarr:
+      case ServiceKey.sabnzbd:
+      case ServiceKey.nzbget:
         return ServiceDomain.downloads;
       case ServiceKey.truenas:
       case ServiceKey.dockge:
+      case ServiceKey.unraid:
         return ServiceDomain.infrastructure;
     }
   }
@@ -80,6 +88,14 @@ extension ServiceKeyExtension on ServiceKey {
         return 'Dockge';
       case ServiceKey.prowlarr:
         return 'Prowlarr';
+      case ServiceKey.readarr:
+        return 'Readarr';
+      case ServiceKey.sabnzbd:
+        return 'SABnzbd';
+      case ServiceKey.nzbget:
+        return 'NZBGet';
+      case ServiceKey.unraid:
+        return 'Unraid';
     }
   }
 
@@ -103,6 +119,14 @@ extension ServiceKeyExtension on ServiceKey {
         return Icons.layers_rounded;
       case ServiceKey.prowlarr:
         return Icons.travel_explore_rounded;
+      case ServiceKey.readarr:
+        return Icons.menu_book_rounded;
+      case ServiceKey.sabnzbd:
+        return Icons.cloud_download_rounded;
+      case ServiceKey.nzbget:
+        return Icons.cloud_sync_rounded;
+      case ServiceKey.unraid:
+        return Icons.developer_board_rounded;
     }
   }
 
@@ -126,11 +150,21 @@ extension ServiceKeyExtension on ServiceKey {
         return AppColors.dockge;
       case ServiceKey.prowlarr:
         return AppColors.prowlarr;
+      case ServiceKey.readarr:
+        return AppColors.readarr;
+      case ServiceKey.sabnzbd:
+        return AppColors.sabnzbd;
+      case ServiceKey.nzbget:
+        return AppColors.nzbget;
+      case ServiceKey.unraid:
+        return AppColors.unraid;
     }
   }
 
   bool get usesApiKey {
-    return this != ServiceKey.qbittorrent && this != ServiceKey.dockge;
+    return this != ServiceKey.qbittorrent &&
+        this != ServiceKey.dockge &&
+        this != ServiceKey.nzbget;
   }
 
   bool get isSearchable {
@@ -151,6 +185,7 @@ extension ServiceKeyExtension on ServiceKey {
     switch (this) {
       case ServiceKey.seerr:
       case ServiceKey.lidarr:
+      case ServiceKey.readarr:
         return 'v1';
       case ServiceKey.radarr:
       case ServiceKey.sonarr:
@@ -165,6 +200,12 @@ extension ServiceKeyExtension on ServiceKey {
         return 'Socket.IO';
       case ServiceKey.prowlarr:
         return 'v1';
+      case ServiceKey.sabnzbd:
+        return 'API';
+      case ServiceKey.nzbget:
+        return 'JSON-RPC';
+      case ServiceKey.unraid:
+        return 'GraphQL';
     }
   }
 
@@ -188,6 +229,14 @@ extension ServiceKeyExtension on ServiceKey {
         return 'stacks';
       case ServiceKey.prowlarr:
         return 'indexers';
+      case ServiceKey.readarr:
+        return 'authors';
+      case ServiceKey.sabnzbd:
+        return 'downloads';
+      case ServiceKey.nzbget:
+        return 'downloads';
+      case ServiceKey.unraid:
+        return 'containers';
     }
   }
 
@@ -203,6 +252,10 @@ extension ServiceKeyExtension on ServiceKey {
       case ServiceKey.truenas:
       case ServiceKey.dockge:
       case ServiceKey.prowlarr:
+      case ServiceKey.readarr:
+      case ServiceKey.sabnzbd:
+      case ServiceKey.nzbget:
+      case ServiceKey.unraid:
         return name;
     }
   }

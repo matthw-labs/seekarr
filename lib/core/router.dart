@@ -44,6 +44,11 @@ import 'package:seekarr/features/bazarr/presentation/bazarr_screen.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_screen.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_library_screen.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_indexer_detail_screen.dart';
+import 'package:seekarr/features/readarr/presentation/readarr_screen.dart';
+import 'package:seekarr/features/readarr/presentation/readarr_library_screen.dart';
+import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_screen.dart';
+import 'package:seekarr/features/nzbget/presentation/nzbget_screen.dart';
+import 'package:seekarr/features/unraid/presentation/unraid_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_series_detail_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_wanted_screen.dart';
 import 'package:seekarr/features/dockge/presentation/dockge_screen.dart';
@@ -566,6 +571,79 @@ GoRoute _prowlarrRoutes({required String path}) {
   );
 }
 
+GoRoute _readarrRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.readarr,
+        child: const ReadarrScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+    routes: [
+      GoRoute(
+        path: 'library',
+        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          child: const ReadarrLibraryScreen(),
+        ),
+      ),
+    ],
+  );
+}
+
+GoRoute _sabnzbdRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.sabnzbd,
+        child: const SabnzbdScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+  );
+}
+
+GoRoute _nzbgetRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.nzbget,
+        child: const NzbgetScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+  );
+}
+
+GoRoute _unraidRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.unraid,
+        child: const UnraidScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+  );
+}
+
 GoRoute _truenasRoutes({required String path}) {
   return GoRoute(
     path: path,
@@ -795,6 +873,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               _truenasRoutes(path: 'truenas'),
               _dockgeRoutes(path: 'dockge'),
               _prowlarrRoutes(path: 'prowlarr'),
+              _readarrRoutes(path: 'readarr'),
+              _sabnzbdRoutes(path: 'sabnzbd'),
+              _nzbgetRoutes(path: 'nzbget'),
+              _unraidRoutes(path: 'unraid'),
             ],
           ),
           GoRoute(

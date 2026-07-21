@@ -34,6 +34,10 @@ class ArrServiceConfig {
     apiVersion: 'v1',
     sortKey: 'releaseDate',
   );
+  static const readarr = ArrServiceConfig(
+    apiVersion: 'v1',
+    sortKey: 'releaseDate',
+  );
 }
 
 /// Mixin providing shared activity endpoints and common service helpers for

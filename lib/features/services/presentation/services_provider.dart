@@ -6,6 +6,11 @@ import 'package:seekarr/core/utils/dynamic_map_utils.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:seekarr/features/dockge/presentation/dockge_provider.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
+import 'package:seekarr/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:seekarr/features/readarr/presentation/readarr_provider.dart';
+import 'package:seekarr/features/sabnzbd/data/sabnzbd_client.dart';
+import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
@@ -21,6 +26,8 @@ import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
+import 'package:seekarr/features/unraid/data/unraid_client.dart';
+import 'package:seekarr/features/unraid/presentation/unraid_provider.dart';
 
 final serviceSummaryProvider =
     FutureProvider.family<ServiceSummary, ServiceKey>((ref, service) async {
@@ -119,6 +126,56 @@ Future<String?> _loadVersion(
         .timeout(const Duration(seconds: 8));
   }
 
+  if (service == ServiceKey.sabnzbd) {
+    final client = SabnzbdClient(
+      url: settings.sabnzbdUrl,
+      apiKey: settings.sabnzbdApiKey,
+    );
+    try {
+      final version = await client.getVersion().timeout(
+        const Duration(seconds: 5),
+      );
+      return version.isNotEmpty ? version : null;
+    } finally {
+      client.close();
+    }
+  }
+
+  if (service == ServiceKey.nzbget) {
+    final client = NzbgetClient(
+      url: settings.nzbgetUrl,
+      username: settings.nzbgetUsername.isEmpty
+          ? null
+          : settings.nzbgetUsername,
+      password: settings.nzbgetPassword.isEmpty
+          ? null
+          : settings.nzbgetPassword,
+    );
+    try {
+      final version = await client.version().timeout(
+        const Duration(seconds: 5),
+      );
+      return version.isNotEmpty ? version : null;
+    } finally {
+      client.close();
+    }
+  }
+
+  if (service == ServiceKey.unraid) {
+    final client = UnraidClient(
+      url: settings.unraidUrl,
+      apiKey: settings.unraidApiKey,
+    );
+    try {
+      final version = await client.version().timeout(
+        const Duration(seconds: 6),
+      );
+      return version.isNotEmpty ? version : null;
+    } finally {
+      client.close();
+    }
+  }
+
   final createClient = ref.watch(serviceStatusClientFactoryProvider);
   final client = createClient(
     baseUrl: settings.urlFor(service),
@@ -164,6 +221,17 @@ String _statusEndpointFor(ServiceKey service) {
       return '';
     case ServiceKey.prowlarr:
       return '/api/v1/system/status';
+    case ServiceKey.readarr:
+      return '/api/v1/system/status';
+    case ServiceKey.sabnzbd:
+      // Handled over the query-string API in _loadVersion; no REST endpoint.
+      return '';
+    case ServiceKey.nzbget:
+      // Handled over JSON-RPC in _loadVersion; no REST endpoint.
+      return '';
+    case ServiceKey.unraid:
+      // Handled over GraphQL in _loadVersion; no REST endpoint.
+      return '';
   }
 }
 
@@ -187,6 +255,14 @@ Future<int> _loadItemCount(Ref ref, ServiceKey service) async {
       return (await ref.watch(dockgeServiceProvider).fetchStacks()).length;
     case ServiceKey.prowlarr:
       return (await ref.watch(prowlarrServiceProvider).getIndexers()).length;
+    case ServiceKey.readarr:
+      return (await ref.watch(readarrServiceProvider).getAuthors()).length;
+    case ServiceKey.sabnzbd:
+      return (await ref.watch(sabnzbdQueueProvider.future)).slots.length;
+    case ServiceKey.nzbget:
+      return (await ref.watch(nzbgetQueueProvider.future)).length;
+    case ServiceKey.unraid:
+      return (await ref.watch(unraidDockerProvider.future)).length;
   }
 }
 
@@ -341,7 +417,11 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
       ServiceKey.bazarr ||
       ServiceKey.truenas ||
       ServiceKey.dockge ||
-      ServiceKey.prowlarr => const <dynamic>[],
+      ServiceKey.prowlarr ||
+      ServiceKey.readarr ||
+      ServiceKey.sabnzbd ||
+      ServiceKey.nzbget ||
+      ServiceKey.unraid => const <dynamic>[],
     };
     return items
         .whereType<Map>()
@@ -385,7 +465,11 @@ String _queueTypeLabel(ServiceKey service) {
     ServiceKey.bazarr ||
     ServiceKey.truenas ||
     ServiceKey.dockge ||
-    ServiceKey.prowlarr => service.title,
+    ServiceKey.prowlarr ||
+    ServiceKey.readarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.nzbget ||
+    ServiceKey.unraid => service.title,
   };
 }
 

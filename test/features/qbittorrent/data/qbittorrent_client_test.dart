@@ -99,8 +99,14 @@ void main() {
       c.close();
     });
 
-    test('prepends http:// when scheme missing', () {
+    test('prepends https:// when scheme missing (secure default)', () {
       final c = QbittorrentClient(url: 'localhost:8080');
+      expect(c.baseUrl, 'https://localhost:8080');
+      c.close();
+    });
+
+    test('honours an explicit http:// scheme', () {
+      final c = QbittorrentClient(url: 'http://localhost:8080');
       expect(c.baseUrl, 'http://localhost:8080');
       c.close();
     });

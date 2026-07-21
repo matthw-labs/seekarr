@@ -76,8 +76,7 @@ class DockgeClient {
   Stream<List<DockgeStack>> get stackListStream => _stackListController.stream;
 
   /// Broadcasts terminal output (deploy/up/down logs) as it arrives.
-  Stream<DockgeTerminalOutput> get terminalOutput =>
-      _terminalController.stream;
+  Stream<DockgeTerminalOutput> get terminalOutput => _terminalController.stream;
 
   String? get version => stringOrNull(_serverInfo?['version']);
 
@@ -94,7 +93,9 @@ class DockgeClient {
     if (raw.isEmpty) {
       throw const DockgeException('Dockge URL is empty');
     }
-    if (!raw.contains('://')) raw = 'http://$raw';
+    // Default a scheme-less URL to HTTPS/WSS so login credentials are not sent
+    // over an unencrypted socket. An explicit http:// is honoured.
+    if (!raw.contains('://')) raw = 'https://$raw';
     final uri = Uri.parse(raw);
     final secure = uri.scheme == 'https';
     return Uri(
@@ -111,7 +112,9 @@ class DockgeClient {
     Iterable<String>? protocols,
     Map<String, String>? headers,
   }) async {
-    final httpClient = buildPinnedHttpClient(pinnedFingerprint: certFingerprint);
+    final httpClient = buildPinnedHttpClient(
+      pinnedFingerprint: certFingerprint,
+    );
     final socket = await io.WebSocket.connect(
       uri.toString(),
       protocols: protocols,
@@ -275,9 +278,7 @@ class DockgeClient {
       final map = mapOrNull(value);
       if (map != null) stacks.add(DockgeStack.fromJson(map));
     });
-    stacks.sort(
-      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-    );
+    stacks.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _latestStacks = stacks;
     if (!_stackListController.isClosed) _stackListController.add(stacks);
   }
@@ -287,12 +288,14 @@ class DockgeClient {
     final map = mapOrNull(data);
     final statuses = mapOrNull(map?['stackStatusList']);
     if (statuses == null || _latestStacks.isEmpty) return;
-    final patched = _latestStacks.map((stack) {
-      if (!statuses.containsKey(stack.name)) return stack;
-      return stack.copyWith(
-        status: DockgeStackStatus.fromCode(intOrNull(statuses[stack.name])),
-      );
-    }).toList(growable: false);
+    final patched = _latestStacks
+        .map((stack) {
+          if (!statuses.containsKey(stack.name)) return stack;
+          return stack.copyWith(
+            status: DockgeStackStatus.fromCode(intOrNull(statuses[stack.name])),
+          );
+        })
+        .toList(growable: false);
     _latestStacks = patched;
     if (!_stackListController.isClosed) _stackListController.add(patched);
   }
@@ -409,11 +412,8 @@ class DockgeClient {
 
   // ---- Per-service actions ----------------------------------------------
 
-  Future<void> startService(String stackName, String serviceName) => _agent(
-    'startService',
-    args: [stackName, serviceName],
-    timeout: _longOp,
-  );
+  Future<void> startService(String stackName, String serviceName) =>
+      _agent('startService', args: [stackName, serviceName], timeout: _longOp);
 
   Future<void> stopService(String stackName, String serviceName) =>
       _agent('stopService', args: [stackName, serviceName], timeout: _longOp);

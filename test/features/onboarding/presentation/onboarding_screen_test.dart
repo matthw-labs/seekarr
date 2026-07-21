@@ -21,7 +21,7 @@ void main() {
     ) async {
       await _pumpOnboarding(tester);
 
-      expect(find.textContaining('Manage your self-hosted'), findsOneWidget);
+      expect(find.textContaining('Your whole homelab'), findsOneWidget);
       await tester.tap(find.widgetWithText(ElevatedButton, 'Continue'));
       await tester.pumpAndSettle();
       expect(find.text('Step 2 of 3'), findsOneWidget);
@@ -166,6 +166,10 @@ Future<void> _enableService(WidgetTester tester, String title) async {
   // tree under the card header exposes the title text in a Column above the
   // toggle; tapping the row's toggle area flips the state.
   final header = find.text(title).first;
+  // The service list scrolls; bring the target row on-screen before tapping so
+  // the test stays robust as more services are added.
+  await tester.ensureVisible(header);
+  await tester.pumpAndSettle();
   // Toggle is the last GestureDetector in the card's header Row.
   await tester.tap(header);
   await tester.pumpAndSettle();

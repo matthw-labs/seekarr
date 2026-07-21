@@ -7,13 +7,16 @@ import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/dockge/data/dockge_client.dart';
+import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:seekarr/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/presentation/widgets/cert_trust_dialog.dart';
 import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
 import 'package:seekarr/features/truenas/domain/truenas_version.dart';
+import 'package:seekarr/features/unraid/data/unraid_client.dart';
 
 // ─── Design tokens (pixel-faithful to prototype) ───────────────────────────
 const _bg = Color(0xFF07080D);
@@ -51,6 +54,17 @@ String _healthEndpoint(ServiceKey service) {
       return '';
     case ServiceKey.prowlarr:
       return '/api/v1/system/status';
+    case ServiceKey.readarr:
+      return '/api/v1/system/status';
+    case ServiceKey.sabnzbd:
+      // SABnzbd verifies via its query-string API, not a REST endpoint.
+      return '';
+    case ServiceKey.nzbget:
+      // NZBGet verifies via JSON-RPC, not a REST endpoint.
+      return '';
+    case ServiceKey.unraid:
+      // Unraid verifies via a GraphQL query, not a REST endpoint.
+      return '';
   }
 }
 
@@ -83,6 +97,23 @@ Future<ServiceConnectionStatus> _verifyService(
       await client.close();
     }
   }
+  if (service == ServiceKey.nzbget) {
+    final urlTrimmed = url.trim();
+    if (urlTrimmed.isEmpty) return ServiceConnectionStatus.notConfigured;
+    final client = NzbgetClient(
+      url: urlTrimmed,
+      username: username.trim().isEmpty ? null : username.trim(),
+      password: password.isEmpty ? null : password,
+    );
+    try {
+      await client.testConnection().timeout(const Duration(seconds: 6));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      client.close();
+    }
+  }
   if (!service.usesApiKey) {
     final urlTrimmed = url.trim();
     if (urlTrimmed.isEmpty) return ServiceConnectionStatus.notConfigured;
@@ -102,6 +133,28 @@ Future<ServiceConnectionStatus> _verifyService(
   }
   if (url.trim().isEmpty || apiKey.trim().isEmpty) {
     return ServiceConnectionStatus.notConfigured;
+  }
+  if (service == ServiceKey.sabnzbd) {
+    final client = SabnzbdClient(url: url.trim(), apiKey: apiKey.trim());
+    try {
+      await client.testConnection().timeout(const Duration(seconds: 6));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      client.close();
+    }
+  }
+  if (service == ServiceKey.unraid) {
+    final client = UnraidClient(url: url.trim(), apiKey: apiKey.trim());
+    try {
+      await client.testConnection().timeout(const Duration(seconds: 6));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      client.close();
+    }
   }
   if (service == ServiceKey.truenas) {
     final client = TrueNasWsClient(

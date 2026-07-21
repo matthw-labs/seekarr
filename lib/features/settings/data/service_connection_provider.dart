@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/core/network/cert_trust.dart';
 import 'package:seekarr/features/dockge/data/dockge_client.dart';
+import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:seekarr/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
+import 'package:seekarr/features/unraid/data/unraid_client.dart';
 
 /// Represents the reachability state of a configured service.
 enum ServiceConnectionStatus {
@@ -39,6 +42,17 @@ String _healthEndpoint(ServiceKey service) {
       return '';
     case ServiceKey.prowlarr:
       return '/api/v1/system/status';
+    case ServiceKey.readarr:
+      return '/api/v1/system/status';
+    case ServiceKey.sabnzbd:
+      // SABnzbd authenticates with a query-string key, handled specially.
+      return '';
+    case ServiceKey.nzbget:
+      // NZBGet uses a JSON-RPC call with Basic auth, handled specially.
+      return '';
+    case ServiceKey.unraid:
+      // Unraid uses a GraphQL query with an x-api-key header, handled specially.
+      return '';
   }
 }
 
@@ -113,6 +127,56 @@ Future<ServiceConnectionStatus> _checkService(
       return ServiceConnectionStatus.disconnected;
     } finally {
       await client.close();
+    }
+  }
+
+  if (service == ServiceKey.sabnzbd) {
+    final client = SabnzbdClient(
+      url: settings.sabnzbdUrl,
+      apiKey: settings.sabnzbdApiKey,
+    );
+    try {
+      await client.testConnection().timeout(const Duration(seconds: 6));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      client.close();
+    }
+  }
+
+  if (service == ServiceKey.nzbget) {
+    final client = NzbgetClient(
+      url: settings.nzbgetUrl,
+      username: settings.nzbgetUsername.isEmpty
+          ? null
+          : settings.nzbgetUsername,
+      password: settings.nzbgetPassword.isEmpty
+          ? null
+          : settings.nzbgetPassword,
+    );
+    try {
+      await client.testConnection().timeout(const Duration(seconds: 6));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      client.close();
+    }
+  }
+
+  if (service == ServiceKey.unraid) {
+    final client = UnraidClient(
+      url: settings.unraidUrl,
+      apiKey: settings.unraidApiKey,
+    );
+    try {
+      await client.testConnection().timeout(const Duration(seconds: 6));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      client.close();
     }
   }
 

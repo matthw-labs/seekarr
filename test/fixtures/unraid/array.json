@@ -1,0 +1,14 @@
+{
+  "data": {
+    "array": {
+      "state": "STARTED",
+      "capacity": {
+        "kilobytes": {"free": "4000000000", "used": "6000000000", "total": "10000000000"}
+      },
+      "disks": [
+        {"name": "disk1", "status": "DISK_OK", "temp": 38},
+        {"name": "disk2", "status": "DISK_OK", "temp": 47}
+      ]
+    }
+  }
+}

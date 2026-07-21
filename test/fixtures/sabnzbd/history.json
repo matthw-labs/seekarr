@@ -1,0 +1,24 @@
+{
+  "history": {
+    "slots": [
+      {
+        "nzo_id": "SABnzbd_nzo_h1",
+        "name": "Debian.12.iso",
+        "status": "Completed",
+        "category": "software",
+        "bytes": 734003200,
+        "completed": 1719830400,
+        "fail_message": ""
+      },
+      {
+        "nzo_id": "SABnzbd_nzo_h2",
+        "name": "Broken.Release",
+        "status": "Failed",
+        "category": "software",
+        "bytes": 0,
+        "completed": 1719744000,
+        "fail_message": "Unpacking failed, write error or disk is full?"
+      }
+    ]
+  }
+}

@@ -7,12 +7,18 @@ import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
 SecureSettingsStore createSecureSettingsStore() {
+  // Keep secrets (API keys/passwords) out of iCloud/device backups by pinning
+  // Keychain accessibility to this device only. Without this the default
+  // accessibility lets credentials sync to backups.
+  const deviceOnly = KeychainAccessibility.first_unlock_this_device;
   return FlutterSecureSettingsStore(
     FlutterSecureStorage(
       // flutter_secure_storage 10.x migrates away from the old
       // encryptedSharedPreferences path. Keep migration enabled for existing
       // installs and write a backup during algorithm upgrades.
       aOptions: AndroidOptions(migrateWithBackup: true),
+      iOptions: const IOSOptions(accessibility: deviceOnly),
+      mOptions: const MacOsOptions(accessibility: deviceOnly),
     ),
   );
 }
@@ -110,6 +116,27 @@ class SettingsService {
       url: 'prowlarr_url',
       legacyApiKey: '',
       secureApiKey: 'secure_prowlarr_api_key',
+    ),
+    ServiceKey.readarr: _ServiceStorageKeys(
+      url: 'readarr_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_readarr_api_key',
+    ),
+    ServiceKey.sabnzbd: _ServiceStorageKeys(
+      url: 'sabnzbd_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_sabnzbd_api_key',
+    ),
+    ServiceKey.nzbget: _ServiceStorageKeys(
+      url: 'nzbget_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_nzbget_password',
+      username: 'nzbget_username',
+    ),
+    ServiceKey.unraid: _ServiceStorageKeys(
+      url: 'unraid_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_unraid_api_key',
     ),
   };
 
@@ -211,6 +238,9 @@ class SettingsService {
     final dockgeKeys = _serviceStorageKeys[ServiceKey.dockge]!;
     final dockgeUsername = _prefs.getString(dockgeKeys.username!) ?? '';
     final dockgePassword = await _loadApiKey(dockgeKeys.secureApiKey);
+    final nzbgetKeys = _serviceStorageKeys[ServiceKey.nzbget]!;
+    final nzbgetUsername = _prefs.getString(nzbgetKeys.username!) ?? '';
+    final nzbgetPassword = await _loadApiKey(nzbgetKeys.secureApiKey);
     final truenasKeys = _serviceStorageKeys[ServiceKey.truenas]!;
 
     return SettingsModel(
@@ -234,6 +264,15 @@ class SettingsService {
       dockgePassword: dockgePassword,
       prowlarrUrl: serviceSettings[ServiceKey.prowlarr]!.$1,
       prowlarrApiKey: serviceSettings[ServiceKey.prowlarr]!.$2,
+      readarrUrl: serviceSettings[ServiceKey.readarr]!.$1,
+      readarrApiKey: serviceSettings[ServiceKey.readarr]!.$2,
+      sabnzbdUrl: serviceSettings[ServiceKey.sabnzbd]!.$1,
+      sabnzbdApiKey: serviceSettings[ServiceKey.sabnzbd]!.$2,
+      nzbgetUrl: serviceSettings[ServiceKey.nzbget]!.$1,
+      nzbgetUsername: nzbgetUsername,
+      nzbgetPassword: nzbgetPassword,
+      unraidUrl: serviceSettings[ServiceKey.unraid]!.$1,
+      unraidApiKey: serviceSettings[ServiceKey.unraid]!.$2,
       truenasCertFingerprint:
           _prefs.getString(truenasKeys.certFingerprint!) ?? '',
       dockgeCertFingerprint:
@@ -265,6 +304,13 @@ class SettingsService {
       await _prefs.setString(dockgeKeys.username!, settings.dockgeUsername);
     } else {
       await _prefs.remove(dockgeKeys.username!);
+    }
+
+    final nzbgetKeys = _serviceStorageKeys[ServiceKey.nzbget]!;
+    if (settings.nzbgetUsername.isNotEmpty) {
+      await _prefs.setString(nzbgetKeys.username!, settings.nzbgetUsername);
+    } else {
+      await _prefs.remove(nzbgetKeys.username!);
     }
 
     await _saveCertFingerprint(
@@ -305,7 +351,9 @@ class SettingsService {
       // their secure keys are loaded separately in loadSettings() to avoid a
       // second secure store read here.
       var apiKey = '';
-      if (service != ServiceKey.qbittorrent && service != ServiceKey.dockge) {
+      if (service != ServiceKey.qbittorrent &&
+          service != ServiceKey.dockge &&
+          service != ServiceKey.nzbget) {
         apiKey = await _loadApiKey(storageKeys.secureApiKey);
         if (apiKey.isEmpty && storageKeys.legacySecureApiKey != null) {
           apiKey = await _loadApiKey(storageKeys.legacySecureApiKey!);
@@ -342,6 +390,10 @@ class SettingsService {
       }
       if (service == ServiceKey.dockge) {
         await _saveApiKey(storageKeys.secureApiKey, settings.dockgePassword);
+        continue;
+      }
+      if (service == ServiceKey.nzbget) {
+        await _saveApiKey(storageKeys.secureApiKey, settings.nzbgetPassword);
         continue;
       }
       await _saveApiKey(storageKeys.secureApiKey, settings.apiKeyFor(service));

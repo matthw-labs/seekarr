@@ -48,6 +48,15 @@ class SettingsModel {
   final String dockgePassword;
   final String prowlarrUrl;
   final String prowlarrApiKey;
+  final String readarrUrl;
+  final String readarrApiKey;
+  final String sabnzbdUrl;
+  final String sabnzbdApiKey;
+  final String nzbgetUrl;
+  final String nzbgetUsername;
+  final String nzbgetPassword;
+  final String unraidUrl;
+  final String unraidApiKey;
 
   /// SHA-256 fingerprint of a self-signed/untrusted TLS certificate the user
   /// explicitly chose to trust for this server (trust-on-first-use). Empty
@@ -117,6 +126,30 @@ class SettingsModel {
           update: (settings, {url, apiKey}) =>
               settings.copyWith(prowlarrUrl: url, prowlarrApiKey: apiKey),
         ),
+        ServiceKey.readarr: _ServiceSettingsAccess(
+          url: (settings) => settings.readarrUrl,
+          apiKey: (settings) => settings.readarrApiKey,
+          update: (settings, {url, apiKey}) =>
+              settings.copyWith(readarrUrl: url, readarrApiKey: apiKey),
+        ),
+        ServiceKey.sabnzbd: _ServiceSettingsAccess(
+          url: (settings) => settings.sabnzbdUrl,
+          apiKey: (settings) => settings.sabnzbdApiKey,
+          update: (settings, {url, apiKey}) =>
+              settings.copyWith(sabnzbdUrl: url, sabnzbdApiKey: apiKey),
+        ),
+        ServiceKey.nzbget: _ServiceSettingsAccess(
+          url: (settings) => settings.nzbgetUrl,
+          apiKey: (settings) => settings.nzbgetPassword,
+          update: (settings, {url, apiKey}) =>
+              settings.copyWith(nzbgetUrl: url, nzbgetPassword: apiKey),
+        ),
+        ServiceKey.unraid: _ServiceSettingsAccess(
+          url: (settings) => settings.unraidUrl,
+          apiKey: (settings) => settings.unraidApiKey,
+          update: (settings, {url, apiKey}) =>
+              settings.copyWith(unraidUrl: url, unraidApiKey: apiKey),
+        ),
       };
 
   static String normalizeRegion(String? region) {
@@ -145,6 +178,15 @@ class SettingsModel {
     this.dockgePassword = '',
     this.prowlarrUrl = '',
     this.prowlarrApiKey = '',
+    this.readarrUrl = '',
+    this.readarrApiKey = '',
+    this.sabnzbdUrl = '',
+    this.sabnzbdApiKey = '',
+    this.nzbgetUrl = '',
+    this.nzbgetUsername = '',
+    this.nzbgetPassword = '',
+    this.unraidUrl = '',
+    this.unraidApiKey = '',
     this.truenasCertFingerprint = '',
     this.dockgeCertFingerprint = '',
     this.region = 'US',
@@ -172,6 +214,15 @@ class SettingsModel {
     String? dockgePassword,
     String? prowlarrUrl,
     String? prowlarrApiKey,
+    String? readarrUrl,
+    String? readarrApiKey,
+    String? sabnzbdUrl,
+    String? sabnzbdApiKey,
+    String? nzbgetUrl,
+    String? nzbgetUsername,
+    String? nzbgetPassword,
+    String? unraidUrl,
+    String? unraidApiKey,
     String? truenasCertFingerprint,
     String? dockgeCertFingerprint,
     String? region,
@@ -198,6 +249,15 @@ class SettingsModel {
       dockgePassword: dockgePassword ?? this.dockgePassword,
       prowlarrUrl: prowlarrUrl ?? this.prowlarrUrl,
       prowlarrApiKey: prowlarrApiKey ?? this.prowlarrApiKey,
+      readarrUrl: readarrUrl ?? this.readarrUrl,
+      readarrApiKey: readarrApiKey ?? this.readarrApiKey,
+      sabnzbdUrl: sabnzbdUrl ?? this.sabnzbdUrl,
+      sabnzbdApiKey: sabnzbdApiKey ?? this.sabnzbdApiKey,
+      nzbgetUrl: nzbgetUrl ?? this.nzbgetUrl,
+      nzbgetUsername: nzbgetUsername ?? this.nzbgetUsername,
+      nzbgetPassword: nzbgetPassword ?? this.nzbgetPassword,
+      unraidUrl: unraidUrl ?? this.unraidUrl,
+      unraidApiKey: unraidApiKey ?? this.unraidApiKey,
       truenasCertFingerprint:
           truenasCertFingerprint ?? this.truenasCertFingerprint,
       dockgeCertFingerprint:
@@ -256,15 +316,29 @@ class SettingsModel {
     );
   }
 
+  SettingsModel copyWithNzbget({
+    String? url,
+    String? username,
+    String? password,
+  }) {
+    return copyWith(
+      nzbgetUrl: url,
+      nzbgetUsername: username,
+      nzbgetPassword: password,
+    );
+  }
+
   String usernameFor(ServiceKey service) {
     if (service == ServiceKey.qbittorrent) return qbittorrentUsername;
     if (service == ServiceKey.dockge) return dockgeUsername;
+    if (service == ServiceKey.nzbget) return nzbgetUsername;
     return '';
   }
 
   String passwordFor(ServiceKey service) {
     if (service == ServiceKey.qbittorrent) return qbittorrentPassword;
     if (service == ServiceKey.dockge) return dockgePassword;
+    if (service == ServiceKey.nzbget) return nzbgetPassword;
     return '';
   }
 
@@ -290,10 +364,12 @@ class SettingsModel {
   }
 
   bool isServiceConfigured(ServiceKey service) {
-    // qBittorrent and Dockge authenticate with username/password (Dockge can
-    // even run without auth behind a reverse proxy), so only the URL is
+    // qBittorrent, Dockge and NZBGet authenticate with username/password (some
+    // can even run without auth behind a reverse proxy), so only the URL is
     // strictly required to consider them configured.
-    if (service == ServiceKey.qbittorrent || service == ServiceKey.dockge) {
+    if (service == ServiceKey.qbittorrent ||
+        service == ServiceKey.dockge ||
+        service == ServiceKey.nzbget) {
       return urlFor(service).isNotEmpty;
     }
     return urlFor(service).isNotEmpty && apiKeyFor(service).isNotEmpty;

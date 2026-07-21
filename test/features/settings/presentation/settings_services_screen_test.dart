@@ -21,11 +21,12 @@ void main() {
       );
 
       expect(find.text('Services'), findsOneWidget);
-      expect(find.byType(SettingsGroupCard), findsOneWidget);
-      expect(find.byType(SettingsCard), findsNWidgets(9));
+      // One grouped card per service domain (media, downloads, infrastructure).
+      expect(find.byType(SettingsGroupCard), findsNWidgets(3));
+      expect(find.byType(SettingsCard), findsNWidgets(13));
       expect(find.text('seerr.local'), findsOneWidget);
       expect(find.text('radarr.local:7878'), findsOneWidget);
-      expect(find.text('Not configured'), findsNWidgets(7));
+      expect(find.text('Not configured'), findsNWidgets(11));
       expect(_textColor(tester, 'radarr.local:7878'), isNot(AppColors.radarr));
     });
 
@@ -69,6 +70,13 @@ Future<void> _pumpServicesScreen(
   );
 
   addTearDown(router.dispose);
+
+  // The screen is a lazy ListView; use a tall viewport so every domain card and
+  // service row is built and counted, independent of scroll position.
+  tester.view.physicalSize = const Size(1200, 3200);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
 
   await tester.pumpWidget(
     ProviderScope(

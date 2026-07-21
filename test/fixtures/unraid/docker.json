@@ -1,0 +1,8 @@
+{
+  "data": {
+    "dockerContainers": [
+      {"id": "abc123", "names": ["/plex"], "state": "running", "status": "Up 3 days", "autoStart": true},
+      {"id": "def456", "names": ["/sonarr"], "state": "exited", "status": "Exited (0)", "autoStart": false}
+    ]
+  }
+}

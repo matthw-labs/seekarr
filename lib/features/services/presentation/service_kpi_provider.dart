@@ -11,6 +11,10 @@ import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 import 'package:seekarr/features/movies/presentation/movies_provider.dart';
 import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:seekarr/features/nzbget/domain/models/nzbget_models.dart';
+import 'package:seekarr/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:seekarr/features/readarr/presentation/readarr_provider.dart';
+import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:seekarr/features/music/presentation/music_provider.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
@@ -19,6 +23,8 @@ import 'package:seekarr/features/series/presentation/series_provider.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
+import 'package:seekarr/features/unraid/domain/models/unraid_models.dart';
+import 'package:seekarr/features/unraid/presentation/unraid_provider.dart';
 
 /// KPIs shown in the [ServiceKpiPeek] at the top of each service page.
 ///
@@ -45,6 +51,14 @@ final serviceKpiProvider = FutureProvider.autoDispose
           return _dockgeKpis(ref);
         case ServiceKey.prowlarr:
           return _prowlarrKpis(ref);
+        case ServiceKey.readarr:
+          return _readarrKpis(ref);
+        case ServiceKey.sabnzbd:
+          return _sabnzbdKpis(ref);
+        case ServiceKey.nzbget:
+          return _nzbgetKpis(ref);
+        case ServiceKey.unraid:
+          return _unraidKpis(ref);
       }
     });
 
@@ -356,6 +370,131 @@ Future<List<ServiceKpi>> _prowlarrKpis(Ref ref) async {
       value: '${stats.totalFailures}',
       icon: Icons.error_outline_rounded,
       accent: _warnIf(stats.totalFailures > 0),
+    ),
+  ];
+}
+
+Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
+  final authors = await ref.watch(readarrAuthorsProvider.future);
+  var books = 0;
+  var have = 0;
+  for (final a in authors) {
+    books += a.bookCount;
+    have += a.bookFileCount;
+  }
+  final missing = (books - have).clamp(0, books);
+  final queue = await ref.watch(readarrQueueProvider.future);
+  return [
+    ServiceKpi(
+      label: 'Authors',
+      value: '${authors.length}',
+      icon: Icons.person_rounded,
+    ),
+    ServiceKpi(label: 'Books', value: '$books', icon: Icons.menu_book_rounded),
+    ServiceKpi(
+      label: 'Missing',
+      value: '$missing',
+      icon: Icons.report_gmailerrorred_rounded,
+      accent: _warnIf(missing > 0),
+    ),
+    ServiceKpi(
+      label: 'Queue',
+      value: '${queue.length}',
+      icon: Icons.download_rounded,
+    ),
+  ];
+}
+
+Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
+  final queue = await ref.watch(sabnzbdQueueProvider.future);
+  return [
+    ServiceKpi(
+      label: 'Down',
+      value: queue.speedLabel,
+      icon: Icons.south_rounded,
+      accent: _warnIf(queue.kbPerSec > 0),
+    ),
+    ServiceKpi(
+      label: 'Queue',
+      value: '${queue.slots.length}',
+      icon: Icons.list_rounded,
+    ),
+    ServiceKpi(
+      label: 'Remaining',
+      value: queue.sizeLeftLabel,
+      icon: Icons.hourglass_bottom_rounded,
+    ),
+    ServiceKpi(
+      label: 'Status',
+      value: queue.paused ? 'Paused' : 'Active',
+      icon: queue.paused
+          ? Icons.pause_circle_rounded
+          : Icons.play_circle_rounded,
+      accent: _warnIf(queue.paused),
+    ),
+  ];
+}
+
+Future<List<ServiceKpi>> _nzbgetKpis(Ref ref) async {
+  final results = await Future.wait([
+    ref.watch(nzbgetStatusProvider.future),
+    ref.watch(nzbgetQueueProvider.future),
+  ]);
+  final status = results[0] as NzbgetStatus;
+  final groups = results[1] as List<NzbgetGroup>;
+  return [
+    ServiceKpi(
+      label: 'Down',
+      value: status.rateLabel,
+      icon: Icons.south_rounded,
+      accent: _warnIf(status.downloadRateBytes > 0),
+    ),
+    ServiceKpi(
+      label: 'Queue',
+      value: '${groups.length}',
+      icon: Icons.list_rounded,
+    ),
+    ServiceKpi(
+      label: 'Remaining',
+      value: status.remainingLabel,
+      icon: Icons.hourglass_bottom_rounded,
+    ),
+    ServiceKpi(
+      label: 'Status',
+      value: status.paused ? 'Paused' : 'Active',
+      icon: status.paused
+          ? Icons.pause_circle_rounded
+          : Icons.play_circle_rounded,
+      accent: _warnIf(status.paused),
+    ),
+  ];
+}
+
+Future<List<ServiceKpi>> _unraidKpis(Ref ref) async {
+  final results = await Future.wait([
+    ref.watch(unraidArrayProvider.future),
+    ref.watch(unraidDockerProvider.future),
+  ]);
+  final array = results[0] as UnraidArray;
+  final containers = results[1] as List<UnraidDockerContainer>;
+  final running = containers.where((c) => c.running).length;
+  return [
+    ServiceKpi(label: 'Array', value: array.state, icon: Icons.dns_rounded),
+    ServiceKpi(
+      label: 'Used',
+      value: '${array.usedPercent}%',
+      icon: Icons.pie_chart_rounded,
+      accent: _warnIf(array.usedPercent >= 80),
+    ),
+    ServiceKpi(
+      label: 'Containers',
+      value: '$running/${containers.length}',
+      icon: Icons.widgets_rounded,
+    ),
+    ServiceKpi(
+      label: 'Disks',
+      value: '${array.disks.length}',
+      icon: Icons.storage_rounded,
     ),
   ];
 }

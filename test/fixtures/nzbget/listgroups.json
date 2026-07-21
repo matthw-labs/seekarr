@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "NZBID": 5,
+      "NZBName": "Ubuntu.24.04.iso",
+      "Status": "DOWNLOADING",
+      "Category": "software",
+      "FileSizeMB": 3000,
+      "RemainingSizeMB": 1500
+    }
+  ],
+  "id": 1
+}

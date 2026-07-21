@@ -200,6 +200,13 @@ Future<_ShellHarness> _pumpShell(
     container.dispose();
   });
 
+  // Use a phone-width viewport so the shell renders the FloatingBottomNavBar
+  // rather than the wide-screen NavigationRail (rail breakpoint is 600).
+  tester.view.physicalSize = const Size(400, 900);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,

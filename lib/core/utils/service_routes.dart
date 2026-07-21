@@ -11,6 +11,10 @@ class ServiceRoutes {
   static const truenas = '$services/truenas';
   static const dockge = '$services/dockge';
   static const prowlarr = '$services/prowlarr';
+  static const readarr = '$services/readarr';
+  static const sabnzbd = '$services/sabnzbd';
+  static const nzbget = '$services/nzbget';
+  static const unraid = '$services/unraid';
 
   // ── TrueNAS sections ──────────────────────────────────────────────────────
   static const truenasDashboard = '$truenas/dashboard';
@@ -97,6 +101,9 @@ class ServiceRoutes {
 
   /// Indexer detail, e.g. `/services/prowlarr/indexer/3`.
   static String prowlarrIndexer(int id) => '$prowlarrIndexerBase/$id';
+
+  // ── Readarr ─────────────────────────────────────────────────────────────
+  static const readarrLibrary = '$readarr/library';
 
   // ── Dockge ────────────────────────────────────────────────────────────────
   static const dockgeStackBase = '$dockge/stack';
