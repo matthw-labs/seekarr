@@ -79,9 +79,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen>
                   ),
                 SliverToBoxAdapter(
                   child: ServiceKpiPeek(
-                    kpis: ref.watch(
-                      serviceKpiProvider(ServiceKey.qbittorrent),
-                    ),
+                    kpis: ref.watch(serviceKpiProvider(ServiceKey.qbittorrent)),
                     accent: ServiceKey.qbittorrent.accent,
                   ),
                 ),

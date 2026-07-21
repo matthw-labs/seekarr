@@ -1,0 +1,57 @@
+{
+  "openapi": "3.0.1",
+  "info": { "title": "Readarr", "version": "1.0.0" },
+  "_note": "Subset of the Readarr v1 OpenAPI spec (sourced from the documented API, marked doc until captured from a live instance). Only the paths and schema properties Seekarr depends on are kept, so the contract test fails loudly if any of them disappear upstream.",
+  "paths": {
+    "/api/v1/system/status": { "get": { "operationId": "getSystemStatus" } },
+    "/api/v1/author": { "get": { "operationId": "getAuthor" } },
+    "/api/v1/author/{id}": { "get": { "operationId": "getAuthorById" } },
+    "/api/v1/book": { "get": { "operationId": "getBook" } },
+    "/api/v1/queue": { "get": { "operationId": "getQueue" } },
+    "/api/v1/history": { "get": { "operationId": "getHistory" } },
+    "/api/v1/command": { "post": { "operationId": "createCommand" } }
+  },
+  "components": {
+    "schemas": {
+      "AuthorResource": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "authorName": { "type": "string" },
+          "authorNameLastFirst": { "type": "string" },
+          "monitored": { "type": "boolean" },
+          "overview": { "type": "string" },
+          "status": { "type": "string" },
+          "statistics": { "$ref": "#/components/schemas/AuthorStatisticsResource" }
+        }
+      },
+      "AuthorStatisticsResource": {
+        "type": "object",
+        "properties": {
+          "bookCount": { "type": "integer" },
+          "bookFileCount": { "type": "integer" },
+          "totalBookCount": { "type": "integer" }
+        }
+      },
+      "BookResource": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "title": { "type": "string" },
+          "authorId": { "type": "integer" },
+          "monitored": { "type": "boolean" }
+        }
+      },
+      "HistoryResource": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "eventType": { "type": "string" },
+          "sourceTitle": { "type": "string" },
+          "date": { "type": "string", "format": "date-time" },
+          "author": { "$ref": "#/components/schemas/AuthorResource" }
+        }
+      }
+    }
+  }
+}

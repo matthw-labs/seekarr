@@ -123,6 +123,19 @@ class SabnzbdClient {
         .toList(growable: false);
   }
 
+  /// Aggregate transfer statistics (total / month / week / day bytes).
+  Future<SabnzbdServerStats> getServerStats() async {
+    final data = await _call('server_stats');
+    return SabnzbdServerStats.fromJson(data);
+  }
+
+  /// The configured categories, always including the `*` default first.
+  Future<List<String>> getCategories() async {
+    final data = await _call('get_cats');
+    final cats = (data['categories'] as List?) ?? const [];
+    return cats.map((e) => e.toString()).toList(growable: false);
+  }
+
   /// Verifies the configured URL + key by fetching the queue (which requires
   /// authentication). Returns true on success.
   Future<bool> testConnection() async {
@@ -138,6 +151,34 @@ class SabnzbdClient {
   /// Resumes the whole queue.
   Future<void> resume() async {
     await _call('resume');
+  }
+
+  /// Adds an NZB by URL. [category] defaults to SABnzbd's `*` and [priority]
+  /// runs -2..2. The URL is passed via Dio's [queryParameters] so it is encoded
+  /// automatically — never concatenated (security §10.2 #8).
+  Future<void> addUrl(
+    String nzbUrl, {
+    String? category,
+    int priority = 0,
+  }) async {
+    await _call(
+      'addurl',
+      extra: {
+        'name': nzbUrl,
+        if (category != null && category.isNotEmpty) 'cat': category,
+        'priority': priority,
+      },
+    );
+  }
+
+  /// Pauses a single queued job by its NZO id.
+  Future<void> pauseJob(String nzoId) async {
+    await _call('queue', extra: {'name': 'pause', 'value': nzoId});
+  }
+
+  /// Resumes a single queued job by its NZO id.
+  Future<void> resumeJob(String nzoId) async {
+    await _call('queue', extra: {'name': 'resume', 'value': nzoId});
   }
 
   /// Deletes a queued job by its NZO id.

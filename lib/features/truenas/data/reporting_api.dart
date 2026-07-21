@@ -15,7 +15,12 @@ class TrueNasReportingApi extends TrueNasApiBase {
     int page = 0,
   }) async {
     try {
-      return await _fetch(names, identifier: identifier, unit: unit, page: page);
+      return await _fetch(
+        names,
+        identifier: identifier,
+        unit: unit,
+        page: page,
+      );
     } catch (_) {
       // A single unsupported graph (e.g. one that requires an `identifier`)
       // can make the batched `reporting.netdata_graph` call reject and blank
@@ -25,7 +30,12 @@ class TrueNasReportingApi extends TrueNasApiBase {
       for (final name in names) {
         try {
           out.addAll(
-            await _fetch([name], identifier: identifier, unit: unit, page: page),
+            await _fetch(
+              [name],
+              identifier: identifier,
+              unit: unit,
+              page: page,
+            ),
           );
         } catch (_) {
           // Skip graphs the server can't satisfy for this request.

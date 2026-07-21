@@ -1,0 +1,48 @@
+# E2E harness for the download/media clients (plan §7.6). Brings up real service
+# instances with pre-seeded, deterministic credentials so the tagged tests under
+# test/e2e/ can exercise the actual transport (HTTP, auth, real envelopes).
+#
+#   docker compose -f docker-compose.e2e.yml up -d
+#   flutter test --tags e2e
+#   docker compose -f docker-compose.e2e.yml down -v
+#
+# Notes:
+#  - SABnzbd verifies the request hostname, so tests connect via 127.0.0.1 and
+#    the seed .ini sets host_whitelist accordingly.
+#  - NZBGet credentials are injected via env → deterministic Basic auth.
+#  - Unraid has no OS container; it stays schema-only (tiers 2-3). See §7.6.
+services:
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    ports:
+      - "8080:8080"
+    volumes:
+      # sabnzbd.ini pre-seeded with `api_key=test-key` and a host_whitelist.
+      - ./test/e2e/seed/sabnzbd:/config
+
+  nzbget:
+    image: lscr.io/linuxserver/nzbget:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - NZBGET_USER=nzbget
+      - NZBGET_PASS=tegbzn6789
+    ports:
+      - "6789:6789"
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    ports:
+      - "8787:8787"
+    volumes:
+      # config.xml pre-seeded with <ApiKey>test-key</ApiKey>.
+      - ./test/e2e/seed/readarr:/config

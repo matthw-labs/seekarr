@@ -84,7 +84,9 @@ class TrueNasWsClient {
   Future<void> _connect() async {
     // Verify TLS against the platform trust store, additionally trusting the
     // user-pinned self-signed certificate (if any). See [buildPinnedHttpClient].
-    final httpClient = buildPinnedHttpClient(pinnedFingerprint: certFingerprint);
+    final httpClient = buildPinnedHttpClient(
+      pinnedFingerprint: certFingerprint,
+    );
     _httpClient = httpClient;
     try {
       final socket = await WebSocket.connect(

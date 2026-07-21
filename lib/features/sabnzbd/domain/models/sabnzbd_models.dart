@@ -106,6 +106,50 @@ class SabnzbdQueueSlot {
   }
 }
 
+/// Aggregate transfer statistics (`mode=server_stats`).
+///
+/// SABnzbd reports totals in bytes. Only the roll-ups are kept; the per-server
+/// breakdown is ignored for the dashboard.
+class SabnzbdServerStats {
+  const SabnzbdServerStats({
+    required this.total,
+    required this.month,
+    required this.week,
+    required this.day,
+  });
+
+  /// Total bytes downloaded over all time.
+  final int total;
+
+  /// Bytes downloaded this month / week / today.
+  final int month;
+  final int week;
+  final int day;
+
+  String get totalLabel => _formatBytes(total);
+  String get monthLabel => _formatBytes(month);
+
+  factory SabnzbdServerStats.fromJson(Map<String, dynamic> json) {
+    return SabnzbdServerStats(
+      total: _asDouble(json['total']).round(),
+      month: _asDouble(json['month']).round(),
+      week: _asDouble(json['week']).round(),
+      day: _asDouble(json['day']).round(),
+    );
+  }
+}
+
+String _formatBytes(int bytes) {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  var value = bytes.toDouble();
+  var unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return '${value.toStringAsFixed(value >= 10 || unit == 0 ? 0 : 1)} ${units[unit]}';
+}
+
 /// A completed/failed download from history (`mode=history`).
 class SabnzbdHistorySlot {
   const SabnzbdHistorySlot({

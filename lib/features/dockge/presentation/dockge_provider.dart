@@ -40,16 +40,17 @@ final dockgeServiceProvider = Provider<DockgeService>((ref) {
 
 /// Live stack list — connects, requests a refresh, then streams every push
 /// Dockge sends (`stackList` / `stackStatusList`).
-final dockgeStackListProvider =
-    StreamProvider.autoDispose<List<DockgeStack>>((ref) async* {
-      final client = ref.watch(dockgeClientProvider);
-      await client.ensureConnected();
-      if (client.latestStacks.isNotEmpty) {
-        yield client.latestStacks;
-      }
-      unawaited(client.requestStackList());
-      yield* client.stackListStream;
-    });
+final dockgeStackListProvider = StreamProvider.autoDispose<List<DockgeStack>>((
+  ref,
+) async* {
+  final client = ref.watch(dockgeClientProvider);
+  await client.ensureConnected();
+  if (client.latestStacks.isNotEmpty) {
+    yield client.latestStacks;
+  }
+  unawaited(client.requestStackList());
+  yield* client.stackListStream;
+});
 
 /// Full detail (compose YAML/ENV) for a single stack.
 final dockgeStackDetailProvider = FutureProvider.autoDispose
@@ -64,10 +65,11 @@ final dockgeServiceStatusProvider = FutureProvider.autoDispose
     });
 
 /// Available Docker networks (used by the compose editor).
-final dockgeNetworkListProvider =
-    FutureProvider.autoDispose<List<String>>((ref) async {
-      return ref.watch(dockgeClientProvider).getDockerNetworkList();
-    });
+final dockgeNetworkListProvider = FutureProvider.autoDispose<List<String>>((
+  ref,
+) async {
+  return ref.watch(dockgeClientProvider).getDockerNetworkList();
+});
 
 /// Connected server version, or null if unavailable.
 final dockgeVersionProvider = FutureProvider.autoDispose<String?>((ref) async {

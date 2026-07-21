@@ -59,9 +59,9 @@ class ProwlarrIndexerTile extends StatelessWidget {
               children: [
                 Text(
                   indexer.name ?? 'Unknown indexer',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

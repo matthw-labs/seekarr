@@ -7,7 +7,11 @@ import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
 /// [count] controls how many shimmer rows are rendered (the dashboard shows a
 /// short preview, the library a fuller list).
 class ProwlarrListShimmer extends StatelessWidget {
-  const ProwlarrListShimmer({super.key, this.count = 3, this.verticalPadding = 0});
+  const ProwlarrListShimmer({
+    super.key,
+    this.count = 3,
+    this.verticalPadding = 0,
+  });
 
   final int count;
   final double verticalPadding;

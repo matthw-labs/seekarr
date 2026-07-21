@@ -31,8 +31,7 @@ class DockgeStackEditScreen extends ConsumerStatefulWidget {
       _DockgeStackEditScreenState();
 }
 
-class _DockgeStackEditScreenState
-    extends ConsumerState<DockgeStackEditScreen> {
+class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
   final _nameCtrl = TextEditingController();
   final _yamlCtrl = TextEditingController();
   final _envCtrl = TextEditingController();
@@ -98,10 +97,7 @@ class _DockgeStackEditScreenState
             ),
       successMessage: deploy ? 'Deployed $name' : 'Saved $name',
       failureMessage: deploy ? 'Deploy failed' : 'Save failed',
-      invalidate: [
-        dockgeStackListProvider,
-        dockgeStackDetailProvider(name),
-      ],
+      invalidate: [dockgeStackListProvider, dockgeStackDetailProvider(name)],
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -226,7 +222,11 @@ class _CodeField extends StatelessWidget {
       autocorrect: false,
       enableSuggestions: false,
       keyboardType: TextInputType.multiline,
-      style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5, height: 1.4),
+      style: const TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 12.5,
+        height: 1.4,
+      ),
       decoration: InputDecoration(
         filled: true,
         fillColor: const Color(0xFF0A0B11),

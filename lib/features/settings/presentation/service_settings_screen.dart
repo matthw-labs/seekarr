@@ -34,13 +34,15 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   bool get isQbittorrent => widget.service == ServiceKey.qbittorrent;
   bool get isDockge => widget.service == ServiceKey.dockge;
+  bool get isNzbget => widget.service == ServiceKey.nzbget;
   bool get isTrueNas => widget.service == ServiceKey.truenas;
+  bool get isUnraid => widget.service == ServiceKey.unraid;
 
   /// Services whose clients support pinning a self-signed TLS certificate.
   bool get supportsCertPinning => isTrueNas || isDockge;
 
   /// Services authenticated with username/password rather than an API key.
-  bool get usesCredentials => isQbittorrent || isDockge;
+  bool get usesCredentials => isQbittorrent || isDockge || isNzbget;
 
   @override
   void initState() {
@@ -140,6 +142,13 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         password: _passwordController.text.trim(),
       );
     }
+    if (isNzbget) {
+      return current.copyWithNzbget(
+        url: _urlController.text.trim(),
+        username: _usernameController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+    }
     return current.copyWithService(
       widget.service,
       url: _urlController.text.trim(),
@@ -164,13 +173,20 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               const SizedBox(height: AppSpacing.md),
               _buildTrueNasVersionNote(context),
             ],
+            if (isUnraid) ...[
+              const SizedBox(height: AppSpacing.md),
+              _buildInfoNote(
+                context,
+                'Enable the Unraid API first: Settings → Management Access → '
+                'Developer Options → turn on the GraphQL sandbox, then create an '
+                'API key under API Keys. Without this the endpoint will not '
+                'respond.',
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             _buildUrlField(),
             const SizedBox(height: AppSpacing.lg),
-            if (usesCredentials)
-              _buildUsernameField()
-            else
-              _buildApiKeyField(),
+            if (usesCredentials) _buildUsernameField() else _buildApiKeyField(),
             if (usesCredentials) ...[
               const SizedBox(height: AppSpacing.lg),
               _buildPasswordField(),
@@ -210,6 +226,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   Widget _buildTrueNasVersionNote(BuildContext context) {
+    return _buildInfoNote(
+      context,
+      'Requires TrueNAS SCALE $kTrueNasMinVersion or newer. Create an '
+      'API key under Credentials → Local Users, and use the '
+      'https:// address of the web UI.',
+    );
+  }
+
+  /// A neutral, icon-led information banner used for per-service setup hints.
+  Widget _buildInfoNote(BuildContext context, String message) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return Container(
@@ -230,9 +256,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              'Requires TrueNAS SCALE $kTrueNasMinVersion or newer. Create an '
-              'API key under Credentials → Local Users, and use the '
-              'https:// address of the web UI.',
+              message,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),

@@ -407,7 +407,7 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
 
 Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
   final queue = await ref.watch(sabnzbdQueueProvider.future);
-  return [
+  final kpis = [
     ServiceKpi(
       label: 'Down',
       value: queue.speedLabel,
@@ -433,6 +433,21 @@ Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
       accent: _warnIf(queue.paused),
     ),
   ];
+  // Lifetime total is a nice-to-have; a stats failure must not drop the whole
+  // KPI row, so it is fetched defensively and simply omitted on error.
+  try {
+    final stats = await ref.watch(sabnzbdServerStatsProvider.future);
+    kpis.add(
+      ServiceKpi(
+        label: 'Total',
+        value: stats.totalLabel,
+        icon: Icons.download_done_rounded,
+      ),
+    );
+  } catch (_) {
+    // Ignore — the four queue KPIs above are enough.
+  }
+  return kpis;
 }
 
 Future<List<ServiceKpi>> _nzbgetKpis(Ref ref) async {

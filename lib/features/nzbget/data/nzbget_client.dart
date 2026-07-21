@@ -139,5 +139,53 @@ class NzbgetClient {
     await _call('resumedownload');
   }
 
+  /// Sets the global download speed limit in kilobytes per second (0 = no
+  /// limit). Positional param, per the JSON-RPC contract.
+  Future<void> setRate(int kilobytesPerSec) async {
+    await _call('rate', [kilobytesPerSec]);
+  }
+
+  /// Queues an NZB from a URL. NZBGet's `append` takes positional params; when
+  /// [content] is a URL, NZBGet fetches it server-side. Signature follows the
+  /// documented order: (NZBFilename, NZBContent, Category, Priority, AddToTop,
+  /// AddPaused). Confirm against the target version before relying on the tail
+  /// params (plan §2.1 `◦`).
+  Future<int> append(
+    String name,
+    String content, {
+    String category = '',
+    int priority = 0,
+    bool addToTop = false,
+    bool addPaused = false,
+  }) async {
+    final result = await _call('append', [
+      name,
+      content,
+      category,
+      priority,
+      addToTop,
+      addPaused,
+    ]);
+    // Returns the new NZBID (>0) on success, 0/false on failure.
+    if (result is num) return result.toInt();
+    return result == true ? 1 : 0;
+  }
+
+  /// Low-level queue edit. NZBGet's `editqueue` is positional:
+  /// (Command, Offset, EditText, IDs). Group commands ignore Offset/EditText.
+  Future<bool> editQueue(
+    String command,
+    List<int> ids, {
+    int offset = 0,
+    String editText = '',
+  }) async {
+    final result = await _call('editqueue', [command, offset, editText, ids]);
+    return result == true;
+  }
+
+  Future<bool> pauseGroup(int nzbId) => editQueue('GroupPause', [nzbId]);
+  Future<bool> resumeGroup(int nzbId) => editQueue('GroupResume', [nzbId]);
+  Future<bool> deleteGroup(int nzbId) => editQueue('GroupDelete', [nzbId]);
+
   void close({bool force = false}) => _dio.close(force: force);
 }

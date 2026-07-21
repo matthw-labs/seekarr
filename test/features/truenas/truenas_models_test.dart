@@ -44,7 +44,11 @@ void main() {
       'available': {'parsed': 4096},
       'compression': {'value': 'LZ4'},
       'children': [
-        {'id': 'tank/media/movies', 'name': 'tank/media/movies', 'pool': 'tank'},
+        {
+          'id': 'tank/media/movies',
+          'name': 'tank/media/movies',
+          'pool': 'tank',
+        },
       ],
     });
 
@@ -76,7 +80,11 @@ void main() {
       'state': 'RUNNING',
       'human_version': '1.40.0',
       'upgrade_available': true,
-      'metadata': {'title': 'Plex', 'icon': 'https://x/icon.png', 'train': 'stable'},
+      'metadata': {
+        'title': 'Plex',
+        'icon': 'https://x/icon.png',
+        'train': 'stable',
+      },
       'portals': {'Web UI': 'https://host:32400'},
     });
     expect(app.title, 'Plex');

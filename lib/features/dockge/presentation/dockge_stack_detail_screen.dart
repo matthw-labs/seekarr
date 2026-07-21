@@ -45,10 +45,8 @@ class DockgeStackDetailScreen extends ConsumerWidget {
         child: detailAsync.when(
           data: (detail) => _DetailBody(detail: detail, onRefresh: _refresh),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => AppErrorState(
-            error: error,
-            onRetry: () => _refresh(ref),
-          ),
+          error: (error, _) =>
+              AppErrorState(error: error, onRetry: () => _refresh(ref)),
         ),
       ),
     );
@@ -110,7 +108,10 @@ class _StatusHeader extends StatelessWidget {
         Container(
           width: 12,
           height: 12,
-          decoration: BoxDecoration(color: status.color, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: status.color,
+            shape: BoxShape.circle,
+          ),
         ),
         const SizedBox(width: 10),
         Text(
@@ -141,41 +142,66 @@ class _ActionBar extends ConsumerWidget {
           icon: Icons.play_arrow_rounded,
           label: 'Start',
           color: AppColors.success,
-          onTap: () => runDockgeStackAction(context, ref,
-              (c) => c.startStack(name), 'Started $name', 'Failed to start',
-              onSuccess: () => onRefresh(ref)),
+          onTap: () => runDockgeStackAction(
+            context,
+            ref,
+            (c) => c.startStack(name),
+            'Started $name',
+            'Failed to start',
+            onSuccess: () => onRefresh(ref),
+          ),
         ),
         _ActionChip(
           icon: Icons.stop_rounded,
           label: 'Stop',
           color: AppColors.error,
-          onTap: () => runDockgeStackAction(context, ref,
-              (c) => c.stopStack(name), 'Stopped $name', 'Failed to stop',
-              onSuccess: () => onRefresh(ref)),
+          onTap: () => runDockgeStackAction(
+            context,
+            ref,
+            (c) => c.stopStack(name),
+            'Stopped $name',
+            'Failed to stop',
+            onSuccess: () => onRefresh(ref),
+          ),
         ),
         _ActionChip(
           icon: Icons.restart_alt_rounded,
           label: 'Restart',
           color: AppColors.dockge,
-          onTap: () => runDockgeStackAction(context, ref,
-              (c) => c.restartStack(name), 'Restarted $name',
-              'Failed to restart', onSuccess: () => onRefresh(ref)),
+          onTap: () => runDockgeStackAction(
+            context,
+            ref,
+            (c) => c.restartStack(name),
+            'Restarted $name',
+            'Failed to restart',
+            onSuccess: () => onRefresh(ref),
+          ),
         ),
         _ActionChip(
           icon: Icons.system_update_alt_rounded,
           label: 'Update',
           color: AppColors.info,
-          onTap: () => runDockgeStackAction(context, ref,
-              (c) => c.updateStack(name), 'Updated $name', 'Failed to update',
-              onSuccess: () => onRefresh(ref)),
+          onTap: () => runDockgeStackAction(
+            context,
+            ref,
+            (c) => c.updateStack(name),
+            'Updated $name',
+            'Failed to update',
+            onSuccess: () => onRefresh(ref),
+          ),
         ),
         _ActionChip(
           icon: Icons.arrow_downward_rounded,
           label: 'Down',
           color: AppColors.warning,
-          onTap: () => runDockgeStackAction(context, ref,
-              (c) => c.downStack(name), 'Stack $name is down',
-              'Failed to bring down', onSuccess: () => onRefresh(ref)),
+          onTap: () => runDockgeStackAction(
+            context,
+            ref,
+            (c) => c.downStack(name),
+            'Stack $name is down',
+            'Failed to bring down',
+            onSuccess: () => onRefresh(ref),
+          ),
         ),
         _ActionChip(
           icon: Icons.delete_outline_rounded,
@@ -308,8 +334,10 @@ class _ServiceStatusList extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
                     borderRadius: AppRadius.borderRadiusSm,
@@ -380,7 +408,8 @@ class _TerminalLogState extends ConsumerState<_TerminalLog> {
   void _onScroll() {
     if (!_scroll.hasClients) return;
     // Resume auto-scroll only while the user stays pinned near the bottom.
-    _autoScroll = _scroll.position.pixels >=
+    _autoScroll =
+        _scroll.position.pixels >=
         _scroll.position.maxScrollExtent - _autoScrollThreshold;
   }
 

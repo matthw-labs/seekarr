@@ -42,8 +42,7 @@ class ArrMediaExtrasSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (hasCast) DiscoverCastList(cast: extras.cast),
-            if (hasCast && hasCollection)
-              const SizedBox(height: AppSpacing.lg),
+            if (hasCast && hasCollection) const SizedBox(height: AppSpacing.lg),
             if (hasCollection)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -84,7 +83,10 @@ class _ConnectSeerrCta extends StatelessWidget {
                 color: AppColors.seerr.withValues(alpha: 0.14),
                 borderRadius: AppRadius.borderRadiusMd,
               ),
-              child: const Icon(Icons.people_alt_rounded, color: AppColors.seerr),
+              child: const Icon(
+                Icons.people_alt_rounded,
+                color: AppColors.seerr,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(

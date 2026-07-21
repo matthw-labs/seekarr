@@ -32,3 +32,15 @@ final sabnzbdHistoryProvider = FutureProvider<List<SabnzbdHistorySlot>>((
 ) async {
   return ref.watch(sabnzbdClientProvider).getHistory();
 });
+
+/// Aggregate transfer statistics (total downloaded, etc.).
+final sabnzbdServerStatsProvider = FutureProvider<SabnzbdServerStats>((
+  ref,
+) async {
+  return ref.watch(sabnzbdClientProvider).getServerStats();
+});
+
+/// The configured categories, for the add-NZB dialog.
+final sabnzbdCategoriesProvider = FutureProvider<List<String>>((ref) async {
+  return ref.watch(sabnzbdClientProvider).getCategories();
+});

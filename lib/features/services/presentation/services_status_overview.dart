@@ -90,7 +90,8 @@ class _DomainOnlineCount extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final online = services
         .where(
-          (s) => ref.watch(serviceSummaryProvider(s)).asData?.value.isOnline ??
+          (s) =>
+              ref.watch(serviceSummaryProvider(s)).asData?.value.isOnline ??
               false,
         )
         .length;
@@ -133,7 +134,10 @@ class _DomainChipRow extends ConsumerWidget {
             _ServiceChip(
               service: service,
               isOnline:
-                  ref.watch(serviceSummaryProvider(service)).asData?.value
+                  ref
+                      .watch(serviceSummaryProvider(service))
+                      .asData
+                      ?.value
                       .isOnline ??
                   false,
               onTap: () => context.push('/services/${service.routeParam}'),

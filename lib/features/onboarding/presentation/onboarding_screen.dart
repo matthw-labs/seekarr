@@ -320,6 +320,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             username: _usernameCtrl[k]!.text.trim(),
             password: _passwordCtrl[k]!.text,
           );
+        } else if (k == ServiceKey.nzbget) {
+          updated = updated.copyWithNzbget(
+            url: _urlCtrl[k]!.text.trim(),
+            username: _usernameCtrl[k]!.text.trim(),
+            password: _passwordCtrl[k]!.text,
+          );
         } else {
           updated = updated.copyWithService(
             k,
@@ -334,6 +340,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             username: '',
             password: '',
           );
+        } else if (k == ServiceKey.dockge) {
+          updated = updated.copyWithDockge(url: '', username: '', password: '');
+        } else if (k == ServiceKey.nzbget) {
+          updated = updated.copyWithNzbget(url: '', username: '', password: '');
         } else {
           updated = updated.copyWithService(k, url: '', apiKey: '');
         }
@@ -1133,7 +1143,9 @@ class _ServiceConfig extends StatelessWidget {
                   controller: apiKeyCtrl,
                   isPassword: true,
                 ),
-              ] else if (serviceKey == ServiceKey.qbittorrent) ...[
+              ] else if (serviceKey == ServiceKey.qbittorrent ||
+                  serviceKey == ServiceKey.dockge ||
+                  serviceKey == ServiceKey.nzbget) ...[
                 const SizedBox(height: 10),
                 _ConfigField(
                   label: 'Username (optional)',
@@ -1146,9 +1158,9 @@ class _ServiceConfig extends StatelessWidget {
                   isPassword: true,
                 ),
                 const SizedBox(height: 10),
-                const Text(
-                  'Leave credentials empty if your qBittorrent instance does not require authentication.',
-                  style: TextStyle(
+                Text(
+                  'Leave credentials empty if your ${serviceKey.title} instance does not require authentication.',
+                  style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
                     color: _muted,
@@ -1161,6 +1173,20 @@ class _ServiceConfig extends StatelessWidget {
                 Text(
                   'Requires TrueNAS SCALE $kTrueNasMinVersion or newer.',
                   style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: _muted,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+              if (serviceKey == ServiceKey.unraid) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  'Enable the Unraid API first (Settings → Management Access → '
+                  'Developer Options → GraphQL sandbox) and create an API key. '
+                  'The endpoint stays silent until it is enabled.',
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
                     color: _muted,

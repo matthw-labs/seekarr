@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/nzbget/domain/models/nzbget_models.dart';
+import 'package:seekarr/features/nzbget/presentation/nzbget_actions.dart';
 import 'package:seekarr/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
@@ -107,6 +110,8 @@ class _NzbgetDashboard extends ConsumerWidget {
             accent: AppColors.nzbget,
           ),
           const SizedBox(height: 8),
+          const _NzbgetActionsBar(),
+          const SizedBox(height: 8),
           const SectionHeader(title: 'Downloading', showChevron: false),
           const SizedBox(height: 2),
           _QueueList(queueAsync: queueAsync),
@@ -118,6 +123,168 @@ class _NzbgetDashboard extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Providers refreshed after any NZBGet mutation.
+final _nzbgetInvalidateAfterAction = <ProviderOrFamily>[
+  nzbgetStatusProvider,
+  nzbgetQueueProvider,
+  nzbgetHistoryProvider,
+];
+
+/// Global controls: add an NZB by URL and pause/resume the whole queue.
+class _NzbgetActionsBar extends ConsumerWidget {
+  const _NzbgetActionsBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final paused =
+        ref.watch(nzbgetStatusProvider).asData?.value.paused ?? false;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _showAddNzbDialog(context, ref),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Add NZB'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: FilledButton.tonalIcon(
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                runNzbgetAction(
+                  context,
+                  ref,
+                  action: (c) =>
+                      paused ? c.resumeDownload() : c.pauseDownload(),
+                  successMessage: paused
+                      ? 'Downloads resumed'
+                      : 'Downloads paused',
+                  failureMessage: paused
+                      ? 'Failed to resume downloads'
+                      : 'Failed to pause downloads',
+                  invalidate: _nzbgetInvalidateAfterAction,
+                );
+              },
+              icon: Icon(
+                paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                size: 18,
+              ),
+              label: Text(paused ? 'Resume all' : 'Pause all'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Per-item overflow menu: pause / resume / delete a single group.
+class _QueueItemMenu extends ConsumerWidget {
+  const _QueueItemMenu({required this.group});
+
+  final NzbgetGroup group;
+
+  bool get _paused => group.status.toUpperCase().contains('PAUSED');
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert_rounded, size: 18),
+      tooltip: 'Job actions',
+      onSelected: (value) {
+        switch (value) {
+          case 'pause':
+            runNzbgetAction(
+              context,
+              ref,
+              action: (c) => c.pauseGroup(group.nzbId),
+              successMessage: 'Job paused',
+              failureMessage: 'Failed to pause the job',
+              invalidate: _nzbgetInvalidateAfterAction,
+            );
+          case 'resume':
+            runNzbgetAction(
+              context,
+              ref,
+              action: (c) => c.resumeGroup(group.nzbId),
+              successMessage: 'Job resumed',
+              failureMessage: 'Failed to resume the job',
+              invalidate: _nzbgetInvalidateAfterAction,
+            );
+          case 'delete':
+            runNzbgetAction(
+              context,
+              ref,
+              action: (c) => c.deleteGroup(group.nzbId),
+              successMessage: 'Job removed',
+              failureMessage: 'Failed to remove the job',
+              invalidate: _nzbgetInvalidateAfterAction,
+            );
+        }
+      },
+      itemBuilder: (context) => [
+        if (_paused)
+          const PopupMenuItem(value: 'resume', child: Text('Resume'))
+        else
+          const PopupMenuItem(value: 'pause', child: Text('Pause')),
+        const PopupMenuItem(value: 'delete', child: Text('Delete')),
+      ],
+    );
+  }
+}
+
+/// Prompts for an NZB URL and enqueues it via `append`.
+Future<void> _showAddNzbDialog(BuildContext context, WidgetRef ref) async {
+  final urlController = TextEditingController();
+  final submitted = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Add NZB by URL'),
+      content: TextField(
+        controller: urlController,
+        autofocus: true,
+        keyboardType: TextInputType.url,
+        decoration: const InputDecoration(
+          labelText: 'NZB URL',
+          hintText: 'https://…/download.nzb',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Add'),
+        ),
+      ],
+    ),
+  );
+
+  if (submitted != true) {
+    urlController.dispose();
+    return;
+  }
+  final url = urlController.text.trim();
+  urlController.dispose();
+  if (url.isEmpty || !context.mounted) return;
+
+  // NZBGet fetches the URL server-side; the filename is only a display label.
+  final name = url.split('/').last.split('?').first;
+  await runNzbgetAction(
+    context,
+    ref,
+    action: (c) => c.append(name.isEmpty ? 'seekarr.nzb' : name, url),
+    successMessage: 'NZB added',
+    failureMessage: 'Failed to add the NZB',
+    invalidate: _nzbgetInvalidateAfterAction,
+  );
 }
 
 class _QueueList extends ConsumerWidget {
@@ -151,13 +318,13 @@ class _QueueList extends ConsumerWidget {
   }
 }
 
-class _QueueTile extends StatelessWidget {
+class _QueueTile extends ConsumerWidget {
   const _QueueTile({required this.group});
 
   final NzbgetGroup group;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final subtitle = <String>[
       if (group.status.isNotEmpty) group.status,
@@ -200,6 +367,7 @@ class _QueueTile extends StatelessWidget {
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
+                  _QueueItemMenu(group: group),
                 ],
               ),
               const SizedBox(height: 6),

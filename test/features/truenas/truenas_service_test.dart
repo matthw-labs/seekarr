@@ -42,8 +42,18 @@ void main() {
           {'name': 'backup', 'status': 'DEGRADED', 'healthy': false},
         ],
         'alert.list': [
-          {'uuid': 'a1', 'level': 'WARNING', 'formatted': 'Disk hot', 'dismissed': false},
-          {'uuid': 'a2', 'level': 'INFO', 'formatted': 'Old', 'dismissed': true},
+          {
+            'uuid': 'a1',
+            'level': 'WARNING',
+            'formatted': 'Disk hot',
+            'dismissed': false,
+          },
+          {
+            'uuid': 'a2',
+            'level': 'INFO',
+            'formatted': 'Old',
+            'dismissed': true,
+          },
         ],
         'service.query': [
           {'id': 1, 'service': 'smb', 'state': 'RUNNING', 'enable': true},

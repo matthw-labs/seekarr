@@ -1,0 +1,61 @@
+# Subset of the Unraid GraphQL SDL (sourced from the documented schema / Apollo
+# introspection, marked doc until captured from a live instance). Only the types
+# and fields Seekarr queries are kept; the contract test asserts each still
+# exists so an upstream rename fails loudly instead of silently returning nulls.
+
+type Query {
+  info: Info
+  array: Array
+  dockerContainers: [DockerContainer!]
+}
+
+type Info {
+  os: Os
+}
+
+type Os {
+  distro: String
+  release: String
+  uptime: String
+}
+
+type Array {
+  state: ArrayState
+  capacity: ArrayCapacity
+  disks: [ArrayDisk!]
+}
+
+type ArrayCapacity {
+  kilobytes: Capacity
+  bytes: Capacity
+}
+
+type Capacity {
+  free: String
+  used: String
+  total: String
+}
+
+type ArrayDisk {
+  name: String
+  status: String
+  temp: Int
+}
+
+type DockerContainer {
+  id: String
+  names: [String!]
+  state: ContainerState
+  status: String
+  autoStart: Boolean
+}
+
+enum ArrayState {
+  STARTED
+  STOPPED
+}
+
+enum ContainerState {
+  RUNNING
+  EXITED
+}

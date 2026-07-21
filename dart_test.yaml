@@ -1,0 +1,12 @@
+# Test tags for the repo. The `e2e` tier (plan §7.6) drives the real service
+# clients against Docker instances, so it is NOT offline/deterministic and must
+# never run in the default `flutter test` gate. It is auto-skipped
+# unless explicitly requested:
+#
+#   docker compose -f docker-compose.e2e.yml up -d
+#   flutter test --tags e2e
+#
+# Everything else (tiers 0-5) stays offline and runs normally.
+tags:
+  e2e:
+    skip: "requires Docker instances: run with `flutter test --tags e2e`"

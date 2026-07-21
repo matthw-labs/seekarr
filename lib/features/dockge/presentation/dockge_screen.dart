@@ -107,9 +107,7 @@ class _StackList extends StatelessWidget {
         ),
       );
     }
-    return Column(
-      children: stacks.map((s) => _StackTile(stack: s)).toList(),
-    );
+    return Column(children: stacks.map((s) => _StackTile(stack: s)).toList());
   }
 }
 
@@ -162,9 +160,9 @@ class _StackTile extends ConsumerWidget {
                       ),
                       Text(
                         stack.status.label,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: statusColor,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: statusColor),
                       ),
                     ],
                   ),

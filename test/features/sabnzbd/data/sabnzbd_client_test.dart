@@ -69,5 +69,60 @@ void main() {
       expect(redacted, isNot(contains('SECRET123')));
       expect(redacted, contains('apikey=***'));
     });
+
+    test('getServerStats parses lifetime totals', () async {
+      final adapter = CapturingHttpAdapter(
+        response: jsonFixtureMap('sabnzbd/server_stats.json'),
+      );
+      final stats = await _client(adapter).getServerStats();
+
+      expect(adapter.lastUri!.queryParameters['mode'], 'server_stats');
+      expect(stats.total, 5497558138880);
+      expect(stats.totalLabel, '5.0 TB');
+    });
+
+    test('getCategories returns the category list', () async {
+      final adapter = CapturingHttpAdapter(
+        response: jsonFixtureMap('sabnzbd/get_cats.json'),
+      );
+      final cats = await _client(adapter).getCategories();
+
+      expect(adapter.lastUri!.queryParameters['mode'], 'get_cats');
+      expect(cats, containsAll(['*', 'movies', 'tv', 'software']));
+    });
+
+    test('addUrl passes the NZB URL + category via query parameters', () async {
+      final adapter = CapturingHttpAdapter(response: {'status': true});
+      final client = _client(adapter);
+
+      await client.addUrl(
+        'https://indexer.local/get/x.nzb',
+        category: 'tv',
+        priority: 1,
+      );
+
+      final q = adapter.lastUri!.queryParameters;
+      expect(q['mode'], 'addurl');
+      expect(q['name'], 'https://indexer.local/get/x.nzb');
+      expect(q['cat'], 'tv');
+      expect(q['priority'], '1');
+      expect(q['apikey'], 'SECRET');
+    });
+
+    test('pauseJob / resumeJob / deleteJob target a single NZO id', () async {
+      final adapter = CapturingHttpAdapter(response: {'status': true});
+      final client = _client(adapter);
+
+      await client.pauseJob('nzo_1');
+      expect(adapter.lastUri!.queryParameters['name'], 'pause');
+      expect(adapter.lastUri!.queryParameters['value'], 'nzo_1');
+
+      await client.resumeJob('nzo_1');
+      expect(adapter.lastUri!.queryParameters['name'], 'resume');
+
+      await client.deleteJob('nzo_1');
+      expect(adapter.lastUri!.queryParameters['name'], 'delete');
+      expect(adapter.lastUri!.queryParameters['value'], 'nzo_1');
+    });
   });
 }

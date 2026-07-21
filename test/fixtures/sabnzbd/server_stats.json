@@ -1,0 +1,13 @@
+{
+  "day": 5368709120,
+  "week": 32212254720,
+  "month": 128849018880,
+  "total": 5497558138880,
+  "servers": {
+    "news.example.com": {
+      "total": 5497558138880,
+      "articles_tried": 12000,
+      "articles_success": 11950
+    }
+  }
+}

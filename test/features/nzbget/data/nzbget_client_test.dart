@@ -94,5 +94,70 @@ void main() {
       expect(group.fileSizeMb, 3072);
       expect(group.remainingSizeMb, 1536);
     });
+
+    test(
+      'status falls back to Hi/Lo bytes when the MB field is absent',
+      () async {
+        final adapter = CapturingHttpAdapter(
+          response: jsonFixtureMap('nzbget/status_hilo.json'),
+        );
+        final status = await _client(adapter).status();
+
+        // RemainingSize = 1 * 2^32 + 1610612736 = 5905580032 bytes → 5632 MB.
+        expect(status.remainingSizeMb, 5632);
+        expect(status.paused, isTrue);
+      },
+    );
+
+    test('append sends positional params and returns the new NZBID', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {'jsonrpc': '2.0', 'result': 7, 'id': 1},
+      );
+      final client = _client(adapter);
+
+      final id = await client.append(
+        'linux.nzb',
+        'https://indexer.local/get/linux.nzb',
+        category: 'software',
+        priority: 1,
+      );
+
+      expect(id, 7);
+      final body = adapter.lastBody as Map<String, dynamic>;
+      expect(body['method'], 'append');
+      final params = body['params'] as List<dynamic>;
+      // (NZBFilename, NZBContent, Category, Priority, AddToTop, AddPaused)
+      expect(params[0], 'linux.nzb');
+      expect(params[1], 'https://indexer.local/get/linux.nzb');
+      expect(params[2], 'software');
+      expect(params[3], 1);
+      expect(params.every((p) => p is! Map), isTrue); // never named params
+    });
+
+    test('deleteGroup issues a GroupDelete editqueue command', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {'jsonrpc': '2.0', 'result': true, 'id': 1},
+      );
+      final client = _client(adapter);
+
+      expect(await client.deleteGroup(5), isTrue);
+      final body = adapter.lastBody as Map<String, dynamic>;
+      expect(body['method'], 'editqueue');
+      final params = body['params'] as List<dynamic>;
+      expect(params[0], 'GroupDelete');
+      expect(params.last, [5]);
+    });
+
+    test('setRate sends the limit as a positional param', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {'jsonrpc': '2.0', 'result': true, 'id': 1},
+      );
+      final client = _client(adapter);
+
+      await client.setRate(2048);
+      final body = adapter.lastBody as Map<String, dynamic>;
+      expect(body['method'], 'rate');
+      expect(body['params'], [2048]);
+    });
   });
 }

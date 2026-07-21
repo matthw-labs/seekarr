@@ -114,7 +114,9 @@ class TrueNasVirtInstance {
       cpuCount: vcpus * cores * threads,
       memoryBytes: memMib != null ? memMib * 1024 * 1024 : null,
       autostart: json['autostart'] == true,
-      image: (description != null && description.isNotEmpty) ? description : null,
+      image: (description != null && description.isNotEmpty)
+          ? description
+          : null,
       legacyVmId: numericId,
     );
   }

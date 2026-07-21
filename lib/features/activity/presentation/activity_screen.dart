@@ -116,13 +116,21 @@ class _ActivitySub {
 /// Now/Wanted, is the combined view that preserved the previous behaviour.
 final Map<_ActivitySection, List<_ActivitySub>> _activitySubs = {
   _ActivitySection.now: [
-    _ActivitySub('All', globalNowItemsProvider, 'Nothing downloading right now'),
+    _ActivitySub(
+      'All',
+      globalNowItemsProvider,
+      'Nothing downloading right now',
+    ),
     _ActivitySub('Queue', globalQueueItemsProvider, 'Download queue is empty'),
     _ActivitySub('Requests', globalRequestItemsProvider, 'No pending requests'),
   ],
   _ActivitySection.history: [
     _ActivitySub('History', globalHistoryItemsProvider, 'No recent history'),
-    _ActivitySub('Blocklist', globalBlocklistItemsProvider, 'Blocklist is empty'),
+    _ActivitySub(
+      'Blocklist',
+      globalBlocklistItemsProvider,
+      'Blocklist is empty',
+    ),
   ],
   _ActivitySection.wanted: [
     _ActivitySub('All', globalWantedItemsProvider, 'Nothing wanted'),

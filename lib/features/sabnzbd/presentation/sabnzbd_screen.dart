@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/sabnzbd/domain/models/sabnzbd_models.dart';
+import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_actions.dart';
 import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
@@ -106,6 +109,8 @@ class _SabnzbdDashboard extends ConsumerWidget {
             accent: AppColors.sabnzbd,
           ),
           const SizedBox(height: 8),
+          _SabnzbdActionsBar(queueAsync: queueAsync),
+          const SizedBox(height: 8),
           const SectionHeader(title: 'Downloading', showChevron: false),
           const SizedBox(height: 2),
           _QueueList(queueAsync: queueAsync),
@@ -117,6 +122,183 @@ class _SabnzbdDashboard extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Providers refreshed after any SABnzbd mutation.
+final _sabnzbdInvalidateAfterAction = <ProviderOrFamily>[
+  sabnzbdQueueProvider,
+  sabnzbdHistoryProvider,
+];
+
+/// Global controls: add an NZB by URL and pause/resume the whole queue.
+class _SabnzbdActionsBar extends ConsumerWidget {
+  const _SabnzbdActionsBar({required this.queueAsync});
+
+  final AsyncValue<SabnzbdQueue> queueAsync;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final paused = queueAsync.asData?.value.paused ?? false;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _showAddNzbDialog(context, ref),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Add NZB'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: FilledButton.tonalIcon(
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                runSabnzbdAction(
+                  context,
+                  ref,
+                  action: (c) => paused ? c.resume() : c.pause(),
+                  successMessage: paused ? 'Queue resumed' : 'Queue paused',
+                  failureMessage: paused
+                      ? 'Failed to resume the queue'
+                      : 'Failed to pause the queue',
+                  invalidate: _sabnzbdInvalidateAfterAction,
+                );
+              },
+              icon: Icon(
+                paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                size: 18,
+              ),
+              label: Text(paused ? 'Resume all' : 'Pause all'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Per-item overflow menu: pause / resume / delete a single job.
+class _QueueItemMenu extends ConsumerWidget {
+  const _QueueItemMenu({required this.slot, required this.paused});
+
+  final SabnzbdQueueSlot slot;
+  final bool paused;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert_rounded, size: 18),
+      tooltip: 'Job actions',
+      onSelected: (value) {
+        switch (value) {
+          case 'pause':
+            runSabnzbdAction(
+              context,
+              ref,
+              action: (c) => c.pauseJob(slot.nzoId),
+              successMessage: 'Job paused',
+              failureMessage: 'Failed to pause the job',
+              invalidate: _sabnzbdInvalidateAfterAction,
+            );
+          case 'resume':
+            runSabnzbdAction(
+              context,
+              ref,
+              action: (c) => c.resumeJob(slot.nzoId),
+              successMessage: 'Job resumed',
+              failureMessage: 'Failed to resume the job',
+              invalidate: _sabnzbdInvalidateAfterAction,
+            );
+          case 'delete':
+            runSabnzbdAction(
+              context,
+              ref,
+              action: (c) => c.deleteJob(slot.nzoId),
+              successMessage: 'Job removed',
+              failureMessage: 'Failed to remove the job',
+              invalidate: _sabnzbdInvalidateAfterAction,
+            );
+        }
+      },
+      itemBuilder: (context) => [
+        if (paused)
+          const PopupMenuItem(value: 'resume', child: Text('Resume'))
+        else
+          const PopupMenuItem(value: 'pause', child: Text('Pause')),
+        const PopupMenuItem(value: 'delete', child: Text('Delete')),
+      ],
+    );
+  }
+}
+
+/// Prompts for an NZB URL (and optional category) and enqueues it.
+Future<void> _showAddNzbDialog(BuildContext context, WidgetRef ref) async {
+  final urlController = TextEditingController();
+  final categories = ref.read(sabnzbdCategoriesProvider).asData?.value;
+  String? category;
+
+  final submitted = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Add NZB by URL'),
+      content: StatefulBuilder(
+        builder: (context, setState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: urlController,
+              autofocus: true,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: 'NZB URL',
+                hintText: 'https://…/download.nzb',
+              ),
+            ),
+            if (categories != null && categories.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: category,
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (v) => setState(() => category = v),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Add'),
+        ),
+      ],
+    ),
+  );
+
+  if (submitted != true) {
+    urlController.dispose();
+    return;
+  }
+  final url = urlController.text.trim();
+  urlController.dispose();
+  if (url.isEmpty || !context.mounted) return;
+
+  await runSabnzbdAction(
+    context,
+    ref,
+    action: (c) => c.addUrl(url, category: category),
+    successMessage: 'NZB added',
+    failureMessage: 'Failed to add the NZB',
+    invalidate: _sabnzbdInvalidateAfterAction,
+  );
 }
 
 class _QueueList extends ConsumerWidget {
@@ -150,13 +332,15 @@ class _QueueList extends ConsumerWidget {
   }
 }
 
-class _QueueTile extends StatelessWidget {
+class _QueueTile extends ConsumerWidget {
   const _QueueTile({required this.slot});
 
   final SabnzbdQueueSlot slot;
 
+  bool get _paused => slot.status.toLowerCase() == 'paused';
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final subtitle = <String>[
       if (slot.status.isNotEmpty) slot.status,
@@ -199,6 +383,7 @@ class _QueueTile extends StatelessWidget {
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
+                  _QueueItemMenu(slot: slot, paused: _paused),
                 ],
               ),
               const SizedBox(height: 6),

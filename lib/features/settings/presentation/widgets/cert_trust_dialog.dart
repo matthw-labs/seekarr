@@ -19,10 +19,7 @@ Future<bool> showCertTrustDialog(
     builder: (context) {
       final theme = Theme.of(context);
       return AlertDialog(
-        icon: Icon(
-          Icons.gpp_maybe_outlined,
-          color: theme.colorScheme.error,
-        ),
+        icon: Icon(Icons.gpp_maybe_outlined, color: theme.colorScheme.error),
         title: const Text('Untrusted certificate'),
         content: Column(
           mainAxisSize: MainAxisSize.min,

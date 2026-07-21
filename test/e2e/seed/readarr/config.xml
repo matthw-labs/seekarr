@@ -1,0 +1,9 @@
+<Config>
+  <BindAddress>*</BindAddress>
+  <Port>8787</Port>
+  <UrlBase></UrlBase>
+  <ApiKey>test-key</ApiKey>
+  <AuthenticationMethod>None</AuthenticationMethod>
+  <Branch>develop</Branch>
+  <LogLevel>info</LogLevel>
+</Config>
