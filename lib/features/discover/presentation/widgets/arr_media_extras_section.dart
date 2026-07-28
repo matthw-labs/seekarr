@@ -17,10 +17,16 @@ class ArrMediaExtrasSection extends ConsumerWidget {
   final int tmdbId;
   final String mediaType; // 'movie' | 'tv'
 
+  /// Accent of the *host* screen (Radarr amber, Sonarr purple, …) so the section
+  /// rules match the ones above them. The data comes from Seerr, but the section
+  /// belongs to the screen it is rendered in.
+  final Color? accent;
+
   const ArrMediaExtrasSection({
     super.key,
     required this.tmdbId,
     required this.mediaType,
+    this.accent,
   });
 
   @override
@@ -41,12 +47,15 @@ class ArrMediaExtrasSection extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (hasCast) DiscoverCastList(cast: extras.cast),
+            if (hasCast) DiscoverCastList(cast: extras.cast, accent: accent),
             if (hasCast && hasCollection) const SizedBox(height: AppSpacing.lg),
             if (hasCollection)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: DiscoverCollectionBanner(collection: extras.collection!),
+                child: DiscoverCollectionBanner(
+                  collection: extras.collection!,
+                  accent: accent,
+                ),
               ),
             const SizedBox(height: AppSpacing.lg),
           ],

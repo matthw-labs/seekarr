@@ -102,6 +102,7 @@ class RequestsList extends ConsumerWidget {
                               ),
                             ),
                           IconButton(
+                            tooltip: 'Delete request',
                             icon: Icon(Icons.delete, color: colorScheme.error),
                             onPressed: () async {
                               final result = await showAppConfirmDialog(

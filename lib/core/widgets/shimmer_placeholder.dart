@@ -86,6 +86,22 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
     final baseColor = colorScheme.surfaceContainerHigh;
     final highlightColor = colorScheme.surfaceContainer;
 
+    // Reduce Motion: this is an indefinitely repeating sweep, the single most
+    // persistent animation in the app. Fall back to the flat base colour, which
+    // still reads as "loading" against the surrounding surfaces.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      if (_controller.isAnimating) _controller.stop();
+      return Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          shape: widget.isCircle ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: widget.isCircle ? null : widget.borderRadius,
+          color: baseColor,
+        ),
+      );
+    }
+
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {

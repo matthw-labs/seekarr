@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/models/media_preview.dart';
+import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
@@ -230,7 +231,13 @@ class _PosterSection<T> extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         SizedBox(
-          height: 176,
+          // 138pt poster + gap + title/subtitle: grows with the reading size so
+          // the labels are not clipped at accessibility text sizes.
+          height: TextScaleMetrics.boxHeight(
+            context,
+            base: 176,
+            textHeight: 34,
+          ),
           child: AsyncValueWidget<List<T>>(
             value: asyncValue,
             serviceName: serviceName,
@@ -364,6 +371,11 @@ class _ServicePosterTile extends StatelessWidget {
       width: 96,
       child: PressableScale(
         onTap: onTap,
+        // The tile is a poster plus a truncated title; announce the full title
+        // and its subtitle as one button rather than an unlabelled image.
+        semanticLabel: title,
+        semanticValue: subtitle.isEmpty ? null : subtitle,
+        excludeChildSemantics: true,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

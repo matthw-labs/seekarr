@@ -13,7 +13,13 @@ import 'package:seekarr/features/settings/domain/service_key.dart';
 class DiscoverCastList extends StatelessWidget {
   final List<DiscoverCastMember> cast;
 
-  const DiscoverCastList({super.key, required this.cast});
+  /// Accent for the section rule. Defaults to Seerr, which owns this data, but
+  /// the host screen passes its own: the widget is reused inside the Radarr and
+  /// Sonarr detail screens via `ArrMediaExtrasSection`, where a hard-coded
+  /// indigo rule sat right below an amber one.
+  final Color? accent;
+
+  const DiscoverCastList({super.key, required this.cast, this.accent});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +30,7 @@ class DiscoverCastList extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: MediaDetailSectionHeader(
             title: 'Cast',
-            accent: ServiceKey.seerr.accent,
+            accent: accent ?? ServiceKey.seerr.accent,
           ),
         ),
         SizedBox(

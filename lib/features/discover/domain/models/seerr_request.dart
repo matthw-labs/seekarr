@@ -31,7 +31,7 @@ enum RequestStatus {
   }
 }
 
-enum MediaAvailability {
+enum SeerrMediaAvailability {
   unknown,
   pending,
   processing,
@@ -39,7 +39,7 @@ enum MediaAvailability {
   available,
   deleted;
 
-  static MediaAvailability fromCode(dynamic value) {
+  static SeerrMediaAvailability fromCode(dynamic value) {
     int? intValue;
     if (value is int) {
       intValue = value;
@@ -49,35 +49,35 @@ enum MediaAvailability {
 
     switch (intValue) {
       case 1:
-        return MediaAvailability.unknown;
+        return SeerrMediaAvailability.unknown;
       case 2:
-        return MediaAvailability.pending;
+        return SeerrMediaAvailability.pending;
       case 3:
-        return MediaAvailability.processing;
+        return SeerrMediaAvailability.processing;
       case 4:
-        return MediaAvailability.partiallyAvailable;
+        return SeerrMediaAvailability.partiallyAvailable;
       case 5:
-        return MediaAvailability.available;
+        return SeerrMediaAvailability.available;
       case 6:
-        return MediaAvailability.deleted;
+        return SeerrMediaAvailability.deleted;
       default:
-        return MediaAvailability.unknown;
+        return SeerrMediaAvailability.unknown;
     }
   }
 
   String get label {
     switch (this) {
-      case MediaAvailability.unknown:
+      case SeerrMediaAvailability.unknown:
         return 'Unknown';
-      case MediaAvailability.pending:
+      case SeerrMediaAvailability.pending:
         return 'Pending';
-      case MediaAvailability.processing:
+      case SeerrMediaAvailability.processing:
         return 'Processing';
-      case MediaAvailability.partiallyAvailable:
+      case SeerrMediaAvailability.partiallyAvailable:
         return 'Partially Available';
-      case MediaAvailability.available:
+      case SeerrMediaAvailability.available:
         return 'Available';
-      case MediaAvailability.deleted:
+      case SeerrMediaAvailability.deleted:
         return 'Deleted';
     }
   }
@@ -184,23 +184,23 @@ extension SeerrRequestDisplayStatusX on SeerrRequest {
 
     if (mediaStatus != null) {
       switch (mediaStatus) {
-        case MediaAvailability.available:
+        case SeerrMediaAvailability.available:
           return (label: 'Available', kind: SeerrRequestDisplayKind.available);
-        case MediaAvailability.partiallyAvailable:
+        case SeerrMediaAvailability.partiallyAvailable:
           return (
             label: 'Partially Available',
             kind: SeerrRequestDisplayKind.partiallyAvailable,
           );
-        case MediaAvailability.processing:
+        case SeerrMediaAvailability.processing:
           return (
             label: 'Processing',
             kind: SeerrRequestDisplayKind.processing,
           );
-        case MediaAvailability.deleted:
+        case SeerrMediaAvailability.deleted:
           return (label: 'Deleted', kind: SeerrRequestDisplayKind.deleted);
-        case MediaAvailability.pending:
+        case SeerrMediaAvailability.pending:
           return (label: 'Pending', kind: SeerrRequestDisplayKind.pending);
-        case MediaAvailability.unknown:
+        case SeerrMediaAvailability.unknown:
           break;
       }
     }
@@ -228,7 +228,7 @@ class RequestMedia {
   final String? year;
   final int? tmdbId;
   final int? tvdbId;
-  final MediaAvailability status;
+  final SeerrMediaAvailability status;
   final String? externalServiceSlug;
   final int? externalServiceId; // Radarr/Sonarr ID
   final String? mediaType;
@@ -240,7 +240,7 @@ class RequestMedia {
     this.year,
     this.tmdbId,
     this.tvdbId,
-    this.status = MediaAvailability.unknown,
+    this.status = SeerrMediaAvailability.unknown,
     this.externalServiceSlug,
     this.externalServiceId,
     this.mediaType,
@@ -252,7 +252,7 @@ class RequestMedia {
     final id = json['id'] as int?;
     final tmdbId = json['tmdbId'];
     final tvdbId = json['tvdbId'];
-    final status = MediaAvailability.fromCode(json['status']);
+    final status = SeerrMediaAvailability.fromCode(json['status']);
     final slug = json['externalServiceSlug']?.toString();
     final externalServiceId = json['externalServiceId'] as int?;
     final mediaType = json['mediaType']?.toString();

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/utils/url_utils.dart';
+import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/core/widgets/section_header.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
@@ -31,6 +34,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   late final TextEditingController _passwordController;
 
   bool _saving = false;
+  bool _testing = false;
+  bool _revealApiKey = false;
+
+  /// Result of the last "Test connection", or null when it has not been run
+  /// since the fields last changed.
+  ({bool ok, String message})? _testResult;
+
+  /// Field values as loaded, so leaving with edits can warn instead of silently
+  /// discarding them.
+  late final Map<String, String> _initialValues;
 
   bool get isQbittorrent => widget.service == ServiceKey.qbittorrent;
   bool get isDockge => widget.service == ServiceKey.dockge;
@@ -60,15 +73,131 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     _passwordController = TextEditingController(
       text: usesCredentials ? settings.passwordFor(widget.service) : '',
     );
+
+    _initialValues = {
+      for (final entry in _controllers.entries) entry.key: entry.value.text,
+    };
+    for (final controller in _controllers.values) {
+      controller.addListener(_onFieldChanged);
+    }
+  }
+
+  Map<String, TextEditingController> get _controllers => {
+    'url': _urlController,
+    'apiKey': _apiKeyController,
+    'username': _usernameController,
+    'password': _passwordController,
+  };
+
+  /// Whether any field differs from what was loaded.
+  bool get _isDirty => _controllers.entries.any(
+    (entry) => entry.value.text != _initialValues[entry.key],
+  );
+
+  void _onFieldChanged() {
+    // A test result describes the values that were tested; once they change it
+    // is stale and claiming otherwise would be worse than showing nothing.
+    if (_testResult != null) setState(() => _testResult = null);
   }
 
   @override
   void dispose() {
+    for (final controller in _controllers.values) {
+      controller.removeListener(_onFieldChanged);
+    }
     _urlController.dispose();
     _apiKeyController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// Verifies the values currently in the form without saving them.
+  ///
+  /// Onboarding has always had this; settings did not, so the only way to find
+  /// out whether an edited URL or key worked was to save it and watch the
+  /// service list go offline.
+  Future<void> _testConnection() async {
+    if (_testing || _saving) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _testing = true;
+      _testResult = null;
+    });
+    try {
+      final candidate = _updateServiceSettings(
+        ref.read(currentSettingsProvider),
+      );
+      final result = await checkServiceWithCertProbe(widget.service, candidate);
+      if (!mounted) return;
+
+      final cert = result.untrustedCertificate;
+      if (cert != null) {
+        final trust = await showCertTrustDialog(
+          context,
+          serviceTitle: widget.service.title,
+          certificate: cert,
+        );
+        if (!mounted) return;
+        if (trust) {
+          await ref
+              .read(settingsProvider.notifier)
+              .updateSettings(
+                ref
+                    .read(currentSettingsProvider)
+                    .copyWithCertFingerprint(widget.service, cert.fingerprint),
+              );
+          if (!mounted) return;
+          setState(() => _testing = false);
+          // Retry now that the certificate is pinned.
+          return _testConnection();
+        }
+      }
+
+      setState(() {
+        _testResult = switch (result.status) {
+          ServiceConnectionStatus.connected => (
+            ok: true,
+            message: '${widget.service.title} answered as expected.',
+          ),
+          ServiceConnectionStatus.notConfigured => (
+            ok: false,
+            message: 'Fill in the address and credentials first.',
+          ),
+          ServiceConnectionStatus.disconnected ||
+          ServiceConnectionStatus.checking => (
+            ok: false,
+            message:
+                'Could not reach ${widget.service.title} with these settings. '
+                'Check the address, the credentials, and that the instance is '
+                'running.',
+          ),
+        };
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _testResult = (ok: false, message: 'Test failed: $e'));
+    } finally {
+      if (mounted) setState(() => _testing = false);
+    }
+  }
+
+  /// Confirms before dropping unsaved edits.
+  Future<bool> _confirmDiscard() async {
+    if (!_isDirty) return true;
+    final result = await showAppConfirmDialog(
+      context: context,
+      title: 'Discard changes?',
+      message:
+          'Your edits to the ${widget.service.title} settings have not been '
+          'saved.',
+      confirmLabel: 'Discard',
+      cancelLabel: 'Keep editing',
+      destructive: true,
+      dangerNote: '',
+    );
+    return result.confirmed;
   }
 
   Future<void> _saveSettings() async {
@@ -158,6 +287,21 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      // Never blocks the iOS back gesture outright — `canPop` stays true unless
+      // there is something to lose, and the guard only asks.
+      canPop: !_isDirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop || !mounted) return;
+        if (await _confirmDiscard() && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.service.title} Settings'),
@@ -191,8 +335,68 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               const SizedBox(height: AppSpacing.lg),
               _buildPasswordField(),
             ],
+            const SizedBox(height: AppSpacing.xl),
+            _buildTestConnectionRow(context),
+            if (_testResult != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              _buildTestResult(context, _testResult!),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTestConnectionRow(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: _testing || _saving ? null : _testConnection,
+      icon: _testing
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.wifi_tethering_rounded, size: 18),
+      label: Text(_testing ? 'Testing…' : 'Test connection'),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(46),
+        foregroundColor: widget.service.accent,
+      ),
+    );
+  }
+
+  Widget _buildTestResult(
+    BuildContext context,
+    ({bool ok, String message}) result,
+  ) {
+    final theme = Theme.of(context);
+    final color = result.ok ? AppColors.success : theme.colorScheme.error;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: AppRadius.borderRadiusMd,
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            result.ok
+                ? Icons.check_circle_outline_rounded
+                : Icons.error_outline_rounded,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              result.message,
+              style: theme.textTheme.bodySmall?.copyWith(color: color),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -218,10 +422,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   Widget _buildHeader(BuildContext context) {
     return SectionHeader(
       title: widget.service.title,
-      trailing: Icon(
-        widget.service.icon,
-        color: Theme.of(context).colorScheme.primary,
-      ),
+      // The service's own accent, not colorScheme.primary: the settings list one
+      // screen back shows Radarr amber, and this header showed the same icon in
+      // indigo.
+      trailing: Icon(widget.service.icon, color: widget.service.accent),
     );
   }
 
@@ -268,16 +472,31 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   Widget _buildUrlField() {
-    return TextFormField(
-      controller: _urlController,
-      decoration: const InputDecoration(
-        labelText: 'Server URL',
-        hintText: 'https://',
-      ),
-      keyboardType: TextInputType.url,
-      textInputAction: TextInputAction.next,
-      autocorrect: false,
-      validator: UrlUtils.validateServiceUrl,
+    // Rebuilds on every keystroke so the cleartext warning tracks the field.
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _urlController,
+      builder: (context, value, _) {
+        final warning = UrlUtils.cleartextWarning(value.text);
+        return TextFormField(
+          controller: _urlController,
+          decoration: InputDecoration(
+            labelText: 'Server URL',
+            hintText: 'https://',
+            helperText: warning,
+            helperMaxLines: 3,
+            helperStyle: warning == null
+                ? null
+                : const TextStyle(color: AppColors.warning),
+          ),
+          keyboardType: TextInputType.url,
+          textInputAction: TextInputAction.next,
+          autocorrect: false,
+          // iOS otherwise rewrites `--` and quotes inside a typed address.
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
+          validator: UrlUtils.validateServiceUrl,
+        );
+      },
     );
   }
 
@@ -287,16 +506,33 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       decoration: InputDecoration(
         labelText: 'API Key',
         hintText: 'Enter your API key',
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.copy),
-          onPressed: _copyApiKey,
-          tooltip: 'Copy API key',
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Reveal is offered alongside copy: checking a pasted key by eye
+            // should not require putting it on the system clipboard, where any
+            // other app can read it.
+            IconButton(
+              icon: Icon(
+                _revealApiKey
+                    ? Icons.visibility_off_rounded
+                    : Icons.visibility_rounded,
+              ),
+              onPressed: () => setState(() => _revealApiKey = !_revealApiKey),
+              tooltip: _revealApiKey ? 'Hide API key' : 'Show API key',
+            ),
+            IconButton(
+              icon: const Icon(Icons.copy),
+              onPressed: _copyApiKey,
+              tooltip: 'Copy API key',
+            ),
+          ],
         ),
       ),
       keyboardType: TextInputType.visiblePassword,
       textInputAction: TextInputAction.done,
       onFieldSubmitted: (_) => _saveSettings(),
-      obscureText: true,
+      obscureText: !_revealApiKey,
       validator: _validateApiKey,
     );
   }

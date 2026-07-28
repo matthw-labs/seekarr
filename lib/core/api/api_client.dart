@@ -1,5 +1,12 @@
 import 'package:dio/dio.dart';
 
+import 'package:seekarr/core/network/redirect_guard.dart';
+
+/// Timeouts match the newer per-service clients (SABnzbd, NZBGet, Unraid) so a
+/// black-holed host fails in seconds instead of hanging on socket defaults.
+const _connectTimeout = Duration(seconds: 10);
+const _receiveTimeout = Duration(seconds: 15);
+
 class ApiClient {
   final Dio _dio;
 
@@ -7,13 +14,21 @@ class ApiClient {
     : _dio = Dio(
         BaseOptions(
           baseUrl: baseUrl,
+          connectTimeout: _connectTimeout,
+          receiveTimeout: _receiveTimeout,
+          // Redirects are followed by SameOriginRedirectInterceptor instead, so
+          // `X-Api-Key` can never be replayed to an unconfigured host.
+          followRedirects: false,
+          validateStatus: allowRedirectStatus,
           headers: {
             'X-Api-Key': apiKey,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
         ),
-      );
+      ) {
+    _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
+  }
 
   Future<Response> get(
     String path, {

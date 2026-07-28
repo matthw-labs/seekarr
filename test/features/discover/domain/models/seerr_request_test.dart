@@ -19,7 +19,7 @@ void main() {
       final request = SeerrRequest(
         id: 1,
         status: RequestStatus.unknown,
-        media: const RequestMedia(status: MediaAvailability.available),
+        media: const RequestMedia(status: SeerrMediaAvailability.available),
         createdAt: '2026-05-01T10:00:00Z',
         type: 'movie',
       );
@@ -32,7 +32,9 @@ void main() {
       final request = SeerrRequest(
         id: 2,
         status: RequestStatus.approved,
-        media: const RequestMedia(status: MediaAvailability.partiallyAvailable),
+        media: const RequestMedia(
+          status: SeerrMediaAvailability.partiallyAvailable,
+        ),
         createdAt: '2026-05-01T10:00:00Z',
         type: 'tv',
       );

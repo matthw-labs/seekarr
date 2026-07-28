@@ -76,6 +76,7 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
             floating: true,
             pinned: true,
             leading: IconButton(
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
               icon: Icon(
                 Icons.chevron_left_rounded,
                 color: colorScheme.onSurfaceVariant,

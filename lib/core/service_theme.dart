@@ -30,9 +30,23 @@ class ServiceTheme {
   factory ServiceTheme.fromAccent(Color accent) {
     return ServiceTheme(
       accent: accent,
-      onAccent: Colors.white,
+      onAccent: foregroundOn(accent),
       softContainer: accent.withValues(alpha: 0.14),
     );
+  }
+
+  /// The legible foreground for text or icons sitting on [background].
+  ///
+  /// Hard-coding white was wrong for the bright accents in this palette: white
+  /// on the amber used by Radarr and SABnzbd measures 2.15:1 and on the success
+  /// green 2.28:1, both far below WCAG AA, while black on the same fills clears
+  /// 9:1. Picking by luminance keeps every badge legible without giving up the
+  /// brand colour.
+  static Color foregroundOn(Color background) {
+    // 0.5 relative luminance is the crossover where black overtakes white.
+    return background.computeLuminance() > 0.45
+        ? const Color(0xFF111827) // gray-900, softer than pure black
+        : Colors.white;
   }
 
   /// Accent-tinted radial glow for signature cards.

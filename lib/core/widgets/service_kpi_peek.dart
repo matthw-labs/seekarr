@@ -6,6 +6,7 @@ import 'package:seekarr/core/app_elevation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/models/service_kpi.dart';
+import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
 
@@ -39,13 +40,23 @@ class ServiceKpiPeek extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The card is all text (a value line and a label line), so the rail has to
+    // follow the reading size or both get clipped.
+    final railHeight = TextScaleMetrics.boxHeight(
+      context,
+      base: _height,
+      textHeight: 34,
+    );
     return kpis.when(
-      loading: () =>
-          _rail(children: List.generate(4, (_) => const _KpiSkeletonCard())),
+      loading: () => _rail(
+        height: railHeight,
+        children: List.generate(4, (_) => const _KpiSkeletonCard()),
+      ),
       error: (_, __) => const SizedBox.shrink(),
       data: (items) {
         if (items.isEmpty) return const SizedBox.shrink();
         return _rail(
+          height: railHeight,
           children: [
             for (final kpi in items) _KpiCard(kpi: kpi, fallbackAccent: accent),
           ],
@@ -54,9 +65,9 @@ class ServiceKpiPeek extends StatelessWidget {
     );
   }
 
-  Widget _rail({required List<Widget> children}) {
+  Widget _rail({required List<Widget> children, required double height}) {
     return SizedBox(
-      height: _height,
+      height: height,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: padding,

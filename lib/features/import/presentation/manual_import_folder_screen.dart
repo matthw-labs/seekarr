@@ -169,6 +169,7 @@ class _FolderSearchBarState extends ConsumerState<_FolderSearchBar> {
         trailing: [
           if (query.isNotEmpty)
             IconButton(
+              tooltip: 'Clear search',
               onPressed: () {
                 _controller.clear();
                 ref.read(_folderSearchQueryProvider.notifier).state = '';

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/core/network/cert_trust.dart';
+import 'package:seekarr/core/utils/url_utils.dart';
 import 'package:seekarr/features/dockge/data/dockge_client.dart';
 import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
@@ -214,7 +215,10 @@ class ConnectionCheckResult {
 }
 
 /// Only TrueNAS and Dockge use the WebSocket clients that support cert pinning.
-bool _supportsCertPinning(ServiceKey service) =>
+///
+/// Public so onboarding can tailor its TLS-failure copy without keeping a
+/// second copy of this rule.
+bool supportsCertPinning(ServiceKey service) =>
     service == ServiceKey.truenas || service == ServiceKey.dockge;
 
 /// Parses [rawUrl] into `(host, port, isSecure)`, applying the same scheme and
@@ -225,7 +229,7 @@ bool _supportsCertPinning(ServiceKey service) =>
   if (!raw.contains('://')) raw = 'https://$raw';
   final uri = Uri.tryParse(raw);
   if (uri == null || uri.host.isEmpty) return null;
-  final secure = uri.scheme != 'http';
+  final secure = UrlUtils.isSecureScheme(raw);
   return (
     host: uri.host,
     port: uri.hasPort ? uri.port : (secure ? 443 : 80),
@@ -275,7 +279,7 @@ Future<ConnectionCheckResult> checkServiceWithCertProbe(
 ) async {
   final status = await _checkService(service, settings);
   if (status != ServiceConnectionStatus.disconnected ||
-      !_supportsCertPinning(service)) {
+      !supportsCertPinning(service)) {
     return ConnectionCheckResult(status);
   }
   final cert = await probeUntrustedCertificate(

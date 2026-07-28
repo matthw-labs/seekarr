@@ -61,6 +61,7 @@ class ManualImportFrame extends StatelessWidget {
       accent: service.accent,
       appBar: GlassAppBar(
         leading: IconButton(
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           icon: const Icon(Icons.chevron_left_rounded),
           onPressed: () => context.pop(),
         ),

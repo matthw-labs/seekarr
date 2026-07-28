@@ -62,6 +62,12 @@ class AppColors {
   static const Color surfaceContainerHighLight = Color(0xFFF0F1F5);
   static const Color surfaceContainerHighestLight = Color(0xFFE2E4EA);
 
+  /// Fill behind a selected segment/chip in light mode.
+  ///
+  /// Deliberately further from `surfaceLight` than the container tokens: a
+  /// selected state has to be visible at a glance, and 1.03:1 was not.
+  static const Color selectedContainerLight = Color(0xFFE2E5EE);
+
   // === TEXT COLORS - DARK ===
   static const Color onSurfaceDark = Color(0xFFF0F2F8);
   static const Color onSurfaceVariantDark = Color(
@@ -70,9 +76,16 @@ class AppColors {
   static const Color onSurfaceDimDark = Color(0xFF7C8598); // dimmer tertiary
 
   // === TEXT COLORS - LIGHT ===
+  //
+  // Both secondary tones are darkened from their Tailwind equivalents to clear
+  // WCAG AA (4.5:1) on `surfaceLight`. gray-500 measured 4.39:1 and gray-400 a
+  // failing 2.36:1, so secondary and tertiary text was below the line in every
+  // light-mode screen. The hierarchy between them is preserved — 5.6:1 vs
+  // 4.8:1 reads as two distinct weights — and reinforced by size and weight
+  // rather than by contrast alone.
   static const Color onSurfaceLight = Color(0xFF111827); // gray-900
-  static const Color onSurfaceVariantLight = Color(0xFF6B7280); // gray-500
-  static const Color onSurfaceDimLight = Color(0xFF9AA1AE); // gray-400
+  static const Color onSurfaceVariantLight = Color(0xFF5A6273); // 5.56:1
+  static const Color onSurfaceDimLight = Color(0xFF656C7B); // 4.79:1
 
   // === OUTLINE / BORDER ===
   static const Color outlineDark = Color(0xFF2D3748);
@@ -203,7 +216,13 @@ class AppTheme {
   );
 
   // === DARK THEME (Primary) ===
-  static ThemeData darkTheme(ColorScheme? dynamicColorScheme) {
+  //
+  // Both themes are deliberately fixed. Seekarr's palette is part of its
+  // identity — per-service accents have to stay recognisable, and the
+  // experience is meant to be identical on every OS — so platform dynamic
+  // color (Material You) is not harmonised in. The previous signature took a
+  // `dynamicColorScheme` it silently ignored, which read as a wiring bug.
+  static ThemeData darkTheme() {
     return _buildTheme(
       brightness: Brightness.dark,
       colorScheme: _darkColorScheme,
@@ -214,7 +233,7 @@ class AppTheme {
   }
 
   // === LIGHT THEME ===
-  static ThemeData lightTheme(ColorScheme? dynamicColorScheme) {
+  static ThemeData lightTheme() {
     return _buildTheme(
       brightness: Brightness.light,
       colorScheme: _lightColorScheme,
@@ -468,10 +487,17 @@ class AppTheme {
     primaryContainer: AppColors.primaryLighter,
     onPrimaryContainer: AppColors.primaryDark,
     // Secondary
+    //
+    // `secondaryContainer` is what Material paints behind a selected
+    // SegmentedButton segment. It used to be surfaceContainerHigh (#F0F1F5),
+    // which sits 1.03:1 from `surface` — the selected segment had no visible
+    // fill at all, and with onSurfaceVariant as its foreground it read as
+    // *less* prominent than the unselected ones. A distinctly tinted container
+    // plus full-strength text makes the selected state unmistakable.
     secondary: AppColors.primary,
     onSecondary: Colors.white,
-    secondaryContainer: AppColors.surfaceContainerHighLight,
-    onSecondaryContainer: AppColors.onSurfaceVariantLight,
+    secondaryContainer: AppColors.selectedContainerLight,
+    onSecondaryContainer: AppColors.onSurfaceLight,
     // Tertiary
     tertiary: AppColors.success,
     onTertiary: Colors.white,

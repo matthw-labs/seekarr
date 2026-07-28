@@ -33,11 +33,13 @@ class FloatingNavDestination {
 
 /// Constants for FloatingBottomNavBar dimensions.
 ///
-/// Use [FloatingNavBarMetrics.totalHeight] to calculate content padding.
+/// Use [FloatingNavBarMetrics.getScrollViewBottomPadding] to calculate content
+/// padding: the bar grows with the reading size, so a fixed constant would leave
+/// the last row of a list under the bar at large text scales.
 class FloatingNavBarMetrics {
   FloatingNavBarMetrics._();
 
-  /// Height of the nav bar itself.
+  /// Height of the nav bar at the default reading size.
   static const double barHeight = 60.0;
 
   /// Top padding above the nav bar.
@@ -46,9 +48,43 @@ class FloatingNavBarMetrics {
   /// Bottom padding below the nav bar (excluding safe area).
   static const double bottomPadding = AppSpacing.xs;
 
-  /// Total height including top/bottom padding (excluding safe area).
-  /// Use this value to add bottom padding to screen content.
+  /// Inset between the glass surface edge and the item row.
+  static const double surfacePadding = 6.0;
+
+  /// Total height at the default reading size, excluding safe area.
+  ///
+  /// Prefer [totalHeightFor], which accounts for the user's text scale.
   static const double totalHeight = barHeight + topPadding + bottomPadding;
+
+  /// Upper bound applied to the user's text scale inside the bar.
+  ///
+  /// The nav bar is compact chrome sitting over content: letting its label grow
+  /// without limit pushes the bar over half the screen, and ignoring the
+  /// preference outright is hostile. Growing up to this factor keeps the label
+  /// legible while the bar stays a bar — the same compromise the system tab bar
+  /// makes.
+  static const double maxTextScaleFactor = 1.3;
+
+  /// The text scale actually used to lay the bar out.
+  static TextScaler effectiveTextScaler(BuildContext context) =>
+      _clamp(MediaQuery.textScalerOf(context));
+
+  static TextScaler _clamp(TextScaler scaler) =>
+      scaler.clamp(maxScaleFactor: maxTextScaleFactor);
+
+  /// Height of the bar at the current reading size.
+  ///
+  /// Derived from the tallest thing inside it — the selection pill — so the row
+  /// can never overflow the surface.
+  static double barHeightFor(BuildContext context) {
+    final pillHeight = _NavBarItem.pillHeightFor(effectiveTextScaler(context));
+    final needed = pillHeight + (surfacePadding * 2);
+    return needed > barHeight ? needed : barHeight;
+  }
+
+  /// Total height at the current reading size, excluding safe area.
+  static double totalHeightFor(BuildContext context) =>
+      barHeightFor(context) + topPadding + bottomPadding;
 
   /// Returns the bottom padding needed for scroll views to allow content
   /// to scroll above the floating nav bar.
@@ -56,7 +92,7 @@ class FloatingNavBarMetrics {
   /// Includes the nav bar height, margins, and device safe area.
   static double getScrollViewBottomPadding(BuildContext context) {
     final bottomSafeArea = MediaQuery.of(context).padding.bottom;
-    return totalHeight + bottomSafeArea;
+    return totalHeightFor(context) + bottomSafeArea;
   }
 }
 
@@ -127,8 +163,10 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
   /// Controls how quickly resistance increases with distance.
   static const double _resistanceFalloff = 30.0;
 
-  static const double _barHorizontalPadding = 6.0;
-  static const double _barVerticalPadding = 6.0;
+  static const double _barHorizontalPadding =
+      FloatingNavBarMetrics.surfacePadding;
+  static const double _barVerticalPadding =
+      FloatingNavBarMetrics.surfacePadding;
   static const double _blurSigma = 24.0;
   static const double _selectedExtraShare = 0.6;
 
@@ -211,6 +249,10 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    // Clamped so the bar follows the user's reading size without letting an
+    // accessibility scale turn it into a full-height panel.
+    final textScaler = FloatingNavBarMetrics.effectiveTextScaler(context);
+    final barHeight = FloatingNavBarMetrics.barHeightFor(context);
     final isDark = colorScheme.brightness == Brightness.dark;
     final glassColor =
         theme.extension<SeekarrThemeColors>()?.glassSurface ??
@@ -239,7 +281,10 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final preferredSurfaceWidth =
-                (_NavBarLayoutMetrics.preferredInnerWidth(widget.destinations) +
+                (_NavBarLayoutMetrics.preferredInnerWidth(
+                          widget.destinations,
+                          textScaler,
+                        ) +
                         (_barHorizontalPadding * 2))
                     .clamp(0.0, constraints.maxWidth)
                     .toDouble();
@@ -265,7 +310,7 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
                       child: Container(
                         key: const ValueKey('floating-nav-surface'),
                         width: preferredSurfaceWidth,
-                        height: FloatingNavBarMetrics.barHeight,
+                        height: barHeight,
                         decoration: BoxDecoration(
                           color: glassColor,
                           borderRadius: AppRadius.borderRadiusXl,
@@ -283,11 +328,13 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
                                 destinations: widget.destinations,
                                 selectedIndex: widget.selectedIndex,
                                 selectedExtraShare: _selectedExtraShare,
+                                textScaler: textScaler,
                               );
                               final indicatorWidth = selectedDestination == null
                                   ? 0.0
                                   : _NavBarItem.preferredSelectedWidthFor(
                                           selectedDestination,
+                                          textScaler,
                                         )
                                         .clamp(
                                           0.0,
@@ -381,6 +428,9 @@ class _NavBarIndicator extends StatelessWidget {
       alpha: isDark ? 0.16 : 0.13,
     );
     final activeBorder = accentColor.withValues(alpha: 0.27);
+    final pillHeight = _NavBarItem.pillHeightFor(
+      FloatingNavBarMetrics.effectiveTextScaler(context),
+    ).clamp(0.0, barHeight);
 
     return Stack(
       children: [
@@ -388,9 +438,9 @@ class _NavBarIndicator extends StatelessWidget {
           duration: AppAnimation.durationSm,
           curve: AppAnimation.emphasizedCurve,
           left: left,
-          top: (barHeight - _NavBarItem._pillHeight) / 2,
+          top: (barHeight - pillHeight) / 2,
           width: width,
-          height: _NavBarItem._pillHeight,
+          height: pillHeight,
           child: DecoratedBox(
             key: const ValueKey('floating-nav-indicator'),
             decoration: BoxDecoration(
@@ -420,7 +470,10 @@ class _NavBarLayoutMetrics {
     required this.gap,
   });
 
-  static double preferredInnerWidth(List<FloatingNavDestination> destinations) {
+  static double preferredInnerWidth(
+    List<FloatingNavDestination> destinations,
+    TextScaler scaler,
+  ) {
     final count = destinations.length;
     if (count == 0) return 0.0;
 
@@ -429,6 +482,7 @@ class _NavBarLayoutMetrics {
       (currentMax, destination) {
         final width = _NavBarItem.preferredSelectedWidthFor(
           destination,
+          scaler,
         ).clamp(_NavBarItem.minSelectedWidth, double.infinity).toDouble();
         return width > currentMax ? width : currentMax;
       },
@@ -458,6 +512,7 @@ class _NavBarLayoutMetrics {
     required List<FloatingNavDestination> destinations,
     required int selectedIndex,
     required double selectedExtraShare,
+    required TextScaler textScaler,
   }) {
     final count = destinations.length;
     final gap = count > 1
@@ -487,6 +542,7 @@ class _NavBarLayoutMetrics {
     final itemWidths = List<double>.filled(count, _compactTargetWidth);
     itemWidths[selectedIndex] = _NavBarItem.preferredSelectedWidthFor(
       destinations[selectedIndex],
+      textScaler,
     ).clamp(_NavBarItem.minSelectedWidth, double.infinity).toDouble();
 
     var delta = itemAreaWidth - _sum(itemWidths);
@@ -577,6 +633,7 @@ class _NavBarItem extends StatelessWidget {
   static const double itemRadius = 20.0;
   static const double _labelGap = 6.0;
   static const double _selectedLabelFontSize = 12.0;
+  static const double _labelLineHeight = 1.3;
   static const double _selectedWidthSlack = 6.0;
   static const double minSelectedWidth = 84.0;
 
@@ -594,7 +651,27 @@ class _NavBarItem extends StatelessWidget {
     required this.onTap,
   });
 
-  static double preferredSelectedWidthFor(FloatingNavDestination destination) {
+  /// Icons keep a fixed size, as the system tab bar's do: the compact
+  /// (unselected) items are icon-only and sized from this, so scaling it would
+  /// overflow them before the label ever grew.
+  static const double iconSize = _iconSize;
+
+  /// Height of the selection pill at the current reading size.
+  static double pillHeightFor(TextScaler scaler) {
+    final scaledLabel = scaler.scale(_selectedLabelFontSize) * _labelLineHeight;
+    final tallest = scaledLabel > iconSize ? scaledLabel : iconSize;
+    final needed = tallest + (AppSpacing.sm * 2);
+    return needed > _pillHeight ? needed : _pillHeight;
+  }
+
+  /// Width the selected pill wants at the current reading size.
+  ///
+  /// [scaler] must be threaded in: measuring at 1.0x while the label renders
+  /// scaled is what made the bar overflow at accessibility text sizes.
+  static double preferredSelectedWidthFor(
+    FloatingNavDestination destination,
+    TextScaler scaler,
+  ) {
     final painter = TextPainter(
       text: TextSpan(
         text: destination.label,
@@ -606,11 +683,12 @@ class _NavBarItem extends StatelessWidget {
         ),
       ),
       textDirection: TextDirection.ltr,
+      textScaler: scaler,
       maxLines: 1,
     )..layout();
 
     return _itemHorizontalPadding * 2 +
-        _iconSize +
+        iconSize +
         _labelGap +
         painter.width +
         _selectedWidthSlack;
@@ -620,6 +698,7 @@ class _NavBarItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final accentColor = destination.accentColor;
+    final scaler = FloatingNavBarMetrics.effectiveTextScaler(context);
 
     final itemColor = isSelected ? accentColor : colorScheme.onSurfaceVariant;
 
@@ -646,10 +725,13 @@ class _NavBarItem extends StatelessWidget {
                 duration: AppAnimation.durationSm,
                 curve: AppAnimation.emphasizedCurve,
                 constraints: const BoxConstraints(minWidth: 48),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _itemHorizontalPadding,
-                  vertical: AppSpacing.sm,
-                ),
+                // No fixed horizontal padding here: the item's assigned width
+                // already accounts for _itemHorizontalPadding (see
+                // preferredSelectedWidthFor), so adding it again as padding made
+                // the row compete with its own allotment and overflow by a
+                // fraction of a pixel at large reading sizes. Centring the
+                // content reproduces the same insets and cannot overflow.
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 decoration: BoxDecoration(
                   color: Colors.transparent,
                   borderRadius: BorderRadius.circular(itemRadius),
@@ -667,33 +749,41 @@ class _NavBarItem extends StatelessWidget {
                             : destination.icon,
                         key: ValueKey(isSelected),
                         color: itemColor,
-                        size: _iconSize,
+                        size: iconSize,
                       ),
                     ),
-                    AnimatedSize(
-                      duration: AppAnimation.durationSm,
-                      curve: AppAnimation.emphasizedCurve,
-                      alignment: Alignment.centerLeft,
-                      child: isSelected
-                          ? Padding(
-                              padding: const EdgeInsets.only(left: _labelGap),
-                              child: AnimatedDefaultTextStyle(
-                                duration: AppAnimation.durationSm,
-                                style: TextStyle(
-                                  fontFamily: AppTheme.fontFamily,
-                                  fontSize: _selectedLabelFontSize,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.12,
-                                  color: itemColor,
+                    // Flexible so the label ellipsises when the row is tighter
+                    // than the measured preference — at large reading sizes the
+                    // available width can fall short of what the pill wants.
+                    Flexible(
+                      child: AnimatedSize(
+                        duration: AppAnimation.durationSm,
+                        curve: AppAnimation.emphasizedCurve,
+                        alignment: Alignment.centerLeft,
+                        child: isSelected
+                            ? Padding(
+                                padding: const EdgeInsets.only(left: _labelGap),
+                                child: AnimatedDefaultTextStyle(
+                                  duration: AppAnimation.durationSm,
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.fontFamily,
+                                    fontSize: _selectedLabelFontSize,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.12,
+                                    color: itemColor,
+                                  ),
+                                  child: Text(
+                                    destination.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    // Clamped scaler: the pill was measured with
+                                    // it, so the label must render with it too.
+                                    textScaler: scaler,
+                                  ),
                                 ),
-                                child: Text(
-                                  destination.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            )
-                          : const SizedBox.shrink(),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
                     ),
                   ],
                 ),

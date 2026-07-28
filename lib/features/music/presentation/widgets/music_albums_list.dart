@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/status/arr_queue_snapshot.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/music/data/lidarr_service.dart';
+import 'package:seekarr/features/music/domain/lidarr_status.dart';
 import 'package:seekarr/features/music/domain/models/lidarr_album.dart';
 import 'package:seekarr/features/music/domain/models/lidarr_track.dart';
 
@@ -18,6 +20,10 @@ class MusicAlbumsList extends StatefulWidget {
   final void Function(int albumId) onInteractiveSearchAlbum;
   final Set<int> searchingAlbums;
 
+  /// The Lidarr queue indexed by album id, so an album being grabbed shows its
+  /// download state instead of a bare "missing" dot.
+  final ArrQueueSnapshot albumQueue;
+
   const MusicAlbumsList({
     super.key,
     required this.albums,
@@ -27,6 +33,7 @@ class MusicAlbumsList extends StatefulWidget {
     required this.onSearchAlbum,
     required this.onInteractiveSearchAlbum,
     required this.searchingAlbums,
+    this.albumQueue = ArrQueueSnapshot.empty,
   });
 
   @override
@@ -79,6 +86,10 @@ class _MusicAlbumsListState extends State<MusicAlbumsList> {
           .map(
             (album) => _AlbumTile(
               album: album,
+              status: lidarrAlbumStatus(
+                album,
+                queueEntry: widget.albumQueue.entryFor(album.id),
+              ),
               baseUrl: widget.baseUrl,
               apiKey: widget.apiKey,
               isSearching: widget.searchingAlbums.contains(album.id),
@@ -148,6 +159,7 @@ class _EmptyAlbumsState extends StatelessWidget {
 
 class _AlbumTile extends StatelessWidget {
   final LidarrAlbum album;
+  final MediaStatusInfo status;
   final String baseUrl;
   final String apiKey;
   final bool isSearching;
@@ -158,6 +170,7 @@ class _AlbumTile extends StatelessWidget {
 
   const _AlbumTile({
     required this.album,
+    required this.status,
     required this.baseUrl,
     required this.apiKey,
     required this.isSearching,
@@ -212,7 +225,7 @@ class _AlbumTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            _AlbumStatusBadge(album: album),
+            StatusBadge(info: status, iconOnly: true),
           ],
         ),
         subtitle: _AlbumSubtitle(album: album),
@@ -237,22 +250,6 @@ class _AlbumTile extends StatelessWidget {
         ),
         children: children,
       ),
-    );
-  }
-}
-
-class _AlbumStatusBadge extends StatelessWidget {
-  final LidarrAlbum album;
-
-  const _AlbumStatusBadge({required this.album});
-
-  @override
-  Widget build(BuildContext context) {
-    return StatusBadge.fromMedia(
-      fileCount: album.trackFileCount,
-      totalCount: album.trackCount,
-      status: album.trackFileCount > 0 ? 'available' : 'missing',
-      iconOnly: true,
     );
   }
 }

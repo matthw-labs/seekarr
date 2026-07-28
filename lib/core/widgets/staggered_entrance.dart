@@ -79,6 +79,15 @@ class _StaggeredEntranceState extends State<StaggeredEntrance>
 
   @override
   Widget build(BuildContext context) {
+    // Reduce Motion: a staggered slide-up across a whole grid is exactly the
+    // kind of large movement the setting exists to suppress. Show the content
+    // immediately rather than crossfading it in with a delay.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _delayTimer?.cancel();
+      if (!_controller.isCompleted) _controller.value = 1.0;
+      return widget.child;
+    }
+
     return FadeTransition(
       opacity: _fade,
       child: AnimatedBuilder(

@@ -163,11 +163,10 @@ void main() {
           searchResultsProvider: testSearchResultsProvider,
           titleExtractor: (item) => item,
           statusExtractor: (item) => switch (item) {
-            'Available Item' => const MediaAvailabilityInfo(
-              hasFile: true,
-              status: 'available',
+            'Available Item' => const MediaStatusInfo(
+              availability: MediaAvailability.available,
             ),
-            _ => const MediaAvailabilityInfo(hasFile: false, status: 'missing'),
+            _ => const MediaStatusInfo(availability: MediaAvailability.missing),
           },
         ),
       );
@@ -186,7 +185,7 @@ void main() {
       expect(find.text('Missing Item'), findsOneWidget);
     });
 
-    testWidgets('filters grouped browse content by queued override status', (
+    testWidgets('filters grouped browse content by pipeline state', (
       tester,
     ) async {
       final libraryProvider = FutureProvider<List<String>>(
@@ -207,14 +206,16 @@ void main() {
           searchResultsProvider: testSearchResultsProvider,
           titleExtractor: (item) => item,
           statusExtractor: (item) => switch (item) {
-            'Available Item' => const MediaAvailabilityInfo(
-              hasFile: true,
-              status: 'available',
+            'Available Item' => const MediaStatusInfo(
+              availability: MediaAvailability.available,
             ),
-            _ => const MediaAvailabilityInfo(hasFile: false, status: 'missing'),
+            // Nothing on disk *and* in the queue — the case that used to be
+            // flattened to "Missing".
+            _ => const MediaStatusInfo(
+              availability: MediaAvailability.missing,
+              pipeline: MediaPipeline.queued,
+            ),
           },
-          browseStatusExtractor: (item) =>
-              item == 'Queued Item' ? MediaStatus.queued : null,
         ),
       );
       await tester.pumpAndSettle();
@@ -355,7 +356,6 @@ Widget _buildCustomTestApp({
   String Function(String item)? titleExtractor,
   String Function(String item)? subtitleExtractor,
   StatusExtractor<String>? statusExtractor,
-  MediaBrowseStatusExtractor<String>? browseStatusExtractor,
   void Function(BuildContext context, String item, String heroTag)? onItemTap,
 }) {
   return UncontrolledProviderScope(
@@ -377,7 +377,6 @@ Widget _buildCustomTestApp({
         imagesExtractor: (_) => null,
         idExtractor: (item) => item.hashCode,
         statusExtractor: statusExtractor,
-        browseStatusExtractor: browseStatusExtractor,
         settingsSelector: (settings) =>
             (settings.radarrUrl, settings.radarrApiKey),
         onItemTap: onItemTap ?? (_, __, ___) {},

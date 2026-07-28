@@ -6,6 +6,7 @@ import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
+import 'package:seekarr/features/dockge/data/dockge_client.dart';
 import 'package:seekarr/features/dockge/domain/models/dockge_stack.dart';
 import 'package:seekarr/features/dockge/presentation/dockge_actions.dart';
 import 'package:seekarr/features/dockge/presentation/dockge_provider.dart';
@@ -194,13 +195,21 @@ class _StackQuickActions extends ConsumerWidget {
             tooltip: 'Stop',
             icon: const Icon(Icons.stop_rounded),
             color: AppColors.error,
-            onPressed: () => runDockgeStackAction(
+            // Confirmed first: these buttons sit on a scrolling list of live
+            // production stacks, and a mis-tap took one down with no warning —
+            // while deleting a movie, a far smaller consequence, already asked.
+            onPressed: () => _confirmThenRun(
               context,
               ref,
-              (c) => c.stopStack(stack.name),
-              'Stopped ${stack.name}',
-              'Failed to stop ${stack.name}',
-              invalidate: [dockgeStackListProvider],
+              title: 'Stop ${stack.name}?',
+              message:
+                  'The stack and its containers will be stopped until you '
+                  'start them again.',
+              confirmLabel: 'Stop',
+              destructive: true,
+              action: (c) => c.stopStack(stack.name),
+              success: 'Stopped ${stack.name}',
+              failure: 'Failed to stop ${stack.name}',
             ),
           )
         else
@@ -221,16 +230,53 @@ class _StackQuickActions extends ConsumerWidget {
           tooltip: 'Restart',
           icon: const Icon(Icons.restart_alt_rounded),
           color: AppColors.dockge,
-          onPressed: () => runDockgeStackAction(
+          onPressed: () => _confirmThenRun(
             context,
             ref,
-            (c) => c.restartStack(stack.name),
-            'Restarted ${stack.name}',
-            'Failed to restart ${stack.name}',
-            invalidate: [dockgeStackListProvider],
+            title: 'Restart ${stack.name}?',
+            message: 'The stack will be briefly unavailable while it restarts.',
+            confirmLabel: 'Restart',
+            action: (c) => c.restartStack(stack.name),
+            success: 'Restarted ${stack.name}',
+            failure: 'Failed to restart ${stack.name}',
           ),
         ),
       ],
+    );
+  }
+
+  /// Asks before running a lifecycle action, then runs it.
+  ///
+  /// Starting a stack is additive and stays a single tap; stopping and
+  /// restarting interrupt something the user is running, so they confirm.
+  Future<void> _confirmThenRun(
+    BuildContext context,
+    WidgetRef ref, {
+    required String title,
+    required String message,
+    required String confirmLabel,
+    required Future<void> Function(DockgeClient client) action,
+    required String success,
+    required String failure,
+    bool destructive = false,
+  }) async {
+    final result = await showAppConfirmDialog(
+      context: context,
+      title: title,
+      message: message,
+      confirmLabel: confirmLabel,
+      destructive: destructive,
+      dangerNote: '',
+    );
+    if (!result.confirmed || !context.mounted) return;
+
+    await runDockgeStackAction(
+      context,
+      ref,
+      action,
+      success,
+      failure,
+      invalidate: [dockgeStackListProvider],
     );
   }
 }

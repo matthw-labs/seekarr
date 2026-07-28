@@ -1,13 +1,22 @@
 import 'package:dio/dio.dart';
 
+import 'package:seekarr/core/network/connection_failure.dart';
+
 import 'package:seekarr/features/sabnzbd/domain/models/sabnzbd_models.dart';
 
 /// Error thrown by [SabnzbdClient]. The message is always run through
 /// [redactSabnzbdSecrets] so an API key (which SABnzbd carries in the request
-/// URL query string) can never reach a log, snackbar or crash report.
-class SabnzbdException implements Exception {
-  const SabnzbdException(this.message);
+/// URL query string) can never reach a log, snackbar or crash report. Carries
+/// the [reason] so a caller verifying the connection can tell an unreachable
+/// host from a rejected API key.
+class SabnzbdException implements Exception, HasFailureReason {
+  const SabnzbdException(
+    this.message, {
+    this.reason = ServiceFailureReason.unknown,
+  });
   final String message;
+  @override
+  final ServiceFailureReason reason;
   @override
   String toString() => 'SabnzbdException: $message';
 }
@@ -81,8 +90,14 @@ class SabnzbdClient {
       if (data is Map<String, dynamic>) {
         // SABnzbd reports auth/other failures as {"status": false, "error": …}.
         if (data['status'] == false && data['error'] != null) {
+          // SABnzbd answers 200 even for "API Key Incorrect", so the reason
+          // has to come from the message.
+          final message = redactSabnzbdSecrets(data['error'].toString());
           throw SabnzbdException(
-            redactSabnzbdSecrets(data['error'].toString()),
+            message,
+            reason: looksUnauthorizedMessage(message)
+                ? ServiceFailureReason.unauthorized
+                : ServiceFailureReason.unknown,
           );
         }
         return data;
@@ -94,6 +109,7 @@ class SabnzbdClient {
     } on DioException catch (e) {
       throw SabnzbdException(
         redactSabnzbdSecrets(e.message ?? 'SABnzbd request failed'),
+        reason: classifyConnectionFailure(e),
       );
     }
   }

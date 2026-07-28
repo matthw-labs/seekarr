@@ -1,0 +1,42 @@
+{
+  "id": 1399,
+  "name": "Series Title",
+  "firstAirDate": "2023-01-15",
+  "mediaInfo": {
+    "id": 34,
+    "tmdbId": 1399,
+    "status": 4,
+    "status4k": 1,
+    "serviceId": 0,
+    "externalServiceId": 201,
+    "seasons": [
+      { "id": 1, "seasonNumber": 1, "status": 5 },
+      { "id": 2, "seasonNumber": 2, "status": 3 }
+    ],
+    "downloadStatus": [
+      {
+        "externalId": 11,
+        "mediaType": "tv",
+        "title": "Series.Title.S02E04.1080p.WEB-DL-GROUP",
+        "status": "downloading",
+        "trackedDownloadStatus": "ok",
+        "trackedDownloadState": "downloading",
+        "size": 2147483648,
+        "sizeLeft": 1717986918,
+        "episode": { "seasonNumber": 2, "episodeNumber": 4 }
+      },
+      {
+        "externalId": 12,
+        "mediaType": "tv",
+        "title": "Series.Title.S02E05.1080p.WEB-DL-GROUP",
+        "status": "completed",
+        "trackedDownloadStatus": "warning",
+        "trackedDownloadState": "importBlocked",
+        "size": 2147483648,
+        "sizeLeft": 0,
+        "episode": { "seasonNumber": 2, "episodeNumber": 5 }
+      }
+    ],
+    "downloadStatus4k": []
+  }
+}

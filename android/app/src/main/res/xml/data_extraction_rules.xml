@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Seekarr holds credentials for the user's own infrastructure and, in
+    SharedPreferences, the trust-on-first-use certificate fingerprints that pin
+    TrueNAS and Dockge.
+
+    Those fingerprints are not secret, but they are integrity-critical: anyone
+    able to write them (a tampered backup restore) could seed an attacker's
+    fingerprint, after which buildPinnedHttpClient would accept that
+    attacker's certificate and the TrueNAS API key or Dockge password would be
+    captured. Service URLs and usernames in the same file add exposure.
+
+    Backup and device-to-device transfer are therefore both disabled; the user
+    re-enters configuration on a new device. android:allowBackup="false" in the
+    manifest covers Android 11 and earlier.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

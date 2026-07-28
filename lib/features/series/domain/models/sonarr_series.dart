@@ -57,6 +57,24 @@ class SonarrSeries {
     this.originalLanguage,
   });
 
+  /// Episodes Sonarr expects to hold: aired and monitored ones only.
+  ///
+  /// Deliberately *not* `totalEpisodeCount`, which counts unaired episodes and
+  /// specials and would leave any continuing series permanently `partial`.
+  int? get episodeCount => (statistics?['episodeCount'] as num?)?.toInt();
+
+  /// Every known episode, including unaired ones and specials.
+  int? get totalEpisodeCount =>
+      (statistics?['totalEpisodeCount'] as num?)?.toInt();
+
+  int? get episodeFileCount =>
+      (statistics?['episodeFileCount'] as num?)?.toInt();
+
+  bool get hasFiles => (episodeFileCount ?? 0) > 0;
+
+  /// True while more episodes are still expected to air.
+  bool get isContinuing => status.toLowerCase() == 'continuing';
+
   factory SonarrSeries.fromJson(Map<String, dynamic> json) {
     final ratings = parseArrRatings(json['ratings'], singleSourceIcon: 'TVDB');
 

@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/api/api_client.dart';
+import 'package:seekarr/core/network/connection_failure.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:seekarr/core/utils/url_utils.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/dockge/data/dockge_client.dart';
 import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
@@ -27,6 +29,10 @@ const _muted2 = Color(0xFF647089);
 const _accent = AppColors.primary; // brand indigo — single source of truth
 const _success = AppColors.success;
 const _screenPad = EdgeInsets.fromLTRB(22, 22, 22, 32);
+
+/// Widest the onboarding column is allowed to get. Beyond this a form field's
+/// label and its control drift too far apart to read as a pair.
+const _contentMaxWidth = 560.0;
 
 /// Service accent, sourced from the app-wide [ServiceKey.accent] so onboarding
 /// matches the rest of the app (previously Seerr was mistakenly tinted green).
@@ -68,7 +74,40 @@ String _healthEndpoint(ServiceKey service) {
   }
 }
 
-Future<ServiceConnectionStatus> _verifyService(
+/// Outcome of a verification attempt: the status and, when it failed, why.
+///
+/// Reachability alone leaves every failure looking identical, so the reason is
+/// what lets the UI say "credentials rejected" instead of "check everything".
+class _VerifyResult {
+  const _VerifyResult(this.status, [this.reason]);
+
+  const _VerifyResult.connected() : this(ServiceConnectionStatus.connected);
+
+  const _VerifyResult.notConfigured()
+    : this(ServiceConnectionStatus.notConfigured);
+
+  /// The service answered, but could not be reached again to confirm.
+  const _VerifyResult.dropped()
+    : this(
+        ServiceConnectionStatus.disconnected,
+        ServiceFailureReason.unreachable,
+      );
+
+  _VerifyResult.failed(
+    Object error, {
+    ServiceFailureReason fallback = ServiceFailureReason.unknown,
+  }) : this(
+         ServiceConnectionStatus.disconnected,
+         classifyConnectionFailure(error, fallback: fallback),
+       );
+
+  final ServiceConnectionStatus status;
+
+  /// Null unless [status] is `disconnected`.
+  final ServiceFailureReason? reason;
+}
+
+Future<_VerifyResult> _verifyService(
   ServiceKey service, {
   required String url,
   required String apiKey,
@@ -79,7 +118,7 @@ Future<ServiceConnectionStatus> _verifyService(
   final pin = certFingerprint.trim().isEmpty ? null : certFingerprint.trim();
   if (service == ServiceKey.dockge) {
     final urlTrimmed = url.trim();
-    if (urlTrimmed.isEmpty) return ServiceConnectionStatus.notConfigured;
+    if (urlTrimmed.isEmpty) return const _VerifyResult.notConfigured();
     final client = DockgeClient(
       baseUrl: urlTrimmed,
       username: username.trim().isEmpty ? null : username.trim(),
@@ -88,18 +127,22 @@ Future<ServiceConnectionStatus> _verifyService(
     );
     try {
       final ok = await client.ping().timeout(const Duration(seconds: 8));
+      // A rejected login throws with `unauthorized`, so `false` here means the
+      // socket dropped after authenticating — a connection fault, not a wrong
+      // password. Reporting it as "credentials rejected" sent users to re-type a
+      // password that was fine.
       return ok
-          ? ServiceConnectionStatus.connected
-          : ServiceConnectionStatus.disconnected;
-    } catch (_) {
-      return ServiceConnectionStatus.disconnected;
+          ? const _VerifyResult.connected()
+          : const _VerifyResult.dropped();
+    } catch (e) {
+      return _VerifyResult.failed(e);
     } finally {
       await client.close();
     }
   }
   if (service == ServiceKey.nzbget) {
     final urlTrimmed = url.trim();
-    if (urlTrimmed.isEmpty) return ServiceConnectionStatus.notConfigured;
+    if (urlTrimmed.isEmpty) return const _VerifyResult.notConfigured();
     final client = NzbgetClient(
       url: urlTrimmed,
       username: username.trim().isEmpty ? null : username.trim(),
@@ -107,40 +150,41 @@ Future<ServiceConnectionStatus> _verifyService(
     );
     try {
       await client.testConnection().timeout(const Duration(seconds: 6));
-      return ServiceConnectionStatus.connected;
-    } catch (_) {
-      return ServiceConnectionStatus.disconnected;
+      return const _VerifyResult.connected();
+    } catch (e) {
+      return _VerifyResult.failed(e);
     } finally {
       client.close();
     }
   }
   if (!service.usesApiKey) {
     final urlTrimmed = url.trim();
-    if (urlTrimmed.isEmpty) return ServiceConnectionStatus.notConfigured;
+    if (urlTrimmed.isEmpty) return const _VerifyResult.notConfigured();
     final client = QbittorrentClient(
       url: urlTrimmed,
       username: username.trim().isEmpty ? null : username.trim(),
       password: password.isEmpty ? null : password,
     );
     try {
-      await client.getVersion().timeout(const Duration(seconds: 5));
-      return ServiceConnectionStatus.connected;
-    } catch (_) {
-      return ServiceConnectionStatus.disconnected;
+      // Two round trips (login + version), so allow more than a single hop.
+      await client.getVersion().timeout(const Duration(seconds: 8));
+      return const _VerifyResult.connected();
+    } catch (e) {
+      return _VerifyResult.failed(e);
     } finally {
       client.close();
     }
   }
   if (url.trim().isEmpty || apiKey.trim().isEmpty) {
-    return ServiceConnectionStatus.notConfigured;
+    return const _VerifyResult.notConfigured();
   }
   if (service == ServiceKey.sabnzbd) {
     final client = SabnzbdClient(url: url.trim(), apiKey: apiKey.trim());
     try {
       await client.testConnection().timeout(const Duration(seconds: 6));
-      return ServiceConnectionStatus.connected;
-    } catch (_) {
-      return ServiceConnectionStatus.disconnected;
+      return const _VerifyResult.connected();
+    } catch (e) {
+      return _VerifyResult.failed(e);
     } finally {
       client.close();
     }
@@ -149,9 +193,9 @@ Future<ServiceConnectionStatus> _verifyService(
     final client = UnraidClient(url: url.trim(), apiKey: apiKey.trim());
     try {
       await client.testConnection().timeout(const Duration(seconds: 6));
-      return ServiceConnectionStatus.connected;
-    } catch (_) {
-      return ServiceConnectionStatus.disconnected;
+      return const _VerifyResult.connected();
+    } catch (e) {
+      return _VerifyResult.failed(e);
     } finally {
       client.close();
     }
@@ -164,9 +208,9 @@ Future<ServiceConnectionStatus> _verifyService(
     );
     try {
       await client.call('core.ping').timeout(const Duration(seconds: 6));
-      return ServiceConnectionStatus.connected;
-    } catch (_) {
-      return ServiceConnectionStatus.disconnected;
+      return const _VerifyResult.connected();
+    } catch (e) {
+      return _VerifyResult.failed(e);
     } finally {
       await client.close();
     }
@@ -179,13 +223,67 @@ Future<ServiceConnectionStatus> _verifyService(
                 .timeout(const Duration(seconds: 5)))
             .statusCode ??
         0;
-    return (code >= 200 && code < 300)
-        ? ServiceConnectionStatus.connected
-        : ServiceConnectionStatus.disconnected;
-  } catch (_) {
-    return ServiceConnectionStatus.disconnected;
+    if (code >= 200 && code < 300) return const _VerifyResult.connected();
+    return _VerifyResult(
+      ServiceConnectionStatus.disconnected,
+      reasonForStatusCode(code),
+    );
+  } catch (e) {
+    return _VerifyResult.failed(e);
   } finally {
     client.close();
+  }
+}
+
+/// Whether a certificate probe could still explain this failure.
+///
+/// An untrusted certificate surfaces as `tls`, and as `unreachable`/`unknown`
+/// when the handshake fails before a reason can be attributed. Anything the
+/// server answered — a rejected key, a 404, a 500 — rules the certificate out.
+bool _certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
+  ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.notFound ||
+  ServiceFailureReason.serverError => false,
+  _ => true,
+};
+
+/// User-facing copy for a failed verification. Each cause names the thing the
+/// user can actually change.
+String _failureMessage(ServiceKey service, ServiceFailureReason? reason) {
+  switch (reason) {
+    case ServiceFailureReason.unreachable:
+      return 'Could not reach the server. Check the address and port, and '
+          'that ${service.title} is running and reachable from this device.';
+    case ServiceFailureReason.timeout:
+      return 'The server did not answer in time. Check the address, or try '
+          'again if the instance is just slow to wake up.';
+    case ServiceFailureReason.tls:
+      // Never suggest downgrading to http:// here. A certificate that fails to
+      // verify is the same signal an interception attack produces, and the
+      // pinning-capable services already offer the right answer: verify again
+      // and confirm the certificate when Seekarr offers to trust it.
+      return supportsCertPinning(service)
+          ? 'The HTTPS certificate could not be verified. If ${service.title} '
+                'uses a self-signed certificate, run Verify again and confirm '
+                'the certificate when Seekarr offers to trust it.'
+          : 'The HTTPS certificate could not be verified. Check the address, '
+                'and that the certificate is valid for this hostname and not '
+                'expired.';
+    case ServiceFailureReason.unauthorized:
+      return service.usesApiKey
+          ? 'Reached ${service.title}, which rejected the API key.'
+          : 'Reached ${service.title}, which rejected the username or '
+                'password.';
+    case ServiceFailureReason.notFound:
+      return 'Reached the server, but the ${service.title} API is not at this '
+          'address. Check for a missing or wrong base path.';
+    case ServiceFailureReason.serverError:
+      return '${service.title} answered with a server error. Check the '
+          'instance and its logs.';
+    case ServiceFailureReason.unknown:
+    case null:
+      return 'Could not verify the instance. Double-check the address and '
+          'credentials.';
   }
 }
 
@@ -219,6 +317,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final Map<ServiceKey, ServiceConnectionStatus?> _verifyStatus = {
     for (final k in ServiceKey.values) k: null,
   };
+
+  /// Why the last verification failed, so the error copy can name the cause.
+  final Map<ServiceKey, ServiceFailureReason?> _verifyReason = {
+    for (final k in ServiceKey.values) k: null,
+  };
   final Map<ServiceKey, bool> _verifying = {
     for (final k in ServiceKey.values) k: false,
   };
@@ -227,9 +330,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// onboarding, persisted to settings on continue. Only TrueNAS and Dockge
   /// (the WebSocket clients) support pinning.
   final Map<ServiceKey, String> _certFingerprint = {};
-
-  static bool _supportsCertPinning(ServiceKey service) =>
-      service == ServiceKey.truenas || service == ServiceKey.dockge;
 
   @override
   void dispose() {
@@ -253,7 +353,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _doVerify(ServiceKey service) async {
     setState(() => _verifying[service] = true);
-    var status = await _verifyService(
+    var result = await _verifyService(
       service,
       url: _urlCtrl[service]!.text,
       apiKey: _apiKeyCtrl[service]!.text,
@@ -264,8 +364,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     // TLS exception flow: if a pinning-capable service failed specifically
     // because of an untrusted certificate, offer to trust it, then re-verify.
-    if (status == ServiceConnectionStatus.disconnected &&
-        _supportsCertPinning(service) &&
+    //
+    // Skipped when the failure is already attributed to something else: probing
+    // for a certificate after the server rejected our API key is a wasted round
+    // trip that can only return null.
+    if (result.status == ServiceConnectionStatus.disconnected &&
+        _certProbeWorthwhile(result.reason) &&
+        supportsCertPinning(service) &&
         mounted) {
       final cert = await probeUntrustedCertificate(
         _urlCtrl[service]!.text,
@@ -279,7 +384,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         );
         if (trust && mounted) {
           _certFingerprint[service] = cert.fingerprint;
-          status = await _verifyService(
+          result = await _verifyService(
             service,
             url: _urlCtrl[service]!.text,
             apiKey: _apiKeyCtrl[service]!.text,
@@ -292,13 +397,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
 
     if (!mounted) return;
-    if (status == ServiceConnectionStatus.connected) {
+    if (result.status == ServiceConnectionStatus.connected) {
       HapticFeedback.mediumImpact();
     } else {
       HapticFeedback.lightImpact();
     }
     setState(() {
-      _verifyStatus[service] = status;
+      _verifyStatus[service] = result.status;
+      _verifyReason[service] = result.reason;
       _verifying[service] = false;
     });
   }
@@ -349,7 +455,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         }
       }
       // Persist (or clear) any trusted self-signed certificate fingerprint.
-      if (_supportsCertPinning(k)) {
+      if (supportsCertPinning(k)) {
         updated = updated.copyWithCertFingerprint(
           k,
           _isServiceReady(k) ? (_certFingerprint[k] ?? '') : '',
@@ -423,35 +529,50 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
             ),
             // Content
+            //
+            // Capped and centred: onboarding is a single column of form fields,
+            // and on an iPad or a wide desktop window an unconstrained column
+            // stretched labels and their toggles ~800pt apart, breaking the
+            // proximity that pairs them, and made the Continue button the width
+            // of the screen.
             SafeArea(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _WelcomeStep(onContinue: () => _goToStep(1)),
-                  _ServicesStep(
-                    enabled: _enabled,
-                    urlCtrl: _urlCtrl,
-                    apiKeyCtrl: _apiKeyCtrl,
-                    usernameCtrl: _usernameCtrl,
-                    passwordCtrl: _passwordCtrl,
-                    verifyStatus: _verifyStatus,
-                    verifying: _verifying,
-                    onToggle: (k, v) => setState(() {
-                      _enabled[k] = v;
-                      if (!v) _verifyStatus[k] = null;
-                    }),
-                    onVerify: _doVerify,
-                    onBack: () => _goToStep(0),
-                    onContinue: _saveAndContinue,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _WelcomeStep(onContinue: () => _goToStep(1)),
+                      _ServicesStep(
+                        enabled: _enabled,
+                        urlCtrl: _urlCtrl,
+                        apiKeyCtrl: _apiKeyCtrl,
+                        usernameCtrl: _usernameCtrl,
+                        passwordCtrl: _passwordCtrl,
+                        verifyStatus: _verifyStatus,
+                        verifyReason: _verifyReason,
+                        verifying: _verifying,
+                        onToggle: (k, v) => setState(() {
+                          _enabled[k] = v;
+                          if (!v) {
+                            _verifyStatus[k] = null;
+                            _verifyReason[k] = null;
+                          }
+                        }),
+                        onVerify: _doVerify,
+                        onBack: () => _goToStep(0),
+                        onContinue: _saveAndContinue,
+                      ),
+                      _ReadyStep(
+                        configuredServices: _configuredServices,
+                        verifyStatus: _verifyStatus,
+                        onReviewSettings: () async => _goToStep(1),
+                        onFinish: _finish,
+                      ),
+                    ],
                   ),
-                  _ReadyStep(
-                    configuredServices: _configuredServices,
-                    verifyStatus: _verifyStatus,
-                    onReviewSettings: () async => _goToStep(1),
-                    onFinish: _finish,
-                  ),
-                ],
+                ),
               ),
             ),
           ],
@@ -708,6 +829,7 @@ class _ServicesStep extends StatelessWidget {
     required this.usernameCtrl,
     required this.passwordCtrl,
     required this.verifyStatus,
+    required this.verifyReason,
     required this.verifying,
     required this.onToggle,
     required this.onVerify,
@@ -721,6 +843,7 @@ class _ServicesStep extends StatelessWidget {
   final Map<ServiceKey, TextEditingController> usernameCtrl;
   final Map<ServiceKey, TextEditingController> passwordCtrl;
   final Map<ServiceKey, ServiceConnectionStatus?> verifyStatus;
+  final Map<ServiceKey, ServiceFailureReason?> verifyReason;
   final Map<ServiceKey, bool> verifying;
   final void Function(ServiceKey, bool) onToggle;
   final Future<void> Function(ServiceKey) onVerify;
@@ -792,6 +915,7 @@ class _ServicesStep extends StatelessWidget {
                               usernameCtrl: usernameCtrl[k]!,
                               passwordCtrl: passwordCtrl[k]!,
                               verifyStatus: verifyStatus[k],
+                              verifyReason: verifyReason[k],
                               verifying: verifying[k]!,
                               onToggle: (v) => onToggle(k, v),
                               onVerify: () => onVerify(k),
@@ -936,6 +1060,7 @@ class _ServiceCard extends StatelessWidget {
     required this.usernameCtrl,
     required this.passwordCtrl,
     required this.verifyStatus,
+    required this.verifyReason,
     required this.verifying,
     required this.onToggle,
     required this.onVerify,
@@ -948,6 +1073,7 @@ class _ServiceCard extends StatelessWidget {
   final TextEditingController usernameCtrl;
   final TextEditingController passwordCtrl;
   final ServiceConnectionStatus? verifyStatus;
+  final ServiceFailureReason? verifyReason;
   final bool verifying;
   final ValueChanged<bool> onToggle;
   final VoidCallback onVerify;
@@ -988,7 +1114,9 @@ class _ServiceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isEnabled ? 'Enabled' : 'Not enabled on this setup',
+                      // "Not enabled on this setup" read as an external
+                      // constraint rather than the user's own choice.
+                      isEnabled ? 'Enabled' : 'Off — tap to connect',
                       style: const TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 11,
@@ -998,10 +1126,28 @@ class _ServiceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Toggle
-              GestureDetector(
+              // Toggle. Semantics + a 44pt target: this was a bare
+              // GestureDetector around a custom switch, so assistive technology
+              // saw neither a control nor its on/off state.
+              Semantics(
+                toggled: isEnabled,
+                label: '${serviceKey.title} enabled',
+                container: true,
+                excludeSemantics: true,
                 onTap: () => onToggle(!isEnabled),
-                child: _Toggle(isOn: isEnabled, color: _color),
+                child: GestureDetector(
+                  onTap: () => onToggle(!isEnabled),
+                  behavior: HitTestBehavior.opaque,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
+                    ),
+                    child: Center(
+                      child: _Toggle(isOn: isEnabled, color: _color),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -1019,6 +1165,7 @@ class _ServiceCard extends StatelessWidget {
               usernameCtrl: usernameCtrl,
               passwordCtrl: passwordCtrl,
               verifyStatus: verifyStatus,
+              verifyReason: verifyReason,
               verifying: verifying,
               onVerify: onVerify,
               accentColor: _color,
@@ -1085,6 +1232,7 @@ class _ServiceConfig extends StatelessWidget {
     required this.usernameCtrl,
     required this.passwordCtrl,
     required this.verifyStatus,
+    required this.verifyReason,
     required this.verifying,
     required this.onVerify,
     required this.accentColor,
@@ -1096,6 +1244,7 @@ class _ServiceConfig extends StatelessWidget {
   final TextEditingController usernameCtrl;
   final TextEditingController passwordCtrl;
   final ServiceConnectionStatus? verifyStatus;
+  final ServiceFailureReason? verifyReason;
   final bool verifying;
   final VoidCallback onVerify;
   final Color accentColor;
@@ -1150,12 +1299,14 @@ class _ServiceConfig extends StatelessWidget {
                 _ConfigField(
                   label: 'Username (optional)',
                   controller: usernameCtrl,
+                  hint: 'Enter username',
                 ),
                 const SizedBox(height: 10),
                 _ConfigField(
                   label: 'Password (optional)',
                   controller: passwordCtrl,
                   isPassword: true,
+                  hint: 'Enter password',
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -1194,12 +1345,11 @@ class _ServiceConfig extends StatelessWidget {
                   ),
                 ),
               ],
-              if (serviceKey == ServiceKey.qbittorrent &&
-                  verifyStatus == ServiceConnectionStatus.disconnected) ...[
+              if (verifyStatus == ServiceConnectionStatus.disconnected) ...[
                 const SizedBox(height: 10),
-                const Text(
-                  'Could not reach the instance. Double-check the URL and credentials.',
-                  style: TextStyle(
+                Text(
+                  _failureMessage(serviceKey, verifyReason),
+                  style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
                     color: Color(0xFFFCA5A5),
@@ -1229,12 +1379,13 @@ class _ServiceConfig extends StatelessWidget {
   }
 }
 
-class _ConfigField extends StatelessWidget {
+class _ConfigField extends StatefulWidget {
   const _ConfigField({
     required this.label,
     required this.controller,
     this.isUrl = false,
     this.isPassword = false,
+    this.hint,
   });
 
   final String label;
@@ -1242,13 +1393,109 @@ class _ConfigField extends StatelessWidget {
   final bool isUrl;
   final bool isPassword;
 
+  /// Overrides the placeholder. Credential fields must pass this — the default
+  /// only makes sense for the API-key field.
+  final String? hint;
+
+  @override
+  State<_ConfigField> createState() => _ConfigFieldState();
+}
+
+class _ConfigFieldState extends State<_ConfigField> {
+  String? _error;
+  String? _warning;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isUrl) {
+      widget.controller.addListener(_validate);
+      _validate();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.isUrl) widget.controller.removeListener(_validate);
+    super.dispose();
+  }
+
+  /// Validates the address as it is typed.
+  ///
+  /// Without this a malformed URL reached the client, which could only report
+  /// "Unreachable" — sending the user to hunt for a network fault when the real
+  /// problem was a typo. A cleartext address outside the local network is
+  /// flagged as a warning rather than an error: it is a supported choice, just
+  /// one worth knowing about.
+  void _validate() {
+    final raw = widget.controller.text;
+    final error = raw.trim().isEmpty
+        ? null // don't scold an untouched field
+        : UrlUtils.validateServiceHost(raw);
+    final warning = error == null ? UrlUtils.cleartextWarning(raw) : null;
+    if (error == _error && warning == _warning) return;
+    setState(() {
+      _error = error;
+      _warning = warning;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _field(context),
+        if (_error != null || _warning != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  _error != null
+                      ? Icons.error_outline_rounded
+                      : Icons.info_outline_rounded,
+                  size: 13,
+                  color: _error != null ? AppColors.error : AppColors.warning,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _error ?? _warning!,
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontSize: 11,
+                      height: 1.35,
+                      color: _error != null
+                          ? AppColors.error
+                          : AppColors.warning,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _field(BuildContext context) {
+    final label = widget.label;
+    final controller = widget.controller;
+    final isUrl = widget.isUrl;
+    final isPassword = widget.isPassword;
+    final hint = widget.hint;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x12FFFFFF)),
+        border: Border.all(
+          color: _error != null
+              ? AppColors.error.withValues(alpha: 0.6)
+              : const Color(0x12FFFFFF),
+        ),
         color: const Color(0xB8080A10),
       ),
       child: Column(
@@ -1274,6 +1521,10 @@ class _ConfigField extends StatelessWidget {
                 : TextInputAction.done,
             autocorrect: false,
             enableSuggestions: false,
+            // Smart substitutions are off as well as autocorrect: iOS otherwise
+            // rewrites `--` and quotes inside an address the user typed.
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             style: const TextStyle(
               fontFamily: AppTheme.fontFamily,
               fontSize: 13,
@@ -1281,7 +1532,11 @@ class _ConfigField extends StatelessWidget {
               height: 1.2,
             ),
             decoration: InputDecoration(
-              hintText: isUrl ? 'http://your-server:port' : 'Enter API key',
+              // https by default: the clients normalise a scheme-less host to
+              // TLS, and the old http:// placeholder taught the opposite.
+              hintText: isUrl
+                  ? 'https://your-server:port'
+                  : (hint ?? 'Enter API key'),
               hintStyle: const TextStyle(
                 fontFamily: AppTheme.fontFamily,
                 fontSize: 13,

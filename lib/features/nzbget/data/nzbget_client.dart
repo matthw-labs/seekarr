@@ -2,12 +2,19 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import 'package:seekarr/core/network/connection_failure.dart';
 import 'package:seekarr/features/nzbget/domain/models/nzbget_models.dart';
 
-/// Error thrown by [NzbgetClient].
-class NzbgetException implements Exception {
-  const NzbgetException(this.message);
+/// Error thrown by [NzbgetClient]. Carries the [reason] so a caller verifying
+/// the connection can tell an unreachable host from rejected credentials.
+class NzbgetException implements Exception, HasFailureReason {
+  const NzbgetException(
+    this.message, {
+    this.reason = ServiceFailureReason.unknown,
+  });
   final String message;
+  @override
+  final ServiceFailureReason reason;
   @override
   String toString() => 'NzbgetException: $message';
 }
@@ -76,12 +83,30 @@ class NzbgetClient {
       );
       final data = response.data;
       final Map<String, dynamic> map;
-      if (data is String) {
-        map = jsonDecode(data) as Map<String, dynamic>;
-      } else if (data is Map) {
+      if (data is Map) {
         map = data.cast<String, dynamic>();
+      } else if (data is String) {
+        // A 200 carrying HTML means the URL points at something that is not the
+        // JSON-RPC endpoint. Decoding it raw threw a FormatException that
+        // escaped the exception contract and could not be classified; naming it
+        // `notFound` tells the user the API is not at this address.
+        try {
+          final decoded = jsonDecode(data);
+          if (decoded is! Map) throw const FormatException();
+          map = decoded.cast<String, dynamic>();
+        } on FormatException {
+          throw const NzbgetException(
+            'The NZBGet JSON-RPC API did not answer at this address. Check the '
+            'URL and port.',
+            reason: ServiceFailureReason.notFound,
+          );
+        }
       } else {
-        throw const NzbgetException('Unexpected NZBGet response');
+        throw const NzbgetException(
+          'The NZBGet JSON-RPC API did not answer at this address. Check the '
+          'URL and port.',
+          reason: ServiceFailureReason.notFound,
+        );
       }
       final error = map['error'];
       if (error != null) {
@@ -92,7 +117,10 @@ class NzbgetClient {
       }
       return map['result'];
     } on DioException catch (e) {
-      throw NzbgetException(e.message ?? 'NZBGet request failed');
+      throw NzbgetException(
+        e.message ?? 'NZBGet request failed',
+        reason: classifyConnectionFailure(e),
+      );
     }
   }
 

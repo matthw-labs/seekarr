@@ -242,6 +242,64 @@ void main() {
       expect(filtered, hasLength(1));
     });
 
+    // The QA finding: "approved" was defined three different ways. The filter
+    // and the count dropped only releases with rejections, while the row badge
+    // required `approved == true`. A release with `approved: false` and no
+    // rejections therefore passed "Approved only", was counted as approved, and
+    // still rendered an amber "Not approved" badge.
+    group('one definition of approved', () {
+      const unapprovedNoRejections = {
+        'title': 'Unapproved but unrejected',
+        'approved': false,
+        'rejections': <dynamic>[],
+        'customFormatScore': 10,
+      };
+
+      test('an unapproved release without rejections is not approved', () {
+        expect(releaseIsApproved(unapprovedNoRejections), isFalse);
+      });
+
+      test('the filter and the count agree with the badge', () {
+        final input = [
+          unapprovedNoRejections,
+          {
+            'title': 'Approved',
+            'approved': true,
+            'rejections': <dynamic>[],
+            'customFormatScore': 20,
+          },
+          {
+            'title': 'Rejected',
+            'approved': false,
+            'rejections': <dynamic>['too big'],
+            'customFormatScore': 30,
+          },
+        ];
+
+        final filtered = filterAndSortReleases(
+          input,
+          sortType: ReleaseSortType.score,
+          sortAscending: false,
+          hideRejected: true,
+        );
+
+        expect(filtered, hasLength(1));
+        expect(filtered.single['title'], 'Approved');
+        expect(countApprovedReleases(input), 1);
+        expect(countApprovedReleases(input), filtered.length);
+      });
+
+      test('a missing approved field falls back to "no rejections"', () {
+        // Radarr/Sonarr v3 always send the field; tolerating its absence keeps
+        // the filter from silently emptying the list on any API that does not.
+        expect(
+          releaseIsApproved({'title': 'X', 'rejections': <dynamic>[]}),
+          isTrue,
+        );
+        expect(releaseIsApproved({'title': 'X'}), isTrue);
+      });
+    });
+
     test('indexer filter matches exact name', () {
       final filtered = filterAndSortReleases(
         releases,
@@ -291,6 +349,98 @@ void main() {
 
     test('empty input returns empty set', () {
       expect(extractAvailableIndexers([]), isEmpty);
+    });
+  });
+
+  group('filterAndSortReleases - query', () {
+    final releases = [
+      {'title': 'Movie.2024.1080p.WEB-DL'},
+      {'title': 'Movie.2024.2160p.REMUX'},
+      {'title': 'Other.Show.S01E01.1080p'},
+    ];
+
+    List<dynamic> filter(String query) => filterAndSortReleases(
+      releases,
+      sortType: ReleaseSortType.score,
+      sortAscending: false,
+      hideRejected: false,
+      query: query,
+    );
+
+    test('matches case-insensitively', () {
+      expect(filter('remux').single['title'], 'Movie.2024.2160p.REMUX');
+    });
+
+    test('requires every whitespace-separated term', () {
+      expect(filter('movie 1080').single['title'], 'Movie.2024.1080p.WEB-DL');
+      expect(filter('movie s01e01'), isEmpty);
+    });
+
+    test('blank queries do not filter', () {
+      expect(filter('   '), hasLength(3));
+    });
+  });
+
+  group('protocol helpers', () {
+    final releases = [
+      {'protocol': 'torrent'},
+      {'protocol': 'usenet'},
+      {'protocol': 'USENET'},
+      {'title': 'unknown protocol'},
+    ];
+
+    test('releaseProtocolOf parses case-insensitively', () {
+      expect(releaseProtocolOf(releases[0]), ReleaseProtocol.torrent);
+      expect(releaseProtocolOf(releases[2]), ReleaseProtocol.usenet);
+      expect(releaseProtocolOf(releases[3]), isNull);
+    });
+
+    test(
+      'extractAvailableProtocols returns present protocols in enum order',
+      () {
+        expect(extractAvailableProtocols(releases), [
+          ReleaseProtocol.usenet,
+          ReleaseProtocol.torrent,
+        ]);
+      },
+    );
+
+    test('filters by protocol', () {
+      final result = filterAndSortReleases(
+        releases,
+        sortType: ReleaseSortType.score,
+        sortAscending: false,
+        hideRejected: false,
+        selectedProtocol: ReleaseProtocol.usenet,
+      );
+      expect(result, hasLength(2));
+    });
+  });
+
+  group('rejection helpers', () {
+    test('normalises string and map rejections', () {
+      expect(
+        releaseRejectionReasons({
+          'rejections': [
+            'Too big',
+            {'reason': 'Wrong language'},
+          ],
+        }),
+        ['Too big', 'Wrong language'],
+      );
+    });
+
+    test('releaseIsRejected and countApprovedReleases agree', () {
+      final releases = [
+        {'rejections': const []},
+        {
+          'rejections': const ['Too big'],
+        },
+        <String, dynamic>{},
+      ];
+      expect(releaseIsRejected(releases[1]), isTrue);
+      expect(releaseIsRejected(releases[2]), isFalse);
+      expect(countApprovedReleases(releases), 2);
     });
   });
 }

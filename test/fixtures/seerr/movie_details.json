@@ -1,0 +1,33 @@
+{
+  "id": 550,
+  "title": "Movie Title",
+  "releaseDate": "2024-05-24",
+  "mediaInfo": {
+    "id": 12,
+    "tmdbId": 550,
+    "status": 3,
+    "status4k": 1,
+    "createdAt": "2026-07-20T10:00:00.000Z",
+    "updatedAt": "2026-07-28T11:00:00.000Z",
+    "mediaAddedAt": null,
+    "serviceId": 0,
+    "externalServiceId": 101,
+    "downloadStatus": [
+      {
+        "externalId": 1,
+        "mediaType": "movie",
+        "title": "Movie.Title.2024.1080p.WEB-DL-GROUP",
+        "status": "downloading",
+        "trackedDownloadStatus": "ok",
+        "trackedDownloadState": "downloading",
+        "size": 8589934592,
+        "sizeLeft": 2147483648,
+        "timeLeft": "00:14:02",
+        "estimatedCompletionTime": "2026-07-28T12:14:02.000Z",
+        "downloadId": "QUEUEITEM0000000001",
+        "episode": {}
+      }
+    ],
+    "downloadStatus4k": []
+  }
+}

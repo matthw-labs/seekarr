@@ -319,10 +319,10 @@ String _subtitleFor(
 
 String _statusFor(GlobalActivityKind kind, Map<String, dynamic> item) {
   return switch (kind) {
-    GlobalActivityKind.queue => resolveQueueDisplayStatus(
-      item,
+    GlobalActivityKind.queue => queueDisplayLabel(
+      resolveQueueDisplayStatus(item),
       includeWarningSuffix: false,
-    ).label,
+    ),
     GlobalActivityKind.history => humanizeEventType(
       stringOrNull(item['eventType']) ?? 'History',
     ),

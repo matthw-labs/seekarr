@@ -79,7 +79,7 @@ class _DiscoverSeasonsListState extends State<DiscoverSeasonsList> {
     return orderedSeasons.first;
   }
 
-  Map<int, MediaAvailability> _availabilityBySeason(
+  Map<int, SeerrMediaAvailability> _availabilityBySeason(
     Map<String, dynamic>? currentMediaInfo,
   ) {
     final seasonsData = currentMediaInfo?['seasons'];
@@ -87,7 +87,7 @@ class _DiscoverSeasonsListState extends State<DiscoverSeasonsList> {
       return const {};
     }
 
-    final results = <int, MediaAvailability>{};
+    final results = <int, SeerrMediaAvailability>{};
 
     for (final item in seasonsData) {
       if (item is! Map) {
@@ -99,7 +99,7 @@ class _DiscoverSeasonsListState extends State<DiscoverSeasonsList> {
         continue;
       }
 
-      results[seasonNumber] = MediaAvailability.fromCode(item['status']);
+      results[seasonNumber] = SeerrMediaAvailability.fromCode(item['status']);
     }
 
     return results;
@@ -212,7 +212,7 @@ class _EpisodeRow extends StatelessWidget {
 
 class _SeasonPill extends StatelessWidget {
   final TvSeason season;
-  final MediaAvailability? availability;
+  final SeerrMediaAvailability? availability;
   final bool selected;
   final VoidCallback onSelected;
 
@@ -236,14 +236,15 @@ class _SeasonPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(displayName),
-          if (availability == MediaAvailability.available) ...[
+          if (availability == SeerrMediaAvailability.available) ...[
             const SizedBox(width: AppSpacing.xs),
             Icon(
               Icons.check_circle_rounded,
               size: 14,
               color: colorScheme.primary,
             ),
-          ] else if (availability == MediaAvailability.partiallyAvailable) ...[
+          ] else if (availability ==
+              SeerrMediaAvailability.partiallyAvailable) ...[
             const SizedBox(width: AppSpacing.xs),
             Icon(Icons.adjust_rounded, size: 14, color: colorScheme.tertiary),
           ],

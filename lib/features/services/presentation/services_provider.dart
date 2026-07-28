@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/api/api_client.dart';
+import 'package:seekarr/core/status/arr_queue_snapshot.dart';
 import 'package:seekarr/core/utils/arr_activity_display.dart';
 import 'package:seekarr/core/utils/dynamic_map_utils.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
@@ -16,6 +17,7 @@ import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/movies/presentation/movies_provider.dart';
 import 'package:seekarr/features/music/data/lidarr_service.dart';
+import 'package:seekarr/features/music/domain/lidarr_queue_snapshots.dart';
 import 'package:seekarr/features/music/presentation/music_provider.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/series/presentation/series_provider.dart';
@@ -280,83 +282,125 @@ final servicesMoviesProvider = moviesProvider;
 final servicesSeriesProvider = seriesProvider;
 final servicesMusicProvider = musicProvider;
 
-final radarrQueuedMovieIdsProvider = FutureProvider<Set<int>>((ref) async {
-  return _loadQueuedIds(
+/// The Radarr queue indexed by movie id.
+///
+/// Every surface that badges a movie — grid, poster rail, detail page — reads
+/// this one snapshot, so they cannot disagree about what is downloading.
+final radarrQueueSnapshotProvider = FutureProvider<ArrQueueSnapshot>((
+  ref,
+) async {
+  return _loadArrQueueSnapshot(
     () => ref.watch(radarrServiceProvider).getQueue(),
-    (item) => intOrNull(mapOrNull(item['movie'])?['id'] ?? item['movieId']),
+    (item) => [intOrNull(mapOrNull(item['movie'])?['id'] ?? item['movieId'])],
   );
 });
 
-final sonarrQueuedSeriesIdsProvider = FutureProvider<Set<int>>((ref) async {
-  return _loadQueuedIds(
+/// The Sonarr queue indexed by series id.
+final sonarrQueueSnapshotProvider = FutureProvider<ArrQueueSnapshot>((
+  ref,
+) async {
+  return _loadArrQueueSnapshot(
     () => ref.watch(sonarrServiceProvider).getQueue(),
-    (item) => intOrNull(mapOrNull(item['series'])?['id'] ?? item['seriesId']),
+    (item) => [intOrNull(mapOrNull(item['series'])?['id'] ?? item['seriesId'])],
   );
 });
 
-final lidarrQueuedArtistIdsProvider = FutureProvider<Set<int>>((ref) async {
+/// The Lidarr queue indexed by artist *and* album id.
+final lidarrQueueSnapshotsProvider = FutureProvider<LidarrQueueSnapshots>((
+  ref,
+) async {
   final service = ref.watch(lidarrServiceProvider);
+
+  int? directArtistId(Map<String, dynamic> item) => intOrNull(
+    mapOrNull(item['artist'])?['id'] ??
+        mapOrNull(item['album'])?['artistId'] ??
+        item['artistId'],
+  );
+  int? albumIdOf(Map<String, dynamic> item) =>
+      intOrNull(mapOrNull(item['album'])?['id'] ?? item['albumId']);
 
   try {
     final queueItems = (await service.getQueue())
         .whereType<Map>()
         .map(stringKeyMap)
         .toList(growable: false);
-    final artistIds = <int>{};
+    if (queueItems.isEmpty) {
+      return LidarrQueueSnapshots.empty;
+    }
+
+    // Only records that do not already name their artist are worth the album
+    // lookup below, which costs one request per artist.
     final unresolvedAlbumIds = <int>{};
-
     for (final item in queueItems) {
-      final artistId = intOrNull(
-        mapOrNull(item['artist'])?['id'] ??
-            mapOrNull(item['album'])?['artistId'] ??
-            item['artistId'],
-      );
-      if (artistId != null && artistId > 0) {
-        artistIds.add(artistId);
-      }
+      final artistId = directArtistId(item);
+      if (artistId != null && artistId > 0) continue;
 
-      final albumId = intOrNull(
-        mapOrNull(item['album'])?['id'] ?? item['albumId'],
-      );
+      final albumId = albumIdOf(item);
       if (albumId != null && albumId > 0) {
         unresolvedAlbumIds.add(albumId);
       }
     }
 
-    if (unresolvedAlbumIds.isEmpty) {
-      return artistIds;
-    }
+    final albumToArtist = <int, int>{};
+    if (unresolvedAlbumIds.isNotEmpty) {
+      final pending = {...unresolvedAlbumIds};
+      for (final artist in await service.getArtists()) {
+        if (pending.isEmpty) break;
+        if (artist.albumCount <= 0) continue;
 
-    final artists = await service.getArtists();
-    for (final artist in artists) {
-      if (unresolvedAlbumIds.isEmpty) {
-        break;
-      }
-      if (artist.albumCount <= 0) {
-        continue;
-      }
-
-      try {
-        final albums = await service.getAlbums(artist.id);
-        final matchedAlbumIds = albums
-            .where((album) => unresolvedAlbumIds.contains(album.id))
-            .map((album) => album.id)
-            .toSet();
-        if (matchedAlbumIds.isEmpty) {
+        try {
+          for (final album in await service.getAlbums(artist.id)) {
+            if (pending.remove(album.id)) {
+              albumToArtist[album.id] = artist.id;
+            }
+          }
+        } catch (_) {
           continue;
         }
-
-        artistIds.add(artist.id);
-        unresolvedAlbumIds.removeAll(matchedAlbumIds);
-      } catch (_) {
-        continue;
       }
     }
 
-    return artistIds;
+    return LidarrQueueSnapshots(
+      byArtist: ArrQueueSnapshot.fromQueueItems(
+        queueItems,
+        idsFor: (item) {
+          final direct = directArtistId(item);
+          if (direct != null && direct > 0) return [direct];
+
+          final albumId = albumIdOf(item);
+          final resolved = albumId == null ? null : albumToArtist[albumId];
+          return resolved == null ? const <int>[] : [resolved];
+        },
+      ),
+      byAlbum: ArrQueueSnapshot.fromQueueItems(
+        queueItems,
+        idsFor: (item) {
+          final albumId = albumIdOf(item);
+          return albumId == null ? const <int>[] : [albumId];
+        },
+      ),
+    );
   } catch (_) {
-    return const <int>{};
+    return LidarrQueueSnapshots.empty;
   }
+});
+
+/// Queued movie ids, derived from [radarrQueueSnapshotProvider].
+final radarrQueuedMovieIdsProvider = FutureProvider<Set<int>>((ref) async {
+  final snapshot = await ref.watch(radarrQueueSnapshotProvider.future);
+  return snapshot.entriesById.keys.toSet();
+});
+
+/// Queued series ids, derived from [sonarrQueueSnapshotProvider].
+final sonarrQueuedSeriesIdsProvider = FutureProvider<Set<int>>((ref) async {
+  final snapshot = await ref.watch(sonarrQueueSnapshotProvider.future);
+  return snapshot.entriesById.keys.toSet();
+});
+
+/// Queued artist ids, derived from [lidarrQueueSnapshotsProvider].
+final lidarrQueuedArtistIdsProvider = FutureProvider<Set<int>>((ref) async {
+  final snapshots = await ref.watch(lidarrQueueSnapshotsProvider.future);
+  return snapshots.byArtist.entriesById.keys.toSet();
 });
 
 final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
@@ -386,20 +430,19 @@ class ServiceQueueItem {
   });
 }
 
-Future<Set<int>> _loadQueuedIds(
+/// Fetches a `/queue` and indexes it, degrading to an empty snapshot on failure
+/// so a badge never blocks on an unreachable service.
+Future<ArrQueueSnapshot> _loadArrQueueSnapshot(
   Future<List<dynamic>> Function() loadItems,
-  int? Function(Map<String, dynamic> item) idExtractor,
+  Iterable<int?> Function(Map<String, dynamic> item) idsFor,
 ) async {
   try {
-    return (await loadItems())
-        .whereType<Map>()
-        .map(stringKeyMap)
-        .map(idExtractor)
-        .whereType<int>()
-        .where((id) => id > 0)
-        .toSet();
+    return ArrQueueSnapshot.fromQueueItems(
+      await loadItems(),
+      idsFor: (item) => idsFor(item).whereType<int>(),
+    );
   } catch (_) {
-    return const <int>{};
+    return ArrQueueSnapshot.empty;
   }
 }
 

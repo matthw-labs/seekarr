@@ -30,6 +30,11 @@ class RadarrMovie {
   final String? added;
   final String? minimumAvailability;
 
+  /// Radarr's own verdict on whether the movie can be grabbed yet — it already
+  /// weighs [minimumAvailability] against the release dates, so prefer it over
+  /// re-deriving availability from [status].
+  final bool? isAvailable;
+
   const RadarrMovie({
     required this.id,
     required this.title,
@@ -55,7 +60,22 @@ class RadarrMovie {
     this.physicalRelease,
     this.added,
     this.minimumAvailability,
+    this.isAvailable,
   });
+
+  /// Whether a file is expected to exist by now.
+  ///
+  /// Distinguishes "released and genuinely missing" from "not out yet", which
+  /// the old badge collapsed into a single red `Missing`.
+  bool get isExpectedOnDisk {
+    final radarrVerdict = isAvailable;
+    if (radarrVerdict != null) return radarrVerdict;
+
+    // Older Radarr payloads omit `isAvailable`; fall back to the same reading
+    // used by the Wanted list.
+    final normalized = status.toLowerCase();
+    return normalized == 'released' || normalized == 'incinemas';
+  }
 
   factory RadarrMovie.fromJson(Map<String, dynamic> json) {
     final ratings = parseArrRatings(json['ratings'], allowSingleSource: false);
@@ -87,6 +107,9 @@ class RadarrMovie {
       physicalRelease: json['physicalRelease'],
       added: json['added'],
       minimumAvailability: json['minimumAvailability'],
+      isAvailable: json['isAvailable'] is bool
+          ? json['isAvailable'] as bool
+          : null,
     );
   }
 

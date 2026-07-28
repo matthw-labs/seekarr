@@ -30,10 +30,7 @@ class QueueItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final resolvedStatus = resolveQueueDisplayStatus(
-      item,
-      includeWarningSuffix: false,
-    );
+    final resolvedStatus = resolveQueueDisplayStatus(item);
     final title = _queueTitle(item, serviceType);
     final subtitle = _queueSubtitle(item, serviceType);
     final progress = dynamic_utils.queueProgress(
@@ -43,10 +40,15 @@ class QueueItemTile extends StatelessWidget {
     );
     final chips = _buildQueueChips(item, colorScheme);
     final showInlineProgress =
-        progress != null && resolvedStatus.badge == MediaStatus.downloading;
+        progress != null &&
+        resolvedStatus.pipeline == MediaPipeline.downloading;
+    final statusLabel = queueDisplayLabel(
+      resolvedStatus,
+      includeWarningSuffix: false,
+    );
     final inlineStatus = showInlineProgress
-        ? '${resolvedStatus.label} (${(progress * 100).round()}%)'
-        : resolvedStatus.label;
+        ? '$statusLabel (${(progress * 100).round()}%)'
+        : statusLabel;
 
     return _TileShell(
       onTap: () => DetailSheets.showQueueDetail(context, item),

@@ -4,16 +4,19 @@ import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/api/quality_profile_mixin.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/status/arr_queue_snapshot.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/music/data/lidarr_service.dart';
+import 'package:seekarr/features/music/domain/lidarr_status.dart';
 import 'package:seekarr/features/music/domain/models/lidarr_album.dart';
 import 'package:seekarr/features/music/domain/models/lidarr_artist.dart';
 import 'package:seekarr/features/music/presentation/music_detail_provider.dart';
 import 'package:seekarr/features/music/presentation/music_detail_view_model.dart';
 import 'package:seekarr/features/music/presentation/music_provider.dart';
 import 'package:seekarr/features/music/presentation/widgets/music_albums_list.dart';
+import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -72,20 +75,36 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     );
     final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
 
+    // One fetch feeds both the artist badge and the per-album badges below.
+    final queues = ref
+        .watch(lidarrQueueSnapshotsProvider)
+        .maybeWhen(data: (snapshots) => snapshots, orElse: () => null);
+    final status = lidarrArtistStatus(
+      artist,
+      queueEntry: queues?.byArtist.entryFor(artist.id),
+    );
+
     return MediaDetailView(
       accent: ServiceKey.lidarr.accent,
       posterUrl: viewModel.posterUrl,
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
       posterRow: (collapseFactor) =>
-          _buildPosterRow(context, viewModel, collapseFactor),
+          _buildPosterRow(context, viewModel, status, collapseFactor),
       contentSections: _buildContentSections(
         viewModel,
         infoGroups,
         artist.id > 0 ? artist.id : widget.artistId,
       ),
       slivers: viewModel.isInLibrary
-          ? [_buildAlbumsSliver(context, settings, albumsAsync)]
+          ? [
+              _buildAlbumsSliver(
+                context,
+                settings,
+                albumsAsync,
+                queues?.byAlbum ?? ArrQueueSnapshot.empty,
+              ),
+            ]
           : const [],
     );
   }
@@ -113,16 +132,12 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
   Widget _buildPosterRow(
     BuildContext context,
     MusicDetailViewModel viewModel,
+    MediaStatusInfo status,
     double collapseFactor,
   ) {
     return MediaDetailPosterRow(
       collapseFactor: collapseFactor,
-      statusBadge: StatusBadge.fromMedia(
-        fileCount: viewModel.trackFileCount,
-        totalCount: viewModel.trackCount,
-        hasFile: viewModel.hasFiles,
-        status: viewModel.status,
-      ),
+      statusBadge: StatusBadge(info: status),
       title: viewModel.title,
       metadataItems: viewModel.metadataItems,
       tags: _buildTags(viewModel),
@@ -187,7 +202,10 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
           ),
           child: SizedBox(
             width: double.infinity,
-            child: RatingChipsRow(ratings: viewModel.ratings),
+            child: RatingChipsRow(
+              ratings: viewModel.ratings,
+              accent: ServiceKey.lidarr.accent,
+            ),
           ),
         ),
       ],
@@ -271,6 +289,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     BuildContext context,
     SettingsModel settings,
     AsyncValue<List<LidarrAlbum>> albumsAsync,
+    ArrQueueSnapshot albumQueue,
   ) {
     return SliverToBoxAdapter(
       child: Padding(
@@ -302,6 +321,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
                 onInteractiveSearchAlbum: (albumId) =>
                     _interactiveSearchAlbum(context, albumId),
                 searchingAlbums: _searchingAlbums,
+                albumQueue: albumQueue,
               ),
             ),
           ],
@@ -347,6 +367,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     final lidarrService = ref.read(lidarrServiceProvider);
     await InteractiveSearchSheet.showAsync(
       context: context,
+      accent: ServiceKey.lidarr.accent,
       title: 'Releases for $title',
       fetchReleases: (token) => lidarrService.getReleases(
         artistId: widget.artistId,
@@ -380,6 +401,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     final lidarrService = ref.read(lidarrServiceProvider);
     await InteractiveSearchSheet.showAsync(
       context: context,
+      accent: ServiceKey.lidarr.accent,
       title: 'Album Releases',
       fetchReleases: (token) =>
           lidarrService.getReleases(albumId: albumId, cancelToken: token),

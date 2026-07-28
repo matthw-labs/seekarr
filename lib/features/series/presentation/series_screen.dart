@@ -6,6 +6,7 @@ import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
+import 'package:seekarr/features/series/domain/sonarr_status.dart';
 import 'package:seekarr/features/series/presentation/series_provider.dart';
 import 'package:seekarr/features/series/presentation/series_search_provider.dart';
 import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
@@ -20,9 +21,9 @@ class SeriesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final queuedSeriesIds = ref
-        .watch(sonarrQueuedSeriesIdsProvider)
-        .maybeWhen(data: (ids) => ids, orElse: () => const <int>{});
+    final queue = ref
+        .watch(sonarrQueueSnapshotProvider)
+        .maybeWhen(data: (snapshot) => snapshot, orElse: () => null);
 
     return MediaBrowseScaffold<SonarrSeries>(
       title: 'TV Series',
@@ -41,22 +42,10 @@ class SeriesScreen extends ConsumerWidget {
       sortTitleExtractor: (series) => series.sortTitle,
       imagesExtractor: (series) => series.images,
       idExtractor: (series) => series.id,
-      statusExtractor: (series) {
-        final stats = series.statistics;
-        final episodeFileCount =
-            (stats?['episodeFileCount'] as num?)?.toInt() ?? 0;
-        final episodeCount = (stats?['episodeCount'] as num?)?.toInt() ?? 0;
-        return MediaAvailabilityInfo(
-          hasFile: episodeFileCount > 0,
-          status: series.status,
-          fileCount: episodeFileCount,
-          totalCount: episodeCount,
-        );
-      },
-      browseStatusExtractor: (series) =>
-          queuedSeriesIds.contains(series.id) ? MediaStatus.queued : null,
+      statusExtractor: (series) =>
+          sonarrSeriesStatus(series, queueEntry: queue?.entryFor(series.id)),
       onRefresh: (ref) {
-        ref.invalidate(sonarrQueuedSeriesIdsProvider);
+        ref.invalidate(sonarrQueueSnapshotProvider);
       },
       settingsSelector: (settings) =>
           (settings.sonarrUrl, settings.sonarrApiKey),

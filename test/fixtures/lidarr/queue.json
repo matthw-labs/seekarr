@@ -1,0 +1,122 @@
+{
+  "page": 1,
+  "pageSize": 20,
+  "sortKey": "timeleft",
+  "sortDirection": "ascending",
+  "totalRecords": 4,
+  "records": [
+    {
+      "id": 1,
+      "artistId": 301,
+      "albumId": 401,
+      "artist": {
+        "id": 301,
+        "artistName": "Artist A",
+        "status": "continuing",
+        "monitored": true,
+        "statistics": {
+          "albumCount": 5,
+          "trackCount": 60,
+          "trackFileCount": 48
+        }
+      },
+      "album": {
+        "id": 401,
+        "artistId": 301,
+        "title": "Album A",
+        "monitored": true,
+        "statistics": { "totalTrackCount": 12, "trackFileCount": 0 }
+      },
+      "languages": [{ "id": 1, "name": "English" }],
+      "quality": {
+        "quality": { "id": 6, "name": "FLAC" },
+        "revision": { "version": 1, "real": 0, "isRepack": false }
+      },
+      "size": 524288000,
+      "title": "Artist.A-Album.A-2024-FLAC-GROUP",
+      "sizeleft": 131072000,
+      "timeleft": "00:02:10",
+      "status": "downloading",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "protocol": "usenet",
+      "downloadClient": "Download Client",
+      "indexer": "Indexer"
+    },
+    {
+      "id": 2,
+      "albumId": 402,
+      "album": {
+        "id": 402,
+        "artistId": 302,
+        "title": "Album B",
+        "monitored": true,
+        "statistics": { "totalTrackCount": 10, "trackFileCount": 0 }
+      },
+      "size": 314572800,
+      "title": "Artist.B-Album.B-2023-MP3-GROUP",
+      "sizeleft": 314572800,
+      "status": "queued",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "protocol": "usenet"
+    },
+    {
+      "id": 3,
+      "artistId": 303,
+      "albumId": 403,
+      "artist": {
+        "id": 303,
+        "artistName": "Artist C",
+        "status": "ended",
+        "monitored": true
+      },
+      "album": {
+        "id": 403,
+        "artistId": 303,
+        "title": "Album C",
+        "monitored": true
+      },
+      "size": 419430400,
+      "title": "Artist.C-Album.C-2022-FLAC-GROUP",
+      "sizeleft": 0,
+      "status": "completed",
+      "trackedDownloadStatus": "warning",
+      "trackedDownloadState": "importPending",
+      "statusMessages": [
+        {
+          "title": "Artist.C-Album.C-2022-FLAC-GROUP",
+          "messages": ["Unable to Import Automatically"]
+        }
+      ],
+      "protocol": "usenet"
+    },
+    {
+      "id": 4,
+      "artistId": 304,
+      "albumId": 404,
+      "artist": {
+        "id": 304,
+        "artistName": "Artist D",
+        "status": "continuing",
+        "monitored": true
+      },
+      "album": {
+        "id": 404,
+        "artistId": 304,
+        "title": "Album D",
+        "monitored": true
+      },
+      "size": 209715200,
+      "title": "Artist.D-Album.D-2021-FLAC-GROUP",
+      "sizeleft": 0,
+      "status": "completed",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "imported",
+      "statusMessages": [],
+      "protocol": "usenet"
+    }
+  ]
+}

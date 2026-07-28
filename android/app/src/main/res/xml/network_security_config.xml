@@ -1,4 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cleartext HTTP is permitted on purpose: Seekarr talks to instances the user
+    runs themselves, and a plain `http://192.168.1.10:8080` LAN address is a
+    normal, supported setup.
+
+    It cannot be narrowed here. Android's `domain` matching works on DNS name
+    suffixes, so RFC-1918 ranges (192.168/16, 10/8, 172.16/12) are not
+    expressible — listing them one address at a time is not workable.
+
+    The restriction therefore lives in the app, where the host is actually
+    known: UrlUtils.cleartextWarning() flags an `http://` URL pointing at a
+    non-private host in onboarding and in the service settings form, so the user
+    is warned before credentials would travel in the clear over the internet.
+
+    Note the deliberate asymmetry with Apple platforms: ios/macos Info.plist set
+    only NSAllowsLocalNetworking (no NSAllowsArbitraryLoads), so there the OS
+    itself blocks arbitrary cleartext.
+-->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>

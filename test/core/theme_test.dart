@@ -8,7 +8,7 @@ void main() {
     testWidgets('dark theme preserves special-case background colors', (
       tester,
     ) async {
-      final theme = AppTheme.darkTheme(null);
+      final theme = AppTheme.darkTheme();
 
       expect(theme.colorScheme.surface, const Color(0xFF0A0B11));
       expect(theme.colorScheme.surfaceContainer, const Color(0xFF161923));
@@ -33,14 +33,14 @@ void main() {
     testWidgets('light theme preserves special-case background colors', (
       tester,
     ) async {
-      final theme = AppTheme.lightTheme(null);
+      final theme = AppTheme.lightTheme();
 
       expect(theme.colorScheme.surface, const Color(0xFFF3F4F6));
       expect(theme.colorScheme.surfaceContainer, Colors.white);
       expect(theme.colorScheme.surfaceContainerHigh, const Color(0xFFF0F1F5));
       expect(theme.colorScheme.outline, const Color(0xFFE2E4EA));
       expect(theme.colorScheme.onSurface, const Color(0xFF111827));
-      expect(theme.colorScheme.onSurfaceVariant, const Color(0xFF6B7280));
+      expect(theme.colorScheme.onSurfaceVariant, const Color(0xFF5A6273));
       expect(
         theme.navigationBarTheme.backgroundColor,
         theme.colorScheme.surface,
@@ -52,7 +52,7 @@ void main() {
     testWidgets('dark theme attaches SeekarrThemeColors defaults', (
       tester,
     ) async {
-      final theme = AppTheme.darkTheme(null);
+      final theme = AppTheme.darkTheme();
 
       final colors = theme.extension<SeekarrThemeColors>();
 
@@ -67,7 +67,7 @@ void main() {
     testWidgets('light theme attaches SeekarrThemeColors defaults', (
       tester,
     ) async {
-      final theme = AppTheme.lightTheme(null);
+      final theme = AppTheme.lightTheme();
 
       final colors = theme.extension<SeekarrThemeColors>();
 
@@ -80,7 +80,7 @@ void main() {
     });
 
     test('SeekarrThemeColors.defaults uses surface scrim and onSurface', () {
-      final colorScheme = AppTheme.lightTheme(null).colorScheme.copyWith(
+      final colorScheme = AppTheme.lightTheme().colorScheme.copyWith(
         surface: const Color(0xFF123456),
         onSurface: const Color(0xFFABCDEF),
       );
@@ -103,5 +103,70 @@ void main() {
       expect(AppColors.sonarr, const Color(0xFF8B5CF6));
       expect(AppColors.lidarr, const Color(0xFFEC4899));
     });
+
+    // These guard the *reason* the light secondary tones were changed, not just
+    // their hex: gray-500 measured 4.39:1 and gray-400 a failing 2.36:1, so
+    // secondary and tertiary text was below WCAG AA on every light screen.
+    group('contrast', () {
+      test('light secondary and tertiary text clear WCAG AA', () {
+        final scheme = AppTheme.lightTheme().colorScheme;
+
+        expect(
+          _contrast(scheme.onSurfaceVariant, scheme.surface),
+          greaterThanOrEqualTo(4.5),
+        );
+        expect(
+          _contrast(AppColors.onSurfaceDimLight, scheme.surface),
+          greaterThanOrEqualTo(4.5),
+        );
+        // Tertiary stays visibly lighter than secondary, so the hierarchy that
+        // the old values expressed through contrast is preserved.
+        expect(
+          _contrast(AppColors.onSurfaceDimLight, scheme.surface),
+          lessThan(_contrast(scheme.onSurfaceVariant, scheme.surface)),
+        );
+      });
+
+      test('dark secondary and tertiary text clear WCAG AA', () {
+        final scheme = AppTheme.darkTheme().colorScheme;
+
+        expect(
+          _contrast(scheme.onSurfaceVariant, scheme.surface),
+          greaterThanOrEqualTo(4.5),
+        );
+        expect(
+          _contrast(AppColors.onSurfaceDimDark, scheme.surface),
+          greaterThanOrEqualTo(4.5),
+        );
+      });
+
+      test('a selected segment is distinguishable from the surface', () {
+        for (final scheme in [
+          AppTheme.lightTheme().colorScheme,
+          AppTheme.darkTheme().colorScheme,
+        ]) {
+          // secondaryContainer is the selected-segment fill. It was 1.03:1 from
+          // surface in light mode, i.e. invisible.
+          expect(
+            _contrast(scheme.secondaryContainer, scheme.surface),
+            greaterThan(1.1),
+          );
+          // And its label must be readable on it.
+          expect(
+            _contrast(scheme.onSecondaryContainer, scheme.secondaryContainer),
+            greaterThanOrEqualTo(4.5),
+          );
+        }
+      });
+    });
   });
+}
+
+/// WCAG 2.1 relative-luminance contrast ratio between two opaque colours.
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  final hi = la > lb ? la : lb;
+  final lo = la > lb ? lb : la;
+  return (hi + 0.05) / (lo + 0.05);
 }

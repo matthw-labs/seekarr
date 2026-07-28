@@ -12,23 +12,11 @@ import 'package:seekarr/core/widgets/status_badge.dart';
 /// Callback signature for when a media item is tapped.
 typedef OnMediaItemTap<T> = void Function(T item, String heroTag);
 
-/// Availability details used to build a [StatusBadge].
-class MediaAvailabilityInfo {
-  final bool hasFile;
-  final String status;
-  final int? fileCount;
-  final int? totalCount;
-
-  const MediaAvailabilityInfo({
-    required this.hasFile,
-    required this.status,
-    this.fileCount,
-    this.totalCount,
-  });
-}
-
-/// Callback signature for extracting status from a media item.
-typedef StatusExtractor<T> = MediaAvailabilityInfo? Function(T item);
+/// Callback signature for extracting a resolved status from a media item.
+///
+/// The caller resolves the status — including the download queue — so the grid
+/// and the item's detail page cannot show different badges for the same item.
+typedef StatusExtractor<T> = MediaStatusInfo? Function(T item);
 
 /// A reusable grid widget for displaying media items (movies, series, music).
 ///
@@ -46,6 +34,12 @@ class MediaGrid<T> extends StatelessWidget {
 
   /// Optional: Extracts status info for badge display.
   final StatusExtractor<T>? statusExtractor;
+
+  /// Optional: Extracts the item's title, used as the accessible name.
+  ///
+  /// Without it each cell is an unlabelled poster image and a screen reader has
+  /// nothing to announce.
+  final String Function(T item)? titleExtractor;
 
   /// Base URL for authenticated image URLs.
   final String baseUrl;
@@ -65,7 +59,11 @@ class MediaGrid<T> extends StatelessWidget {
   /// Scroll physics. Use AlwaysScrollableScrollPhysics for RefreshIndicator.
   final ScrollPhysics? physics;
 
-  /// Number of columns in the grid
+  /// Minimum number of columns; more are used when the window is wide enough.
+  ///
+  /// This is a floor rather than a fixed count so an iPad or a resized macOS
+  /// window fills with more posters instead of stretching three of them to
+  /// several hundred points each.
   final int crossAxisCount;
 
   const MediaGrid({
@@ -74,6 +72,7 @@ class MediaGrid<T> extends StatelessWidget {
     required this.imagesExtractor,
     required this.idExtractor,
     this.statusExtractor,
+    this.titleExtractor,
     required this.baseUrl,
     required this.apiKey,
     required this.heroTagPrefix,
@@ -83,6 +82,16 @@ class MediaGrid<T> extends StatelessWidget {
     this.crossAxisCount = 3,
   });
 
+  /// Width a poster wants before another column is worth adding. Chosen so a
+  /// 390pt-wide phone keeps exactly three columns.
+  static const double _preferredTileWidth = 130.0;
+
+  /// Columns that fit [availableWidth], never fewer than [minColumns].
+  static int columnsFor(double availableWidth, int minColumns) {
+    final fits = (availableWidth / _preferredTileWidth).floor();
+    return fits > minColumns ? fits : minColumns;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
@@ -91,6 +100,11 @@ class MediaGrid<T> extends StatelessWidget {
         title: 'No items found',
       );
     }
+
+    final columns = columnsFor(
+      MediaQuery.sizeOf(context).width - (AppSpacing.lg * 2),
+      crossAxisCount,
+    );
 
     return GridView.builder(
       physics: physics ?? const AlwaysScrollableScrollPhysics(),
@@ -103,7 +117,7 @@ class MediaGrid<T> extends StatelessWidget {
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
       ),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
+        crossAxisCount: columns,
         childAspectRatio: 2 / 3,
         crossAxisSpacing: AppSpacing.gridGap,
         mainAxisSpacing: AppSpacing.gridGap,
@@ -126,24 +140,18 @@ class MediaGrid<T> extends StatelessWidget {
 
         // Extract status for badge
         Widget? badge;
-        if (statusExtractor != null) {
-          final statusInfo = statusExtractor!(item);
-          if (statusInfo != null) {
-            badge = StatusBadge.fromMedia(
-              hasFile: statusInfo.hasFile,
-              fileCount: statusInfo.fileCount,
-              totalCount: statusInfo.totalCount,
-              status: statusInfo.status,
-              compact: true,
-            );
-          }
+        final statusInfo = statusExtractor?.call(item);
+        if (statusInfo != null) {
+          badge = StatusBadge(info: statusInfo, compact: true);
         }
 
         return StaggeredEntrance(
           index: index,
-          wrapCount: crossAxisCount * 4,
+          wrapCount: columns * 4,
           child: PressableScale(
             onTap: onItemTap != null ? () => onItemTap!(item, heroTag) : null,
+            semanticLabel: titleExtractor?.call(item),
+            excludeChildSemantics: titleExtractor != null,
             child: Hero(
               tag: heroTag,
               child: ContentCard(

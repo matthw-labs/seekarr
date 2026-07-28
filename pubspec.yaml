@@ -43,7 +43,6 @@ dependencies:
   cookie_jar: ^4.0.8
   flutter_riverpod: ^3.0.3
   go_router: ^17.0.0
-  dynamic_color: ^1.8.1
   shared_preferences: ^2.5.3
   flutter_secure_storage: ^10.2.0
   cached_network_image: ^3.4.1

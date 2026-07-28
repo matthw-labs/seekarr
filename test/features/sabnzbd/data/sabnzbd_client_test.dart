@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:seekarr/core/network/connection_failure.dart';
 import 'package:seekarr/features/sabnzbd/data/sabnzbd_client.dart';
 
 import '../../../test_helpers/capturing_http_adapter.dart';
@@ -60,6 +61,26 @@ void main() {
       final client = _client(adapter);
 
       expect(client.getQueue(), throwsA(isA<SabnzbdException>()));
+    });
+
+    test('a rejected API key is reported as unauthorized, not unreachable', () {
+      // SABnzbd answers 200 for a bad key, so the reason comes from the
+      // message — this is what lets onboarding say "key rejected".
+      final adapter = CapturingHttpAdapter(
+        response: {'status': false, 'error': 'API Key Incorrect'},
+      );
+      final client = _client(adapter);
+
+      expect(
+        client.getQueue(),
+        throwsA(
+          isA<SabnzbdException>().having(
+            (e) => e.reason,
+            'reason',
+            ServiceFailureReason.unauthorized,
+          ),
+        ),
+      );
     });
 
     test('redactSabnzbdSecrets strips the api key from any string', () {

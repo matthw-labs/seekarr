@@ -1,4 +1,3 @@
-import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -59,17 +58,16 @@ class SeekarrApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 
-    return DynamicColorBuilder(
-      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        return MaterialApp.router(
-          title: 'Seekarr',
-          theme: AppTheme.lightTheme(lightDynamic),
-          darkTheme: AppTheme.darkTheme(darkDynamic),
-          themeMode: themeMode,
-          routerConfig: router,
-          debugShowCheckedModeBanner: false,
-        );
-      },
+    // No DynamicColorBuilder: the palette is fixed on purpose so per-service
+    // accents stay recognisable and the experience is identical on every OS.
+    // See AppTheme.darkTheme.
+    return MaterialApp.router(
+      title: 'Seekarr',
+      theme: AppTheme.lightTheme(),
+      darkTheme: AppTheme.darkTheme(),
+      themeMode: themeMode,
+      routerConfig: router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }

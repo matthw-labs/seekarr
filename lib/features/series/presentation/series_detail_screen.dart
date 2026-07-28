@@ -11,10 +11,12 @@ import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
 import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
+import 'package:seekarr/features/series/domain/sonarr_status.dart';
 import 'package:seekarr/features/series/presentation/series_detail_provider.dart';
 import 'package:seekarr/features/series/presentation/series_detail_view_model.dart';
 import 'package:seekarr/features/series/presentation/series_provider.dart';
 import 'package:seekarr/features/series/presentation/widgets/series_seasons_list.dart';
+import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
@@ -73,13 +75,23 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     );
     final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
 
+    // Without the queue the badge cannot tell "nothing on disk" from "being
+    // downloaded right now", and every in-flight series reads as Missing.
+    final queueEntry = ref
+        .watch(sonarrQueueSnapshotProvider)
+        .maybeWhen(
+          data: (snapshot) => snapshot.entryFor(series.id),
+          orElse: () => null,
+        );
+    final status = sonarrSeriesStatus(series, queueEntry: queueEntry);
+
     return MediaDetailView(
       accent: ServiceKey.sonarr.accent,
       posterUrl: viewModel.posterUrl,
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
       posterRow: (collapseFactor) =>
-          _buildPosterRow(context, viewModel, collapseFactor),
+          _buildPosterRow(context, viewModel, status, collapseFactor),
       contentSections: _buildContentSections(
         viewModel,
         infoGroups,
@@ -104,16 +116,12 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
   Widget _buildPosterRow(
     BuildContext context,
     SeriesDetailViewModel viewModel,
+    MediaStatusInfo status,
     double collapseFactor,
   ) {
     return MediaDetailPosterRow(
       collapseFactor: collapseFactor,
-      statusBadge: StatusBadge.fromMedia(
-        fileCount: viewModel.episodeFileCount,
-        totalCount: viewModel.episodeCount,
-        hasFile: viewModel.hasFiles,
-        status: viewModel.status,
-      ),
+      statusBadge: StatusBadge(info: status),
       title: viewModel.title,
       metadataItems: viewModel.metadataItems,
       tags: _buildSummaryTags(viewModel),
@@ -180,7 +188,10 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
           ),
           child: SizedBox(
             width: double.infinity,
-            child: RatingChipsRow(ratings: viewModel.ratings),
+            child: RatingChipsRow(
+              ratings: viewModel.ratings,
+              accent: ServiceKey.sonarr.accent,
+            ),
           ),
         ),
       ],
@@ -217,7 +228,11 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         _buildSeasonsSection(context, viewModel, episodesAsync),
         const SizedBox(height: AppSpacing.lg),
       ],
-      ArrMediaExtrasSection(tmdbId: tmdbId, mediaType: 'tv'),
+      ArrMediaExtrasSection(
+        tmdbId: tmdbId,
+        mediaType: 'tv',
+        accent: ServiceKey.sonarr.accent,
+      ),
       if (viewModel.genres.isNotEmpty) ...[
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -343,6 +358,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     final sonarrService = ref.read(sonarrServiceProvider);
     await InteractiveSearchSheet.showAsync(
       context: context,
+      accent: ServiceKey.sonarr.accent,
       title: seasonNumber != null
           ? 'Releases for $title - Season $seasonNumber'
           : 'Releases for $title',
@@ -414,6 +430,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     final sonarrService = ref.read(sonarrServiceProvider);
     await InteractiveSearchSheet.showAsync(
       context: context,
+      accent: ServiceKey.sonarr.accent,
       title: 'Episode Releases',
       fetchReleases: (token) =>
           sonarrService.getReleases(episodeId: episodeId, cancelToken: token),

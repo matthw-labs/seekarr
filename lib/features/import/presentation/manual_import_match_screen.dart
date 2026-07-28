@@ -210,6 +210,7 @@ class _FileHeader extends StatelessWidget {
             ),
           ],
           IconButton.filledTonal(
+            tooltip: 'Remove from import',
             onPressed: onRemove,
             icon: const Icon(Icons.close_rounded, size: 16),
             color: AppColors.error,
@@ -391,6 +392,7 @@ class _BulkFixBar extends ConsumerWidget {
             child: const Text('Fix files'),
           ),
           IconButton(
+            tooltip: 'Clear selection',
             onPressed: () => ref
                 .read(manualImportFlowProvider.notifier)
                 .clearBulkFixSelection(),

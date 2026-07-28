@@ -1,9 +1,9 @@
 import 'package:seekarr/core/utils/dynamic_map_utils.dart'
     show intOrNull, mapOrNull, stringOrNull;
+import 'package:seekarr/core/status/arr_queue_snapshot.dart';
 import 'package:seekarr/core/utils/arr_activity_display.dart';
 import 'package:seekarr/core/utils/release_utils.dart';
 import 'package:seekarr/core/utils/string_utils.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
 import 'package:seekarr/features/activity/presentation/activity_screen.dart';
 
 export 'package:seekarr/core/utils/dynamic_map_utils.dart'
@@ -132,22 +132,6 @@ String? formatCutoffSize(Map<String, dynamic> item, ServiceType serviceType) {
   return formattedSize == '—' ? null : formattedSize;
 }
 
-String humanizeCamelCase(String value) {
-  if (value.trim().isEmpty) return value;
-
-  final normalized = value.replaceAll('_', ' ').replaceAll('-', ' ');
-  final withSpaces = normalized.replaceAllMapped(
-    RegExp(r'([a-z])([A-Z])'),
-    (match) => '${match[1]} ${match[2]}',
-  );
-
-  return withSpaces
-      .split(RegExp(r'\s+'))
-      .where((part) => part.isNotEmpty)
-      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-      .join(' ');
-}
-
 String humanizeEventType(String value) {
   switch (value) {
     case 'grabbed':
@@ -168,44 +152,45 @@ String humanizeEventType(String value) {
   }
 }
 
-({String label, MediaStatus badge}) resolveQueueDisplayStatus(
-  Map<String, dynamic> item, {
-  bool includeWarningSuffix = true,
-}) {
+/// Resolves a queue record for display in the Activity tab.
+///
+/// A thin wrapper over the canonical [ArrQueueEntry] parser so Activity, the
+/// media detail pages and the poster grids can never disagree about what a
+/// queue record means. Unlike the media resolvers this always returns a status:
+/// an already-imported record still has a row to render.
+MediaStatusInfo resolveQueueDisplayStatus(Map<String, dynamic> item) {
+  final entry = ArrQueueEntry.fromQueueItem(item);
+  if (entry != null) {
+    return MediaStatusInfo(
+      pipeline: entry.pipeline,
+      progress: entry.progress,
+      hasWarning: entry.hasWarning,
+      detail: entry.detail,
+      labelOverride: entry.label,
+    );
+  }
+
+  // `imported` / `ignored`: the pipeline is done with this record.
   final trackedState = stringOrNull(
     item['trackedDownloadState'],
   )?.toLowerCase();
-  final status = stringOrNull(item['status'])?.toLowerCase();
-  final trackedStatus = stringOrNull(
-    item['trackedDownloadStatus'],
-  )?.toLowerCase();
+  return MediaStatusInfo(
+    availability: MediaAvailability.available,
+    labelOverride: trackedState == 'ignored' ? 'Ignored' : 'Imported',
+    hasWarning: arrQueueHasWarning(item),
+  );
+}
 
-  final resolved = switch (trackedState) {
-    'downloading' => (label: 'Downloading', badge: MediaStatus.downloading),
-    'importpending' ||
-    'importblocked' => (label: 'Import Pending', badge: MediaStatus.queued),
-    'importing' => (label: 'Importing', badge: MediaStatus.downloading),
-    'failedpending' => (label: 'Failed', badge: MediaStatus.missing),
-    _ => switch (status) {
-      'completed' => (label: 'Completed', badge: MediaStatus.available),
-      'delay' || 'queued' => (label: 'Queued', badge: MediaStatus.queued),
-      'downloading' => (label: 'Downloading', badge: MediaStatus.downloading),
-      'paused' => (label: 'Paused', badge: MediaStatus.queued),
-      final String value when value.isNotEmpty => (
-        label: humanizeCamelCase(value),
-        badge: MediaStatus.unknown,
-      ),
-      _ => (label: 'Unknown', badge: MediaStatus.unknown),
-    },
-  };
-
-  if (includeWarningSuffix &&
-      (trackedStatus == 'warning' ||
-          extractArrStatusMessages(item['statusMessages']).isNotEmpty)) {
-    return (label: '${resolved.label} (Warning)', badge: resolved.badge);
+/// The Activity tab spells the warning out in text, since its rows carry no
+/// coloured badge of their own.
+String queueDisplayLabel(
+  MediaStatusInfo status, {
+  bool includeWarningSuffix = true,
+}) {
+  if (includeWarningSuffix && status.hasWarning) {
+    return '${status.label} (Warning)';
   }
-
-  return resolved;
+  return status.label;
 }
 
 String? wantedStatusText(Map<String, dynamic> item, ServiceType serviceType) {

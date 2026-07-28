@@ -43,3 +43,17 @@ ios/Flutter/LocalSigning.xcconfig
 *.pem
 *.key
 secrets/
+
+# Live captures from tool/capture_status_fixtures.dart. Redacted, but not
+# committed: they are the user's own instance data. The glob is deliberately
+# wide so Syncthing conflict copies (queue.captured.sync-conflict-*.json)
+# are caught too.
+test/fixtures/**/*.captured*
+
+# Local planning and design notes.
+*_plan.md
+PRODUCT.md
+
+# Syncthing conflict copies (the repo is inside a synced folder).
+*sync-conflict-*
+

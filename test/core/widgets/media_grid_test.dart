@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seekarr/core/status/media_status.dart';
 import 'package:seekarr/core/widgets/media_grid.dart';
 
 void main() {
@@ -88,9 +89,10 @@ void main() {
               items: items,
               imagesExtractor: (_) => null,
               idExtractor: (item) => items.indexOf(item),
-              statusExtractor: (item) => MediaAvailabilityInfo(
-                hasFile: item == 'Available',
-                status: item.toLowerCase(),
+              statusExtractor: (item) => MediaStatusInfo(
+                availability: item == 'Available'
+                    ? MediaAvailability.available
+                    : MediaAvailability.missing,
               ),
               baseUrl: 'http://localhost',
               apiKey: 'test',

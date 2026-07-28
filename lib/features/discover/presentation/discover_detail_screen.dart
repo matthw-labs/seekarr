@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
+import 'package:seekarr/features/discover/domain/seerr_status.dart';
 import 'package:seekarr/features/discover/presentation/discover_detail_extras_provider.dart';
 import 'package:seekarr/features/discover/presentation/discover_detail_view_model.dart';
 import 'package:seekarr/features/discover/presentation/discover_details_provider.dart';
@@ -105,8 +106,8 @@ class DiscoverDetailScreen extends ConsumerWidget {
           backdropUrl: viewModel.backdropUrl,
           posterRow: (collapseFactor) => MediaDetailPosterRow(
             collapseFactor: collapseFactor,
-            statusBadge: StatusBadge.fromSeerr(
-              statusCode: viewModel.statusCode,
+            statusBadge: StatusBadge(
+              info: seerrMediaStatus(viewModel.mediaInfo),
             ),
             title: viewModel.title,
             metadataItems: metadataItems,
@@ -229,6 +230,8 @@ class DiscoverDetailScreen extends ConsumerWidget {
   ) {
     if (lookupRatings != null) {
       return lookupRatings
+          // A 0.0 with no votes is "not rated yet", not a score of zero.
+          .where((rating) => rating.value > 0 || rating.votes > 0)
           .map(
             (rating) => RatingChip(
               value: rating.value.toStringAsFixed(1),
@@ -240,13 +243,14 @@ class DiscoverDetailScreen extends ConsumerWidget {
           .toList(growable: false);
     }
 
-    if (viewModel.voteAverage == null) {
+    final voteAverage = viewModel.voteAverage;
+    if (voteAverage == null || voteAverage <= 0) {
       return const [];
     }
 
     return [
       RatingChip(
-        value: viewModel.voteAverage!.toStringAsFixed(1),
+        value: voteAverage.toStringAsFixed(1),
         votes: viewModel.voteCount ?? 0,
         sourceName: 'TMDB',
         sourceIcon: 'TMDB',

@@ -185,6 +185,94 @@ void main() {
       expect(settled.x, closeTo(0, 0.01));
       expect(settled.y, closeTo(0, 0.01));
     });
+
+    // Regression guard for the QA finding: the pill width was measured with a
+    // TextPainter that got no textScaler, so at accessibility reading sizes the
+    // label overflowed the bar on every screen of the app.
+    group('text scaling', () {
+      for (final scale in const [1.0, 1.3, 2.0, 3.0]) {
+        testWidgets('lays out without overflow at ${scale}x', (tester) async {
+          _setTestViewport(tester, const Size(390, 844));
+          await _pumpNavBar(tester, selectedIndex: 1, textScale: scale);
+
+          expect(tester.takeException(), isNull);
+
+          // The selected label must fit inside the glass surface.
+          final surface = _navSurfaceRect(tester);
+          final label = tester.getRect(find.text('Activity'));
+          expect(label.left, greaterThanOrEqualTo(surface.left - 0.01));
+          expect(label.right, lessThanOrEqualTo(surface.right + 0.01));
+          expect(label.top, greaterThanOrEqualTo(surface.top - 0.01));
+          expect(label.bottom, lessThanOrEqualTo(surface.bottom + 0.01));
+
+          // …and the bar must stay inside the viewport.
+          expect(surface.left, greaterThanOrEqualTo(-0.01));
+          expect(surface.right, lessThanOrEqualTo(390.01));
+        });
+      }
+
+      testWidgets('the label grows but the bar stays a bar', (tester) async {
+        _setTestViewport(tester, const Size(390, 844));
+
+        await _pumpNavBar(tester, selectedIndex: 0, textScale: 1.0);
+        final baseHeight = _navSurfaceRect(tester).height;
+        final baseLabel = tester.getRect(find.text('Services')).height;
+
+        await _pumpNavBar(tester, selectedIndex: 0, textScale: 3.0);
+        final cappedHeight = _navSurfaceRect(tester).height;
+        final cappedLabel = tester.getRect(find.text('Services')).height;
+
+        // The reading preference is honoured up to maxTextScaleFactor…
+        expect(cappedLabel, greaterThan(baseLabel));
+        expect(
+          cappedLabel / baseLabel,
+          lessThanOrEqualTo(FloatingNavBarMetrics.maxTextScaleFactor + 0.05),
+        );
+        // …and the clamped label still fits the existing bar height, so the
+        // chrome does not turn into a panel.
+        expect(cappedHeight, closeTo(baseHeight, 0.01));
+        expect(cappedHeight, lessThan(844 / 4));
+      });
+
+      testWidgets('scroll padding covers the bar at every scale', (
+        tester,
+      ) async {
+        _setTestViewport(tester, const Size(390, 844));
+
+        for (final scale in const [1.0, 1.3, 3.0]) {
+          late double padding;
+          late double barHeight;
+          await tester.pumpWidget(
+            MaterialApp(
+              home: MediaQuery(
+                data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+                child: Builder(
+                  builder: (context) {
+                    padding = FloatingNavBarMetrics.getScrollViewBottomPadding(
+                      context,
+                    );
+                    barHeight = FloatingNavBarMetrics.barHeightFor(context);
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ),
+          );
+
+          // Content must always clear the bar plus its margins, otherwise the
+          // last list row hides underneath it.
+          expect(
+            padding,
+            greaterThanOrEqualTo(
+              barHeight +
+                  FloatingNavBarMetrics.topPadding +
+                  FloatingNavBarMetrics.bottomPadding,
+            ),
+            reason: 'scale $scale',
+          );
+        }
+      });
+    });
   });
 }
 
@@ -192,10 +280,17 @@ Future<void> _pumpNavBar(
   WidgetTester tester, {
   required int selectedIndex,
   bool settle = true,
+  double textScale = 1.0,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
-      theme: AppTheme.darkTheme(null),
+      theme: AppTheme.darkTheme(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       home: Scaffold(
         bottomNavigationBar: FloatingBottomNavBar(
           selectedIndex: selectedIndex,

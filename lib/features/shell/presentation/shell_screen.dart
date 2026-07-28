@@ -17,9 +17,14 @@ class ShellScreen extends ConsumerWidget {
 
   const ShellScreen({super.key, required this.child});
 
-  /// Width at or above which navigation moves from a bottom bar to a side
-  /// rail. Tablets and desktop windows get the rail; phones keep the bar.
-  static const double _railBreakpoint = 600;
+  /// Width at or above which navigation moves from a bottom bar to a side rail.
+  ///
+  /// 840 rather than 600: at 600 a phone in landscape (roughly 850pt wide on a
+  /// modern iPhone) also got the rail, replacing the thumb-reachable bottom bar
+  /// with a side rail on a device held in two hands. 840 is Material's
+  /// expanded-window breakpoint and keeps phones on the bar in both
+  /// orientations, while tablets and desktop windows still get the rail.
+  static const double _railBreakpoint = 840;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,10 +37,16 @@ class ShellScreen extends ConsumerWidget {
         body: Row(
           children: [
             if (!hideNav)
-              _ServicesNavRail(
-                selectedIndex: selectedIndex,
-                onDestinationSelected: (int idx) =>
-                    _onItemTapped(idx, context, ref, selectedIndex),
+              // SafeArea on the rail side only: in landscape the notch and the
+              // rounded corner sit on the leading edge, and the rail was laid
+              // out underneath them. The content keeps its own insets.
+              SafeArea(
+                right: false,
+                child: _ServicesNavRail(
+                  selectedIndex: selectedIndex,
+                  onDestinationSelected: (int idx) =>
+                      _onItemTapped(idx, context, ref, selectedIndex),
+                ),
               ),
             Expanded(child: child),
           ],

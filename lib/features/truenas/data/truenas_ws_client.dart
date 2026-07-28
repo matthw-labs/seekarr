@@ -3,12 +3,21 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:seekarr/core/network/cert_trust.dart';
+import 'package:seekarr/core/network/connection_failure.dart';
 import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:seekarr/core/utils/url_utils.dart';
 
-/// Error surfaced by the TrueNAS WebSocket client.
-class TrueNasException implements Exception {
+/// Error surfaced by the TrueNAS WebSocket client. Carries the [reason] so a
+/// caller verifying the connection can tell an unreachable host from a
+/// rejected API key.
+class TrueNasException implements Exception, HasFailureReason {
   final String message;
-  const TrueNasException(this.message);
+  @override
+  final ServiceFailureReason reason;
+  const TrueNasException(
+    this.message, {
+    this.reason = ServiceFailureReason.unknown,
+  });
   @override
   String toString() => 'TrueNasException: $message';
 }
@@ -58,7 +67,7 @@ class TrueNasWsClient {
     }
     if (!raw.contains('://')) raw = 'https://$raw';
     final uri = Uri.parse(raw);
-    final secure = uri.scheme != 'http';
+    final secure = UrlUtils.isSecureScheme(raw);
     return Uri(
       scheme: secure ? 'wss' : 'ws',
       host: uri.host,
@@ -117,7 +126,10 @@ class TrueNasWsClient {
 
       final ok = await _rawCall('auth.login_with_api_key', [apiKey]);
       if (ok != true) {
-        throw const TrueNasException('Authentication failed (check API key)');
+        throw const TrueNasException(
+          'Authentication failed (check API key)',
+          reason: ServiceFailureReason.unauthorized,
+        );
       }
       _authed = true;
     } catch (e) {
@@ -127,7 +139,10 @@ class TrueNasWsClient {
       httpClient.close(force: true);
       _httpClient = null;
       if (e is TrueNasException) rethrow;
-      throw TrueNasException('Could not connect: $e');
+      throw TrueNasException(
+        'Could not connect: $e',
+        reason: classifyConnectionFailure(e),
+      );
     }
   }
 
@@ -187,7 +202,10 @@ class TrueNasWsClient {
         }
       }
       if (DateTime.now().isAfter(deadline)) {
-        throw TrueNasException('Timed out waiting for job $method');
+        throw TrueNasException(
+          'Timed out waiting for job $method',
+          reason: ServiceFailureReason.timeout,
+        );
       }
       await Future<void>.delayed(pollInterval);
     }
@@ -245,7 +263,10 @@ class TrueNasWsClient {
       const Duration(seconds: 15),
       onTimeout: () {
         _pending.remove(id);
-        throw TrueNasException('Timed out calling $method');
+        throw TrueNasException(
+          'Timed out calling $method',
+          reason: ServiceFailureReason.timeout,
+        );
       },
     );
   }

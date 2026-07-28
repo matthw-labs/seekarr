@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
 
 /// A reusable, always-visible search bar widget for the top of screens.
 ///
@@ -24,6 +23,14 @@ class SearchBarHeader extends StatefulWidget {
   /// Whether to autofocus the search field
   final bool autofocus;
 
+  /// Accent for the leading search glyph.
+  ///
+  /// Defaults to the app's primary. It used to be hard-coded to the Seerr
+  /// indigo, which left an indigo magnifier sitting on the amber Radarr page and
+  /// the pink Lidarr one — the per-service accent is part of the identity, so
+  /// every screen passes its own.
+  final Color? accent;
+
   const SearchBarHeader({
     super.key,
     required this.onQueryChanged,
@@ -31,6 +38,7 @@ class SearchBarHeader extends StatefulWidget {
     this.initialQuery,
     this.debounceDuration = const Duration(milliseconds: 400),
     this.autofocus = false,
+    this.accent,
   });
 
   @override
@@ -92,7 +100,10 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
         autoFocus: widget.autofocus,
         leading: Padding(
           padding: const EdgeInsets.only(left: AppSpacing.sm),
-          child: Icon(Icons.search_rounded, color: AppColors.seerr),
+          child: Icon(
+            Icons.search_rounded,
+            color: widget.accent ?? colorScheme.primary,
+          ),
         ),
         trailing: [
           if (_hasText)

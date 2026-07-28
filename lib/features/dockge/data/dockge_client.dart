@@ -6,14 +6,23 @@ import 'package:web_socket/io_web_socket.dart';
 import 'package:web_socket/web_socket.dart' as ws;
 
 import 'package:seekarr/core/network/cert_trust.dart';
+import 'package:seekarr/core/network/connection_failure.dart';
 import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:seekarr/core/utils/url_utils.dart';
 import 'package:seekarr/features/dockge/domain/models/dockge_stack.dart';
 import 'package:seekarr/features/dockge/domain/models/dockge_stack_detail.dart';
 
-/// Error surfaced by the Dockge client.
-class DockgeException implements Exception {
+/// Error surfaced by the Dockge client. Carries the [reason] so a caller
+/// verifying the connection can tell an unreachable host from a rejected
+/// login.
+class DockgeException implements Exception, HasFailureReason {
   final String message;
-  const DockgeException(this.message);
+  @override
+  final ServiceFailureReason reason;
+  const DockgeException(
+    this.message, {
+    this.reason = ServiceFailureReason.unknown,
+  });
   @override
   String toString() => 'DockgeException: $message';
 }
@@ -47,6 +56,10 @@ class DockgeClient {
   final String? certFingerprint;
 
   static const String _endpoint = '';
+
+  /// How long to wait for `autoLogin` after connecting without credentials
+  /// before concluding the instance requires a login.
+  static const Duration _autoLoginGrace = Duration(milliseconds: 1500);
 
   socket_io.Socket? _socket;
   bool _authed = false;
@@ -97,7 +110,9 @@ class DockgeClient {
     // over an unencrypted socket. An explicit http:// is honoured.
     if (!raw.contains('://')) raw = 'https://$raw';
     final uri = Uri.parse(raw);
-    final secure = uri.scheme == 'https';
+    // Secure unless the user explicitly asked for cleartext: an unrecognised
+    // scheme must never downgrade the socket carrying the login credentials.
+    final secure = UrlUtils.isSecureScheme(raw);
     return Uri(
       scheme: secure ? 'https' : 'http',
       host: uri.host,
@@ -164,6 +179,22 @@ class DockgeClient {
     _socket = socket;
 
     socket.onConnect((_) {
+      if (!_hasCredentials) {
+        // Auth-disabled instances answer `autoLogin` almost immediately. If that
+        // has not arrived shortly after connect, the server wants credentials we
+        // do not have — report that instead of letting the connection time out,
+        // which surfaced as "check the address" and sent the user looking for a
+        // network fault rather than filling in the login fields.
+        Timer(_autoLoginGrace, () {
+          if (_authed || authCompleter.isCompleted) return;
+          authCompleter.completeError(
+            const DockgeException(
+              'Dockge requires a username and password',
+              reason: ServiceFailureReason.unauthorized,
+            ),
+          );
+        });
+      }
       if (_hasCredentials) {
         socket.emitWithAck(
           'login',
@@ -178,19 +209,22 @@ class DockgeClient {
                 authCompleter.completeError(
                   const DockgeException(
                     'Two-factor authentication is not supported',
+                    reason: ServiceFailureReason.unauthorized,
                   ),
                 );
               }
             } else if (!authCompleter.isCompleted) {
               authCompleter.completeError(
-                DockgeException(_msg(map) ?? 'Login failed'),
+                DockgeException(
+                  _msg(map) ?? 'Login failed',
+                  reason: ServiceFailureReason.unauthorized,
+                ),
               );
             }
           },
         );
       }
-      // With auth disabled the server emits `autoLogin` instead; when auth is
-      // enabled but no credentials were supplied, we intentionally time out.
+      // With auth disabled the server emits `autoLogin` instead, handled below.
     });
 
     socket.on('autoLogin', (_) {
@@ -208,7 +242,16 @@ class DockgeClient {
 
     socket.onConnectError((dynamic e) {
       if (!authCompleter.isCompleted) {
-        authCompleter.completeError(DockgeException('Connection error: $e'));
+        authCompleter.completeError(
+          DockgeException(
+            'Connection error: $e',
+            // Socket.IO hands us an untyped connect error.
+            reason: classifyConnectionFailure(
+              e,
+              fallback: ServiceFailureReason.unreachable,
+            ),
+          ),
+        );
       }
     });
 
@@ -237,6 +280,7 @@ class DockgeClient {
         const Duration(seconds: 15),
         onTimeout: () => throw const DockgeException(
           'Timed out connecting to Dockge (check URL and credentials)',
+          reason: ServiceFailureReason.timeout,
         ),
       );
     } catch (e) {
@@ -244,7 +288,13 @@ class DockgeClient {
       socket.dispose();
       _socket = null;
       if (e is DockgeException) rethrow;
-      throw DockgeException('Could not connect: $e');
+      throw DockgeException(
+        'Could not connect: $e',
+        reason: classifyConnectionFailure(
+          e,
+          fallback: ServiceFailureReason.unreachable,
+        ),
+      );
     }
   }
 
@@ -433,6 +483,11 @@ class DockgeClient {
       _agent('terminalJoin', args: [combinedTerminalName(stackName)]);
 
   /// Lightweight connectivity probe used by the connection health check.
+  ///
+  /// A genuine credential rejection throws a [DockgeException] carrying
+  /// `unauthorized`, so a `false` here means only that the socket dropped
+  /// between authenticating and returning — a connection problem, not a wrong
+  /// password.
   Future<bool> ping() async {
     await ensureConnected();
     return _authed;

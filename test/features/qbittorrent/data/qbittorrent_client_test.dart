@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:seekarr/core/network/connection_failure.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 
 /// In-memory [HttpClientAdapter] that returns a canned response and
@@ -79,11 +80,43 @@ class _ScriptableAdapter implements HttpClientAdapter {
     final status = callIndex < script.length ? script[callIndex] : script.last;
     callIndex++;
     final isLogin = options.path == '/api/v2/auth/login';
-    final body = isLogin ? (status == 200 ? 'Ok.' : 'Fails.') : 'v4.6.5';
+    final body = isLogin
+        ? (status == 200
+              ? 'Ok.'
+              : status == 204
+              ? '' // qBittorrent 5.1+ answers 204 with an empty body.
+              : 'Fails.')
+        : 'v4.6.5';
     final bytes = utf8.encode(body);
     return ResponseBody.fromBytes(
       bytes,
       status,
+      headers: {
+        Headers.contentTypeHeader: ['text/plain; charset=utf-8'],
+      },
+    );
+  }
+}
+
+/// Answers the login with `200 Fails.` — qBittorrent ≤ 5.0's way of saying the
+/// credentials are wrong — and 200 for anything else.
+class _LoginFailsAdapter implements HttpClientAdapter {
+  final List<RequestOptions> requests = [];
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests.add(options);
+    final isLogin = options.path == '/api/v2/auth/login';
+    return ResponseBody.fromBytes(
+      utf8.encode(isLogin ? 'Fails.' : 'v4.6.5'),
+      200,
       headers: {
         Headers.contentTypeHeader: ['text/plain; charset=utf-8'],
       },
@@ -170,6 +203,22 @@ void main() {
       c.close();
     });
 
+    test('returns true on 204 with empty body (qBittorrent 5.1+)', () async {
+      // Observed against qBittorrent v5.2.3: a successful login answers
+      // 204 No Content and sets the SID cookie — there is no "Ok." body.
+      final adapter = _ScriptableAdapter(script: [204]);
+      final c = _client(adapter, user: 'admin', pw: 'adminadmin');
+      expect(await c.authenticate(), isTrue);
+      c.close();
+    });
+
+    test('returns false on 401 (qBittorrent 5.1+ bad credentials)', () async {
+      final adapter = _ScriptableAdapter(script: [401]);
+      final c = _client(adapter, user: 'admin', pw: 'wrong');
+      expect(await c.authenticate(), isFalse);
+      c.close();
+    });
+
     test('shares inflight future across concurrent calls', () async {
       final adapter = _MockAdapter(response: 'Ok.');
       final c = _client(adapter, user: 'admin', pw: 'adminadmin');
@@ -208,11 +257,12 @@ void main() {
     test(
       'retries exactly once on 403 then surfaces error if still failing',
       () async {
-        // 1st call: data fetch → 403.
-        // 2nd call: login (forced by interceptor) → 200 Ok.
-        // 3rd call: data retry → 403 → surfaced.
+        // 1st call: upfront login → 200 Ok.
+        // 2nd call: data fetch → 403 (session rejected).
+        // 3rd call: login (forced by interceptor) → 200 Ok.
+        // 4th call: data retry → 403 → surfaced.
         // No further calls — the interceptor must stop after one retry.
-        final adapter = _ScriptableAdapter(script: [403, 200, 403, 403, 403]);
+        final adapter = _ScriptableAdapter(script: [200, 403, 200, 403, 403]);
         final c = _client(adapter, user: 'admin', pw: 'adminadmin');
 
         await expectLater(c.getVersion(), throwsA(isA<DioException>()));
@@ -230,12 +280,12 @@ void main() {
             .toList();
         expect(
           loginCalls.length,
-          1,
-          reason: 'interceptor should not loop on auth retries',
+          2,
+          reason: 'upfront login plus one interceptor re-auth, and no more',
         );
         expect(
           adapter.callIndex,
-          3,
+          4,
           reason: 'no further network activity after the single retry',
         );
         c.close();
@@ -243,13 +293,13 @@ void main() {
     );
 
     test('retries once on 403, succeeds when retry returns 200', () async {
-      // 1st call: data → 403; 2nd call: login → 200; 3rd call: data → 200.
-      final adapter = _ScriptableAdapter(script: [403, 200, 200]);
+      // login → 200; data → 403; re-login → 200; data retry → 200.
+      final adapter = _ScriptableAdapter(script: [200, 403, 200, 200]);
       final c = _client(adapter, user: 'admin', pw: 'adminadmin');
 
       final version = await c.getVersion();
       expect(version, 'v4.6.5');
-      expect(adapter.callIndex, 3);
+      expect(adapter.callIndex, 4);
       c.close();
     });
 
@@ -264,10 +314,66 @@ void main() {
       c.close();
     });
 
+    // The QA finding: a wrong password cost three round trips (login → data 403
+    // → re-login) before the failure surfaced, and on a slow link that ran past
+    // the 8s verify budget and was reported as a timeout, i.e. "check the
+    // address". An unambiguous rejection now fails immediately and carries
+    // `unauthorized` so the UI can name the real cause.
+    group('credential rejection fails fast', () {
+      test('200 Fails. stops before the data call', () async {
+        // Login → 200 "Fails.". Nothing else should be attempted.
+        final adapter = _ScriptableAdapter(script: [200, 200, 200]);
+        // Force the login to report failure while keeping a 200 status.
+        final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080'));
+        dio.httpClientAdapter = _LoginFailsAdapter();
+        final c = QbittorrentClient(
+          url: 'http://localhost:8080',
+          username: 'admin',
+          password: 'wrong',
+          dio: dio,
+        );
+
+        await expectLater(
+          c.getVersion(),
+          throwsA(
+            isA<QbittorrentException>().having(
+              (e) => e.reason,
+              'reason',
+              ServiceFailureReason.unauthorized,
+            ),
+          ),
+        );
+        expect(adapter.callIndex, 0);
+        c.close();
+      });
+
+      test('401 stops before the data call', () async {
+        final adapter = _ScriptableAdapter(script: [401, 200, 200]);
+        final c = _client(adapter, user: 'admin', pw: 'wrong');
+
+        await expectLater(
+          c.getVersion(),
+          throwsA(
+            isA<QbittorrentException>().having(
+              (e) => e.reason,
+              'reason',
+              ServiceFailureReason.unauthorized,
+            ),
+          ),
+        );
+        final dataCalls = adapter.requests
+            .where((r) => r.path == '/api/v2/app/version')
+            .toList();
+        expect(dataCalls, isEmpty, reason: 'no point asking after a 401');
+        expect(adapter.callIndex, 1, reason: 'one login attempt, then stop');
+        c.close();
+      });
+    });
+
     test('does not loop when login itself returns 403', () async {
-      // 1st call: data → 403; 2nd call: login → 403.
-      // The interceptor should call login once, see failure, and surface
-      // the original 403 without retrying the data call.
+      // Every call → 403: the upfront login fails, the data call fails, and
+      // the interceptor's re-auth fails too. The original 403 is surfaced
+      // without ever retrying the data call.
       final adapter = _ScriptableAdapter(script: [403, 403, 403, 403]);
       final c = _client(adapter, user: 'admin', pw: 'wrong');
 
@@ -283,7 +389,7 @@ void main() {
         1,
         reason: 'must not retry the data call when login itself fails',
       );
-      expect(loginCalls.length, 1);
+      expect(loginCalls.length, 2, reason: 'upfront login plus one re-auth');
       c.close();
     });
   });

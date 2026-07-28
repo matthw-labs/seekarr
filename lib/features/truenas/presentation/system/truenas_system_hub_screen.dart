@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:go_router/go_router.dart';
@@ -81,17 +82,22 @@ class TrueNasSystemHubScreen extends StatelessWidget {
             childAspectRatio: 1.4,
             children: [for (final entry in _entries) _SystemTile(entry: entry)],
           ),
-          const SizedBox(height: AppSpacing.md),
-          // Debug-only entry point for inspecting raw JSON-RPC responses.
-          OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const TrueNasDiagnosticsScreen(),
+          // Entry point for inspecting raw JSON-RPC responses. Debug builds
+          // only: the screen dumps server payloads verbatim with a copy button,
+          // which must never ship to release even while today's probes are
+          // limited to non-sensitive methods.
+          if (kDebugMode) ...[
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const TrueNasDiagnosticsScreen(),
+                ),
               ),
+              icon: const Icon(Icons.bug_report_rounded, size: 18),
+              label: const Text('Diagnostics (debug)'),
             ),
-            icon: const Icon(Icons.bug_report_rounded, size: 18),
-            label: const Text('Diagnostics (debug)'),
-          ),
+          ],
         ],
       ),
     );

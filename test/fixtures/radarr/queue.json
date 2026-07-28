@@ -1,0 +1,271 @@
+{
+  "page": 1,
+  "pageSize": 20,
+  "sortKey": "timeleft",
+  "sortDirection": "ascending",
+  "totalRecords": 11,
+  "records": [
+    {
+      "id": 1,
+      "movieId": 101,
+      "movie": {
+        "id": 101,
+        "title": "Movie A",
+        "year": 2024,
+        "status": "released",
+        "hasFile": false,
+        "monitored": true,
+        "isAvailable": true
+      },
+      "languages": [{ "id": 1, "name": "English" }],
+      "quality": {
+        "quality": {
+          "id": 7,
+          "name": "Bluray-1080p",
+          "source": "bluray",
+          "resolution": 1080
+        },
+        "revision": { "version": 1, "real": 0, "isRepack": false }
+      },
+      "customFormats": [],
+      "customFormatScore": 0,
+      "size": 8589934592,
+      "title": "Movie.A.2024.1080p.BluRay.x264-GROUP",
+      "sizeleft": 2147483648,
+      "timeleft": "00:12:34",
+      "estimatedCompletionTime": "2026-07-28T12:34:56Z",
+      "added": "2026-07-28T12:00:00Z",
+      "status": "downloading",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "downloadId": "QUEUEITEM0000000001",
+      "protocol": "torrent",
+      "downloadClient": "Download Client",
+      "downloadClientHasPostImportCategory": false,
+      "indexer": "Indexer",
+      "outputPath": "/downloads/complete/movie-a"
+    },
+    {
+      "id": 2,
+      "movieId": 102,
+      "movie": {
+        "id": 102,
+        "title": "Movie B",
+        "year": 2025,
+        "status": "released",
+        "hasFile": false,
+        "monitored": true,
+        "isAvailable": true
+      },
+      "size": 4294967296,
+      "title": "Movie.B.2025.1080p.WEB-DL-GROUP",
+      "sizeleft": 4294967296,
+      "timeleft": "00:00:00",
+      "status": "queued",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "protocol": "usenet",
+      "downloadClient": "Download Client",
+      "indexer": "Indexer"
+    },
+    {
+      "id": 3,
+      "movieId": 103,
+      "movie": {
+        "id": 103,
+        "title": "Movie C",
+        "year": 2023,
+        "status": "released",
+        "hasFile": false,
+        "monitored": true,
+        "isAvailable": true
+      },
+      "size": 6442450944,
+      "title": "Movie.C.2023.2160p.WEB-DL-GROUP",
+      "sizeleft": 6442450944,
+      "status": "delay",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "protocol": "usenet"
+    },
+    {
+      "id": 4,
+      "movieId": 104,
+      "movie": {
+        "id": 104,
+        "title": "Movie D",
+        "year": 2022,
+        "status": "released",
+        "hasFile": false,
+        "monitored": true,
+        "isAvailable": true
+      },
+      "size": 10737418240,
+      "title": "Movie.D.2022.1080p.BluRay-GROUP",
+      "sizeleft": 5368709120,
+      "status": "paused",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "protocol": "torrent"
+    },
+    {
+      "id": 5,
+      "movieId": 105,
+      "movie": {
+        "id": 105,
+        "title": "Movie E",
+        "year": 2021,
+        "status": "released",
+        "hasFile": false,
+        "monitored": true,
+        "isAvailable": true
+      },
+      "size": 3221225472,
+      "title": "Movie.E.2021.1080p.WEB-DL-GROUP",
+      "sizeleft": 0,
+      "timeleft": "00:00:00",
+      "status": "completed",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "importPending",
+      "statusMessages": [],
+      "protocol": "usenet",
+      "outputPath": "/downloads/complete/movie-e"
+    },
+    {
+      "id": 6,
+      "movieId": 106,
+      "movie": {
+        "id": 106,
+        "title": "Movie F",
+        "year": 2020,
+        "status": "released",
+        "hasFile": false,
+        "monitored": true,
+        "isAvailable": true
+      },
+      "size": 5368709120,
+      "title": "Movie.F.2020.1080p.WEB-DL-GROUP",
+      "sizeleft": 0,
+      "status": "completed",
+      "trackedDownloadStatus": "warning",
+      "trackedDownloadState": "importBlocked",
+      "statusMessages": [
+        {
+          "title": "Movie.F.2020.1080p.WEB-DL-GROUP",
+          "messages": ["Not a Custom Format upgrade for existing movie file"]
+        }
+      ],
+      "protocol": "usenet"
+    },
+    {
+      "id": 7,
+      "movieId": 107,
+      "movie": {
+        "id": 107,
+        "title": "Movie G",
+        "year": 2019,
+        "status": "released",
+        "hasFile": false,
+        "monitored": true,
+        "isAvailable": true
+      },
+      "size": 2147483648,
+      "title": "Movie.G.2019.1080p.WEB-DL-GROUP",
+      "sizeleft": 0,
+      "status": "completed",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "importing",
+      "statusMessages": [],
+      "protocol": "usenet"
+    },
+    {
+      "id": 8,
+      "movieId": 108,
+      "movie": {
+        "id": 108,
+        "title": "Movie H",
+        "year": 2018,
+        "status": "released",
+        "hasFile": false,
+        "monitored": true,
+        "isAvailable": true
+      },
+      "size": 7516192768,
+      "title": "Movie.H.2018.1080p.BluRay-GROUP",
+      "sizeleft": 1073741824,
+      "status": "failed",
+      "trackedDownloadStatus": "error",
+      "trackedDownloadState": "failedPending",
+      "errorMessage": "The download failed in the download client",
+      "statusMessages": [],
+      "protocol": "torrent"
+    },
+    {
+      "id": 9,
+      "movieId": 109,
+      "movie": {
+        "id": 109,
+        "title": "Movie I",
+        "year": 2017,
+        "status": "released",
+        "hasFile": false,
+        "monitored": true,
+        "isAvailable": true
+      },
+      "size": 0,
+      "title": "Movie.I.2017.1080p.WEB-DL-GROUP",
+      "sizeleft": 0,
+      "status": "downloadClientUnavailable",
+      "trackedDownloadStatus": "warning",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "protocol": "usenet"
+    },
+    {
+      "id": 10,
+      "movieId": 110,
+      "movie": {
+        "id": 110,
+        "title": "Movie J",
+        "year": 2016,
+        "status": "released",
+        "hasFile": true,
+        "monitored": true,
+        "isAvailable": true
+      },
+      "size": 5368709120,
+      "title": "Movie.J.2016.1080p.WEB-DL-GROUP",
+      "sizeleft": 0,
+      "status": "completed",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "imported",
+      "statusMessages": [],
+      "protocol": "usenet"
+    },
+    {
+      "id": 11,
+      "movieId": 111,
+      "movie": {
+        "id": 111,
+        "title": "Movie K",
+        "year": 2015,
+        "status": "released",
+        "hasFile": false,
+        "monitored": false,
+        "isAvailable": true
+      },
+      "size": 1073741824,
+      "title": "Movie.K.2015.720p.WEB-DL-GROUP",
+      "sizeleft": 1073741824,
+      "status": "completed",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "ignored",
+      "statusMessages": [],
+      "protocol": "usenet"
+    }
+  ]
+}

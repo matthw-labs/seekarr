@@ -242,6 +242,8 @@ class SettingsService {
     final nzbgetUsername = _prefs.getString(nzbgetKeys.username!) ?? '';
     final nzbgetPassword = await _loadApiKey(nzbgetKeys.secureApiKey);
     final truenasKeys = _serviceStorageKeys[ServiceKey.truenas]!;
+    final truenasCertFingerprint = await _loadCertFingerprint(truenasKeys);
+    final dockgeCertFingerprint = await _loadCertFingerprint(dockgeKeys);
 
     return SettingsModel(
       seerrUrl: serviceSettings[ServiceKey.seerr]!.$1,
@@ -273,10 +275,8 @@ class SettingsService {
       nzbgetPassword: nzbgetPassword,
       unraidUrl: serviceSettings[ServiceKey.unraid]!.$1,
       unraidApiKey: serviceSettings[ServiceKey.unraid]!.$2,
-      truenasCertFingerprint:
-          _prefs.getString(truenasKeys.certFingerprint!) ?? '',
-      dockgeCertFingerprint:
-          _prefs.getString(dockgeKeys.certFingerprint!) ?? '',
+      truenasCertFingerprint: truenasCertFingerprint,
+      dockgeCertFingerprint: dockgeCertFingerprint,
       region: _loadRegion(),
       themeMode: AppThemeMode.fromName(_prefs.getString(_kThemeMode)),
     );
@@ -323,15 +323,34 @@ class SettingsService {
     );
   }
 
+  /// Persists a trust-on-first-use certificate fingerprint.
+  ///
+  /// Stored in secure storage rather than SharedPreferences. The fingerprint is
+  /// not a secret, but it *is* integrity-critical: whoever can write it can pin
+  /// their own certificate, after which `buildPinnedHttpClient` accepts it and
+  /// the TrueNAS API key or Dockge password is captured. It therefore lives
+  /// beside the credential it protects. Any value left in prefs by an older
+  /// build is removed on write.
   Future<void> _saveCertFingerprint(ServiceKey service, String value) async {
     final key = _serviceStorageKeys[service]!.certFingerprint;
     if (key == null) return;
-    final normalized = value.trim();
-    if (normalized.isEmpty) {
-      await _prefs.remove(key);
-    } else {
-      await _prefs.setString(key, normalized);
-    }
+    await _prefs.remove(key);
+    await _saveApiKey(key, value);
+  }
+
+  /// Reads a pinned fingerprint, migrating a value written to prefs by an
+  /// earlier build so an update does not silently drop the user's pin.
+  Future<String> _loadCertFingerprint(_ServiceStorageKeys keys) async {
+    final key = keys.certFingerprint;
+    if (key == null) return '';
+    final secure = await _loadApiKey(key);
+    if (secure.isNotEmpty) return secure;
+
+    final legacy = _prefs.getString(key)?.trim() ?? '';
+    if (legacy.isEmpty) return '';
+    await _saveApiKey(key, legacy);
+    await _prefs.remove(key);
+    return legacy;
   }
 
   Future<Map<ServiceKey, (String, String)>> _loadServiceSettings() async {

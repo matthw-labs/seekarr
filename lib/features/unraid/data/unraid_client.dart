@@ -2,12 +2,20 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import 'package:seekarr/core/network/connection_failure.dart';
+import 'package:seekarr/core/network/redirect_guard.dart';
 import 'package:seekarr/features/unraid/domain/models/unraid_models.dart';
 
-/// Error thrown by [UnraidClient].
-class UnraidException implements Exception {
-  const UnraidException(this.message);
+/// Error thrown by [UnraidClient]. Carries the [reason] so a caller verifying
+/// the connection can tell an unreachable host from a rejected API key.
+class UnraidException implements Exception, HasFailureReason {
+  const UnraidException(
+    this.message, {
+    this.reason = ServiceFailureReason.unknown,
+  });
   final String message;
+  @override
+  final ServiceFailureReason reason;
   @override
   String toString() => 'UnraidException: $message';
 }
@@ -33,8 +41,15 @@ class UnraidClient {
             baseUrl: baseUrl,
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 15),
+            // Follow redirects manually so `x-api-key` is never replayed to an
+            // unconfigured host (a 303 would also downgrade this POST to GET).
+            followRedirects: false,
+            validateStatus: allowRedirectStatus,
           ),
         );
+    if (dio == null) {
+      _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
+    }
   }
 
   final String baseUrl;
@@ -49,6 +64,32 @@ class UnraidClient {
     }
     if (n.endsWith('/')) n = n.substring(0, n.length - 1);
     return n;
+  }
+
+  /// Decodes a GraphQL response body, or throws an [UnraidException] the caller
+  /// can classify.
+  ///
+  /// A 200 carrying HTML — the URL points at some other web app, or at a reverse
+  /// proxy's landing page — used to throw a raw `TypeError`/`FormatException`
+  /// that was neither an `UnraidException` nor classifiable, so the UI fell back
+  /// to a generic failure. `notFound` says the useful thing: the API is not here.
+  static Map<String, dynamic> _decodeGraphQl(dynamic raw) {
+    const notGraphQl =
+        'The Unraid GraphQL API did not answer at this address. '
+        'Check the URL and that the API is enabled.';
+    try {
+      final decoded = raw is String ? jsonDecode(raw) : raw;
+      if (decoded is Map) return decoded.cast<String, dynamic>();
+    } on FormatException {
+      throw const UnraidException(
+        notGraphQl,
+        reason: ServiceFailureReason.notFound,
+      );
+    }
+    throw const UnraidException(
+      notGraphQl,
+      reason: ServiceFailureReason.notFound,
+    );
   }
 
   Future<Map<String, dynamic>> _query(
@@ -66,21 +107,27 @@ class UnraidClient {
           headers: {'x-api-key': _apiKey, 'Content-Type': 'application/json'},
         ),
       );
-      final raw = response.data;
-      final Map<String, dynamic> map = raw is String
-          ? jsonDecode(raw) as Map<String, dynamic>
-          : (raw as Map).cast<String, dynamic>();
+      final map = _decodeGraphQl(response.data);
       final errors = map['errors'];
       if (errors is List && errors.isNotEmpty) {
         final first = errors.first;
         final message = first is Map
             ? (first['message'] ?? first).toString()
             : first.toString();
-        throw UnraidException(message);
+        // The Unraid API answers 200 with a GraphQL error for a bad API key.
+        throw UnraidException(
+          message,
+          reason: looksUnauthorizedMessage(message)
+              ? ServiceFailureReason.unauthorized
+              : ServiceFailureReason.unknown,
+        );
       }
       return (map['data'] as Map?)?.cast<String, dynamic>() ?? const {};
     } on DioException catch (e) {
-      throw UnraidException(e.message ?? 'Unraid request failed');
+      throw UnraidException(
+        e.message ?? 'Unraid request failed',
+        reason: classifyConnectionFailure(e),
+      );
     }
   }
 

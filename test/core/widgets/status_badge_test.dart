@@ -3,230 +3,296 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seekarr/core/widgets/status_badge.dart';
 
 void main() {
-  group('StatusBadge.fromMedia', () {
-    final cases = <({bool hasFile, String status, MediaStatus expected})>[
-      (hasFile: true, status: 'released', expected: MediaStatus.available),
-      (hasFile: false, status: 'released', expected: MediaStatus.missing),
-      (
-        hasFile: false,
-        status: 'downloading',
-        expected: MediaStatus.downloading,
-      ),
-      (
-        hasFile: false,
-        status: 'DOWNLOADING',
-        expected: MediaStatus.downloading,
-      ),
-      (
-        hasFile: false,
-        status: 'Downloading',
-        expected: MediaStatus.downloading,
-      ),
-      (hasFile: false, status: 'queued', expected: MediaStatus.queued),
-    ];
-    for (final c in cases) {
-      test(
-        'hasFile=${c.hasFile} status="${c.status}" -> ${c.expected.name}',
-        () {
-          final badge = StatusBadge.fromMedia(
-            hasFile: c.hasFile,
-            status: c.status,
-          );
-          expect(badge.status, c.expected);
-        },
+  group('MediaStatusInfo.label', () {
+    test('the pipeline wins over availability', () {
+      // The regression this whole layer exists to prevent: nothing on disk plus
+      // an active download must never read "Missing".
+      const info = MediaStatusInfo(
+        availability: MediaAvailability.missing,
+        pipeline: MediaPipeline.downloading,
       );
-    }
 
-    test('fileCount >= totalCount -> available', () {
-      final badge = StatusBadge.fromMedia(
-        fileCount: 10,
-        totalCount: 10,
-        status: 'continuing',
-      );
-      expect(badge.status, MediaStatus.available);
+      expect(info.label, 'Downloading');
+      expect(info.tone, StatusTone.info);
     });
 
-    test('fileCount > totalCount -> available', () {
-      final badge = StatusBadge.fromMedia(
-        fileCount: 15,
-        totalCount: 10,
-        status: 'continuing',
+    test('labelOverride wins over everything', () {
+      const info = MediaStatusInfo(
+        availability: MediaAvailability.missing,
+        pipeline: MediaPipeline.paused,
+        labelOverride: 'Client Unavailable',
       );
-      expect(badge.status, MediaStatus.available);
+
+      expect(info.label, 'Client Unavailable');
     });
 
-    test('0 < fileCount < totalCount -> partial', () {
-      final badge = StatusBadge.fromMedia(
-        fileCount: 4,
-        totalCount: 10,
-        status: 'continuing',
+    test('unmonitored surfaces only when nothing is on disk', () {
+      const unmonitoredMissing = MediaStatusInfo(
+        availability: MediaAvailability.missing,
+        unmonitored: true,
       );
-      expect(badge.status, MediaStatus.partial);
+      const unmonitoredAvailable = MediaStatusInfo(
+        availability: MediaAvailability.available,
+        unmonitored: true,
+      );
+
+      expect(unmonitoredMissing.label, 'Unmonitored');
+      expect(unmonitoredMissing.tone, StatusTone.neutral);
+      expect(unmonitoredAvailable.label, 'Available');
+      expect(unmonitoredAvailable.tone, StatusTone.success);
     });
 
-    test('fileCount == 0 with totalCount > 0 -> missing', () {
-      final badge = StatusBadge.fromMedia(
-        fileCount: 0,
-        totalCount: 10,
-        status: 'continuing',
+    test('an in-flight item outranks the unmonitored flag', () {
+      const info = MediaStatusInfo(
+        availability: MediaAvailability.missing,
+        unmonitored: true,
+        pipeline: MediaPipeline.downloading,
       );
-      expect(badge.status, MediaStatus.missing);
+
+      expect(info.label, 'Downloading');
     });
 
-    test('fileCount == 0 with downloading status -> downloading', () {
-      final badge = StatusBadge.fromMedia(
-        fileCount: 0,
-        totalCount: 10,
-        status: 'downloading',
+    final availabilityLabels = <MediaAvailability, String>{
+      MediaAvailability.notTracked: 'Not Requested',
+      MediaAvailability.unavailable: 'Not Released',
+      MediaAvailability.missing: 'Missing',
+      MediaAvailability.partial: 'Partial',
+      MediaAvailability.available: 'Available',
+      MediaAvailability.upgradable: 'Upgrade Available',
+      MediaAvailability.deleted: 'Deleted',
+      MediaAvailability.unknown: 'Unknown',
+    };
+
+    availabilityLabels.forEach((availability, label) {
+      test('${availability.name} reads "$label"', () {
+        expect(MediaStatusInfo(availability: availability).label, label);
+      });
+    });
+  });
+
+  group('MediaStatusInfo.tone', () {
+    test('a warning lifts a calm tone but never masks an error', () {
+      const queuedWarning = MediaStatusInfo(
+        pipeline: MediaPipeline.downloading,
+        hasWarning: true,
       );
-      expect(badge.status, MediaStatus.downloading);
+      const failedWarning = MediaStatusInfo(
+        pipeline: MediaPipeline.failed,
+        hasWarning: true,
+      );
+
+      expect(queuedWarning.tone, StatusTone.warning);
+      expect(failedWarning.tone, StatusTone.error);
     });
 
-    test('totalCount == 0 falls back to hasFile/status', () {
-      final badge = StatusBadge.fromMedia(
-        fileCount: 0,
-        totalCount: 0,
-        hasFile: false,
-        status: 'released',
-      );
-      expect(badge.status, MediaStatus.missing);
-    });
-
-    test('null totalCount falls back to fileCount presence', () {
-      final badge = StatusBadge.fromMedia(
-        fileCount: 2,
-        totalCount: null,
-        status: 'continuing',
-      );
-      expect(badge.status, MediaStatus.available);
-    });
-
-    test('missing availability inputs throws ArgumentError', () {
+    test('notTracked carries the accent tone as a call to action', () {
       expect(
-        () => StatusBadge.fromMedia(status: 'released'),
-        throwsArgumentError,
+        const MediaStatusInfo(availability: MediaAvailability.notTracked).tone,
+        StatusTone.primary,
+      );
+    });
+
+    test('an unreleased title is neutral, not an error', () {
+      expect(
+        const MediaStatusInfo(availability: MediaAvailability.unavailable).tone,
+        StatusTone.neutral,
+      );
+      expect(
+        const MediaStatusInfo(availability: MediaAvailability.missing).tone,
+        StatusTone.error,
       );
     });
   });
 
-  group('StatusBadge.fromSeerr', () {
-    final cases =
-        <({int? statusCode, MediaStatus status, String label, IconData icon})>[
-          (
-            statusCode: null,
-            status: MediaStatus.unknown,
-            label: 'Available to Request',
-            icon: Icons.add_circle_rounded,
-          ),
-          (
-            statusCode: 2,
-            status: MediaStatus.queued,
-            label: 'Pending',
-            icon: Icons.schedule_rounded,
-          ),
-          (
-            statusCode: 3,
-            status: MediaStatus.downloading,
-            label: 'Processing',
-            icon: Icons.sync_rounded,
-          ),
-          (
-            statusCode: 4,
-            status: MediaStatus.queued,
-            label: 'Partially Available',
-            icon: Icons.change_circle_rounded,
-          ),
-          (
-            statusCode: 5,
-            status: MediaStatus.available,
-            label: 'Available',
-            icon: Icons.check_circle_rounded,
-          ),
-          (
-            statusCode: 6,
-            status: MediaStatus.missing,
-            label: 'Deleted',
-            icon: Icons.delete_rounded,
-          ),
-          (
-            statusCode: 999,
-            status: MediaStatus.unknown,
-            label: 'Unknown',
-            icon: Icons.help_outline_rounded,
-          ),
-        ];
-
-    for (final c in cases) {
-      testWidgets(
-        'renders ${c.label} for Seerr status ${c.statusCode ?? 'null'}',
-        (tester) async {
-          final badge = StatusBadge.fromSeerr(statusCode: c.statusCode);
-          expect(badge.status, c.status);
-
-          await tester.pumpWidget(MaterialApp(home: Scaffold(body: badge)));
-          expect(find.text(c.label), findsOneWidget);
-          expect(find.byIcon(c.icon), findsOneWidget);
-        },
+  group('MediaPipeline.salience', () {
+    test('failed outranks downloading, which outranks the waiting states', () {
+      expect(
+        MediaPipeline.failed.salience,
+        greaterThan(MediaPipeline.downloading.salience),
       );
-    }
+      expect(
+        MediaPipeline.downloading.salience,
+        greaterThan(MediaPipeline.queued.salience),
+      );
+      expect(
+        MediaPipeline.queued.salience,
+        greaterThan(MediaPipeline.paused.salience),
+      );
+    });
   });
 
-  group('StatusBadge widget rendering', () {
+  group('availabilityFromCounts', () {
+    test('all files present is available', () {
+      expect(
+        availabilityFromCounts(fileCount: 10, totalCount: 10),
+        MediaAvailability.available,
+      );
+    });
+
+    test('more files than expected is still available', () {
+      expect(
+        availabilityFromCounts(fileCount: 15, totalCount: 10),
+        MediaAvailability.available,
+      );
+    });
+
+    test('some files present is partial', () {
+      expect(
+        availabilityFromCounts(fileCount: 4, totalCount: 10),
+        MediaAvailability.partial,
+      );
+    });
+
+    test('no files present falls back to whenEmpty', () {
+      expect(
+        availabilityFromCounts(fileCount: 0, totalCount: 10),
+        MediaAvailability.missing,
+      );
+      expect(
+        availabilityFromCounts(
+          fileCount: 0,
+          totalCount: 10,
+          whenEmpty: MediaAvailability.unavailable,
+        ),
+        MediaAvailability.unavailable,
+      );
+    });
+
+    test('a zero total falls back to file presence', () {
+      expect(
+        availabilityFromCounts(fileCount: 2, totalCount: 0),
+        MediaAvailability.available,
+      );
+      expect(
+        availabilityFromCounts(fileCount: 0, totalCount: 0),
+        MediaAvailability.missing,
+      );
+    });
+
+    test('an absent count is unknown rather than missing', () {
+      expect(
+        availabilityFromCounts(fileCount: null, totalCount: null),
+        MediaAvailability.unknown,
+      );
+    });
+  });
+
+  group('statusIconFor', () {
+    test('the pipeline icon wins over the availability icon', () {
+      expect(
+        statusIconFor(
+          const MediaStatusInfo(
+            availability: MediaAvailability.missing,
+            pipeline: MediaPipeline.downloading,
+          ),
+        ),
+        Icons.downloading_rounded,
+      );
+    });
+
+    test('unmonitored without files gets the bookmark icon', () {
+      expect(
+        statusIconFor(
+          const MediaStatusInfo(
+            availability: MediaAvailability.missing,
+            unmonitored: true,
+          ),
+        ),
+        Icons.bookmark_border_rounded,
+      );
+    });
+  });
+
+  group('StatusBadge rendering', () {
+    testWidgets('full mode renders the label', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StatusBadge(
+              info: MediaStatusInfo(availability: MediaAvailability.available),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Available'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+    });
+
     testWidgets('compact mode renders no label', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: StatusBadge(status: MediaStatus.available, compact: true),
+            body: StatusBadge(
+              info: MediaStatusInfo(availability: MediaAvailability.available),
+              compact: true,
+            ),
           ),
         ),
       );
-      expect(find.byType(StatusBadge), findsOneWidget);
+
       expect(find.text('Available'), findsNothing);
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
     });
 
-    final fullModeCases = <({MediaStatus status, String label, IconData icon})>[
-      (
-        status: MediaStatus.available,
-        label: 'Available',
-        icon: Icons.check_circle_rounded,
-      ),
-      (
-        status: MediaStatus.partial,
-        label: 'Partial',
-        icon: Icons.donut_large_rounded,
-      ),
-      (
-        status: MediaStatus.missing,
-        label: 'Missing',
-        icon: Icons.cancel_rounded,
-      ),
-      (
-        status: MediaStatus.downloading,
-        label: 'Downloading',
-        icon: Icons.downloading_rounded,
-      ),
-      (
-        status: MediaStatus.queued,
-        label: 'Queued',
-        icon: Icons.schedule_rounded,
-      ),
-      (
-        status: MediaStatus.unknown,
-        label: 'Unknown',
-        icon: Icons.help_outline_rounded,
-      ),
-    ];
-
-    for (final c in fullModeCases) {
-      testWidgets('full mode renders ${c.status.name}', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(body: StatusBadge(status: c.status)),
+    testWidgets('an active download renders a progress ring and percentage', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StatusBadge(
+              info: MediaStatusInfo(
+                availability: MediaAvailability.missing,
+                pipeline: MediaPipeline.downloading,
+                progress: 0.42,
+              ),
+            ),
           ),
-        );
-        expect(find.text(c.label), findsOneWidget);
-        expect(find.byIcon(c.icon), findsOneWidget);
-      });
-    }
+        ),
+      );
+
+      expect(find.text('Downloading'), findsOneWidget);
+      expect(find.text('42%'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byIcon(Icons.downloading_rounded), findsNothing);
+    });
+
+    testWidgets('a waiting state shows its icon, not a ring', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StatusBadge(
+              info: MediaStatusInfo(
+                availability: MediaAvailability.missing,
+                pipeline: MediaPipeline.queued,
+                progress: 0.42,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Queued'), findsOneWidget);
+      expect(find.text('42%'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
+    });
+
+    testWidgets('iconOnly renders a bare dot', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StatusBadge(
+              info: MediaStatusInfo(availability: MediaAvailability.missing),
+              iconOnly: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Missing'), findsNothing);
+      expect(find.byType(Icon), findsNothing);
+    });
   });
 }

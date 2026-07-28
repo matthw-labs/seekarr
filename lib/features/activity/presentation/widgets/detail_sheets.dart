@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/utils/arr_activity_display.dart';
+import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/features/activity/presentation/activity_screen.dart';
@@ -115,14 +116,14 @@ class DetailSheets {
 }
 
 List<_DetailSection> _buildQueueSections(Map<String, dynamic> item) {
-  final displayStatus = resolveQueueDisplayStatus(item);
+  final displayStatus = queueDisplayLabel(resolveQueueDisplayStatus(item));
   final statusMessages = extractStatusMessages(item['statusMessages']);
 
   return [
     _DetailSection(
       title: 'Summary',
       fields: _compactFields([
-        _detailField('Display Status', displayStatus.label),
+        _detailField('Display Status', displayStatus),
         _detailField('Status', item['status']),
         _detailField('Tracked Status', item['trackedDownloadStatus']),
         _detailField('Tracked State', item['trackedDownloadState']),

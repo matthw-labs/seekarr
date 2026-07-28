@@ -178,6 +178,7 @@ class _RequestCard extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Delete from library',
             onPressed: onDelete,
             icon: const Icon(Icons.delete_outline),
             style: IconButton.styleFrom(

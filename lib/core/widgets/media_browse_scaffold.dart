@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
@@ -24,7 +25,6 @@ typedef SettingsSelector = (String, String) Function(SettingsModel settings);
 typedef MediaBrowseItemTap<T> =
     void Function(BuildContext context, T item, String heroTag);
 typedef MediaBrowseTextExtractor<T> = String Function(T item);
-typedef MediaBrowseStatusExtractor<T> = MediaStatus? Function(T item);
 typedef MediaBrowseRefreshCallback = void Function(WidgetRef ref);
 
 enum MediaBrowseFilter { all, available, missing, inQueue }
@@ -53,7 +53,6 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
   final List<dynamic>? Function(T item) imagesExtractor;
   final int Function(T item) idExtractor;
   final StatusExtractor<T>? statusExtractor;
-  final MediaBrowseStatusExtractor<T>? browseStatusExtractor;
   final MediaBrowseRefreshCallback? onRefresh;
   final SettingsSelector settingsSelector;
   final MediaBrowseItemTap<T> onItemTap;
@@ -83,7 +82,6 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
     required this.imagesExtractor,
     required this.idExtractor,
     this.statusExtractor,
-    this.browseStatusExtractor,
     this.onRefresh,
     required this.settingsSelector,
     required this.onItemTap,
@@ -160,6 +158,7 @@ class _MediaBrowseScaffoldState<T>
           SliverToBoxAdapter(
             child: SearchBarHeader(
               hintText: widget.searchHint,
+              accent: widget.accentColor,
               onQueryChanged: (query) {
                 ref.read(widget.searchQueryProvider.notifier).state = query;
               },
@@ -331,7 +330,9 @@ class _MediaBrowseScaffoldState<T>
                             coverTypes:
                                 widget.coverTypes ?? const ['poster', 'cover'],
                           ),
-                          status: _browseStatusFor(section.items[itemIndex]),
+                          status: widget.statusExtractor?.call(
+                            section.items[itemIndex],
+                          ),
                           heroTag:
                               '${widget.heroTagPrefix}_${widget.idExtractor(section.items[itemIndex])}_${section.startIndex + itemIndex}',
                           onTap: () => widget.onItemTap(
@@ -363,6 +364,7 @@ class _MediaBrowseScaffoldState<T>
       imagesExtractor: widget.imagesExtractor,
       idExtractor: widget.idExtractor,
       statusExtractor: widget.statusExtractor,
+      titleExtractor: widget.titleExtractor,
       baseUrl: baseUrl,
       apiKey: apiKey,
       heroTagPrefix: heroTagPrefix,
@@ -388,15 +390,19 @@ class _MediaBrowseScaffoldState<T>
 
     return sortedItems
         .where((item) {
-          final status = _browseStatusFor(item);
+          final status = widget.statusExtractor?.call(item);
           return switch (_selectedFilter) {
             MediaBrowseFilter.all => true,
             MediaBrowseFilter.available =>
-              status == MediaStatus.available || status == MediaStatus.partial,
+              status != null &&
+                  (status.isAvailable ||
+                      status.availability == MediaAvailability.partial),
+            // Deliberately excludes `unavailable`: an unreleased title is not a
+            // gap the user can act on.
             MediaBrowseFilter.missing =>
-              status == null || status == MediaStatus.missing,
-            MediaBrowseFilter.inQueue =>
-              status == MediaStatus.queued || status == MediaStatus.downloading,
+              status == null ||
+                  status.availability == MediaAvailability.missing,
+            MediaBrowseFilter.inQueue => status?.isInPipeline ?? false,
           };
         })
         .toList(growable: false);
@@ -430,39 +436,6 @@ class _MediaBrowseScaffoldState<T>
     }
     final firstCharacter = sortKey.characters.first.toUpperCase();
     return RegExp(r'^[A-Z]$').hasMatch(firstCharacter) ? firstCharacter : '#';
-  }
-
-  MediaStatus? _browseStatusFor(T item) {
-    final overrideStatus = widget.browseStatusExtractor?.call(item);
-    if (overrideStatus != null) {
-      return overrideStatus;
-    }
-
-    final statusInfo = widget.statusExtractor?.call(item);
-    if (statusInfo == null) {
-      return null;
-    }
-
-    if (statusInfo.fileCount != null &&
-        statusInfo.totalCount != null &&
-        statusInfo.totalCount! > 0) {
-      if (statusInfo.fileCount! >= statusInfo.totalCount!) {
-        return MediaStatus.available;
-      }
-      if (statusInfo.fileCount! > 0) {
-        return MediaStatus.partial;
-      }
-    }
-
-    if (statusInfo.hasFile) {
-      return MediaStatus.available;
-    }
-
-    return switch (statusInfo.status.toLowerCase()) {
-      'queued' => MediaStatus.queued,
-      'downloading' => MediaStatus.downloading,
-      _ => MediaStatus.missing,
-    };
   }
 }
 
@@ -562,7 +535,7 @@ class _BrowsePosterTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final ImageSource imageSource;
-  final MediaStatus? status;
+  final MediaStatusInfo? status;
   final String heroTag;
   final VoidCallback onTap;
 
@@ -581,56 +554,66 @@ class _BrowsePosterTile extends StatelessWidget {
 
     return SizedBox(
       width: 96,
-      child: InkWell(
+      // Labelled as one button: the visible title is truncated to a single line,
+      // so a screen reader would otherwise announce a clipped name.
+      child: Semantics(
+        button: true,
+        container: true,
+        excludeSemantics: true,
+        label: title,
+        value: subtitle.isEmpty ? null : subtitle,
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 96,
-              height: 138,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Hero(
-                      tag: heroTag,
-                      child: ContentCard(
-                        imageUrl: imageSource.url,
-                        httpHeaders: imageSource.headers,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadius.borderRadiusMd,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 96,
+                height: 138,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Hero(
+                        tag: heroTag,
+                        child: ContentCard(
+                          imageUrl: imageSource.url,
+                          httpHeaders: imageSource.headers,
+                        ),
                       ),
                     ),
-                  ),
-                  if (status != null)
-                    Positioned(
-                      left: 6,
-                      bottom: 6,
-                      child: StatusBadge(status: status!, iconOnly: true),
-                    ),
-                ],
+                    if (status != null)
+                      Positioned(
+                        left: 6,
+                        bottom: 6,
+                        child: StatusBadge(info: status!, iconOnly: true),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if (subtitle.isNotEmpty)
+              const SizedBox(height: AppSpacing.xs),
               Text(
-                subtitle,
+                title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 10,
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-          ],
+              if (subtitle.isNotEmpty)
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 10,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

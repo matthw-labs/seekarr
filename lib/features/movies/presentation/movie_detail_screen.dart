@@ -11,9 +11,11 @@ import 'package:seekarr/features/discover/presentation/widgets/arr_media_extras_
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
+import 'package:seekarr/features/movies/domain/radarr_status.dart';
 import 'package:seekarr/features/movies/presentation/movie_detail_provider.dart';
 import 'package:seekarr/features/movies/presentation/movie_detail_view_model.dart';
 import 'package:seekarr/features/movies/presentation/movies_provider.dart';
+import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
@@ -68,13 +70,23 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     );
     final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
 
+    // Without the queue the badge cannot tell "nothing on disk" from "being
+    // downloaded right now", and every in-flight movie reads as Missing.
+    final queueEntry = ref
+        .watch(radarrQueueSnapshotProvider)
+        .maybeWhen(
+          data: (snapshot) => snapshot.entryFor(movie.id),
+          orElse: () => null,
+        );
+    final status = radarrMovieStatus(movie, queueEntry: queueEntry);
+
     return MediaDetailView(
       accent: ServiceKey.radarr.accent,
       posterUrl: viewModel.posterUrl,
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
       posterRow: (collapseFactor) =>
-          _buildPosterRow(context, viewModel, collapseFactor),
+          _buildPosterRow(context, viewModel, status, collapseFactor),
       contentSections: _buildContentSections(
         viewModel,
         infoGroups,
@@ -98,14 +110,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
   Widget _buildPosterRow(
     BuildContext context,
     MovieDetailViewModel viewModel,
+    MediaStatusInfo status,
     double collapseFactor,
   ) {
     return MediaDetailPosterRow(
       collapseFactor: collapseFactor,
-      statusBadge: StatusBadge.fromMedia(
-        hasFile: viewModel.hasFile,
-        status: viewModel.status,
-      ),
+      statusBadge: StatusBadge(info: status),
       title: viewModel.title,
       metadataItems: viewModel.metadataItems,
       tags: _buildSummaryTags(viewModel),
@@ -167,7 +177,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
           ),
           child: SizedBox(
             width: double.infinity,
-            child: RatingChipsRow(ratings: viewModel.ratings),
+            child: RatingChipsRow(
+              ratings: viewModel.ratings,
+              accent: ServiceKey.radarr.accent,
+            ),
           ),
         ),
       ],
@@ -201,7 +214,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         ),
         const SizedBox(height: AppSpacing.lg),
       ],
-      ArrMediaExtrasSection(tmdbId: tmdbId, mediaType: 'movie'),
+      ArrMediaExtrasSection(
+        tmdbId: tmdbId,
+        mediaType: 'movie',
+        accent: ServiceKey.radarr.accent,
+      ),
       if (viewModel.genres.isNotEmpty) ...[
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -340,6 +357,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     final radarrService = ref.read(radarrServiceProvider);
     await InteractiveSearchSheet.showAsync(
       context: context,
+      accent: ServiceKey.radarr.accent,
       title: 'Releases for $title',
       fetchReleases: (token) =>
           radarrService.getReleases(widget.movieId, cancelToken: token),

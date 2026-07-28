@@ -10,6 +10,7 @@ import 'package:seekarr/features/activity/presentation/widgets/segment_selector.
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/music/data/lidarr_service.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
 
 typedef ReleaseFetcher = Future<List<dynamic>> Function(CancelToken token);
 
@@ -89,8 +90,16 @@ Future<void> showWantedInteractiveSearch(
   };
   if (fetchReleases == null) return;
 
+  final accent = switch (serviceType) {
+    ServiceType.movies => ServiceKey.radarr.accent,
+    ServiceType.series => ServiceKey.sonarr.accent,
+    ServiceType.music => ServiceKey.lidarr.accent,
+    ServiceType.discover => null,
+  };
+
   await InteractiveSearchSheet.showAsync(
     context: context,
+    accent: accent,
     title: sheetTitle,
     fetchReleases: fetchReleases,
     onGrabRelease: (guid, indexerId) =>

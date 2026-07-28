@@ -6,6 +6,7 @@ import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
+import 'package:seekarr/features/movies/domain/radarr_status.dart';
 import 'package:seekarr/features/movies/presentation/movies_provider.dart';
 import 'package:seekarr/features/movies/presentation/movies_search_provider.dart';
 import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
@@ -20,9 +21,9 @@ class MoviesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final queuedMovieIds = ref
-        .watch(radarrQueuedMovieIdsProvider)
-        .maybeWhen(data: (ids) => ids, orElse: () => const <int>{});
+    final queue = ref
+        .watch(radarrQueueSnapshotProvider)
+        .maybeWhen(data: (snapshot) => snapshot, orElse: () => null);
 
     return MediaBrowseScaffold<RadarrMovie>(
       title: 'Movies',
@@ -42,11 +43,9 @@ class MoviesScreen extends ConsumerWidget {
       imagesExtractor: (movie) => movie.images,
       idExtractor: (movie) => movie.id,
       statusExtractor: (movie) =>
-          MediaAvailabilityInfo(hasFile: movie.hasFile, status: movie.status),
-      browseStatusExtractor: (movie) =>
-          queuedMovieIds.contains(movie.id) ? MediaStatus.queued : null,
+          radarrMovieStatus(movie, queueEntry: queue?.entryFor(movie.id)),
       onRefresh: (ref) {
-        ref.invalidate(radarrQueuedMovieIdsProvider);
+        ref.invalidate(radarrQueueSnapshotProvider);
       },
       settingsSelector: (settings) =>
           (settings.radarrUrl, settings.radarrApiKey),

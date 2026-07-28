@@ -1,240 +1,575 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import 'package:seekarr/core/app_animation.dart';
+import 'package:seekarr/core/app_elevation.dart';
+import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/release_utils.dart';
+import 'package:seekarr/core/utils/snack_bar_helper.dart';
 
-/// Widget displaying a single release item in the interactive search list.
+/// Semantic tone of a release row.
 ///
-/// Shows release title, metadata (indexer, size, seeders, quality, age),
-/// custom formats, and any rejection reasons.
-class ReleaseListItem extends StatelessWidget {
+/// Drives the status rail, the grab button and the header badge so a list of
+/// releases can be triaged at a glance: green = the *Arr will accept it,
+/// amber = accepted with reservations, red = rejected by the decision engine.
+enum ReleaseStatusTone {
+  approved(AppColors.success, 'Approved'),
+  pending(AppColors.warning, 'Not approved'),
+  rejected(AppColors.error, 'Rejected');
+
+  final Color color;
+  final String label;
+  const ReleaseStatusTone(this.color, this.label);
+}
+
+/// Resolves the [ReleaseStatusTone] for a raw release map.
+///
+/// Shares [releaseIsApproved] with the filter chip and the summary count so all
+/// three agree on what "approved" means.
+ReleaseStatusTone releaseStatusTone(dynamic release) {
+  if (releaseIsRejected(release)) return ReleaseStatusTone.rejected;
+  if (releaseIsApproved(release)) return ReleaseStatusTone.approved;
+  return ReleaseStatusTone.pending;
+}
+
+/// A single release row in the Interactive Search sheet.
+///
+/// Collapsed, the row reads top-down: quality + protocol + custom-format score,
+/// then the release title, then a metadata line (size, age, indexer, peers).
+/// Tapping anywhere expands it to reveal the full title (with copy), the custom
+/// formats breakdown and any rejection reasons.
+class ReleaseListItem extends StatefulWidget {
   final dynamic release;
-  final VoidCallback onGrab;
+
+  /// Null while another row's grab is in flight, which disables this row's grab
+  /// affordance so only one download can be started at a time.
+  final VoidCallback? onGrab;
+
+  /// Shows a spinner in place of the grab affordance while *this* row's grab is
+  /// in flight, and blocks repeated taps.
+  final bool isGrabbing;
 
   const ReleaseListItem({
     super.key,
     required this.release,
     required this.onGrab,
+    this.isGrabbing = false,
   });
 
   @override
+  State<ReleaseListItem> createState() => _ReleaseListItemState();
+}
+
+class _ReleaseListItemState extends State<ReleaseListItem> {
+  bool _expanded = false;
+
+  void _toggle() {
+    HapticFeedback.selectionClick();
+    setState(() => _expanded = !_expanded);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Basic info
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final release = widget.release;
+
+    final tone = releaseStatusTone(release);
     final releaseTitle = release['title'] as String? ?? 'Unknown';
     final indexer = release['indexer'] as String? ?? 'Unknown';
-    final sizeNum = release['size'] as num? ?? 0;
-    final sizeStr = formatReleaseSize(sizeNum.toInt());
-    final seeders = (release['seeders'] as num?)?.toInt() ?? 0;
+    final sizeStr = formatReleaseSize((release['size'] as num? ?? 0).toInt());
+    final seeders = (release['seeders'] as num?)?.toInt();
+    final leechers = (release['leechers'] as num?)?.toInt();
     final quality = release['quality']?['quality']?['name'] as String? ?? '';
-    final ageNum = release['ageMinutes'] as num? ?? 0;
-    final ageStr = formatReleaseAge(ageNum.toInt());
+    final ageStr = formatReleaseAge(
+      (release['ageMinutes'] as num? ?? 0).toInt(),
+    );
+    final protocol = releaseProtocolOf(release);
+    final score = (release['customFormatScore'] as num?)?.toInt() ?? 0;
 
-    // Custom formats
-    final customFormatScore =
-        (release['customFormatScore'] as num?)?.toInt() ?? 0;
-    final customFormats = release['customFormats'] as List<dynamic>? ?? [];
-
-    // Rejection info
-    final rejections = release['rejections'] as List<dynamic>? ?? [];
-    final isRejected = rejections.isNotEmpty;
-    final isApproved = release['approved'] as bool? ?? false;
-
-    // Determine status color
-    Color statusColor;
-    if (isRejected) {
-      statusColor = Colors.red;
-    } else if (isApproved) {
-      statusColor = Colors.green;
-    } else {
-      statusColor = Colors.orange;
-    }
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(8),
-        border: isRejected
-            ? Border.all(color: Colors.red.withValues(alpha: 0.3), width: 1)
-            : null,
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
       ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          leading: _buildLeadingIcon(statusColor, customFormatScore),
-          title: Text(
-            releaseTitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHigh,
+          borderRadius: AppRadius.borderRadiusMd,
+          border: Border.all(
+            color: tone == ReleaseStatusTone.rejected
+                ? tone.color.withValues(alpha: 0.28)
+                : colorScheme.outlineVariant.withValues(alpha: 0.5),
           ),
-          subtitle: _buildSubtitleRow(
-            indexer: indexer,
-            sizeStr: sizeStr,
-            seeders: seeders,
-            quality: quality,
-            ageStr: ageStr,
-          ),
-          trailing: IconButton(
-            icon: const Icon(Icons.download, size: 20),
-            color: statusColor,
-            onPressed: onGrab,
-            tooltip: 'Grab Release',
-          ),
-          children: [
-            // Custom Formats section
-            if (customFormats.isNotEmpty) ...[
-              _buildSectionHeader(context, 'Custom Formats', customFormatScore),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: customFormats.map<Widget>((cf) {
-                  final name = cf['name'] as String? ?? 'Unknown';
-                  final score = (cf['score'] as num?)?.toInt() ?? 0;
-                  return CustomFormatChip(name: name, score: score);
-                }).toList(),
+          boxShadow: AppElevation.level1(colorScheme),
+        ),
+        child: ClipRRect(
+          borderRadius: AppRadius.borderRadiusMd,
+          child: Stack(
+            children: [
+              // Status rail — the fastest signal in the list.
+              Positioned(
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: 3,
+                child: ColoredBox(color: tone.color.withValues(alpha: 0.9)),
               ),
-            ],
-
-            // Rejections section
-            if (isRejected) ...[
-              const SizedBox(height: 12),
-              _buildSectionHeader(
-                context,
-                'Rejection Reasons',
-                null,
-                isError: true,
-              ),
-              ...rejections.map<Widget>((rejection) {
-                final reason = rejection is String
-                    ? rejection
-                    : (rejection['reason'] as String? ?? rejection.toString());
-                return Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 14,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          reason,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.red,
-                          ),
+              Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  onTap: _toggle,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                      AppSpacing.md,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _ReleaseBadgeRow(
+                                    quality: quality,
+                                    protocol: protocol,
+                                    score: score,
+                                    tone: tone,
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    releaseTitle,
+                                    maxLines: _expanded ? 4 : 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  _ReleaseMetaRow(
+                                    indexer: indexer,
+                                    sizeStr: sizeStr,
+                                    ageStr: ageStr,
+                                    seeders: seeders,
+                                    leechers: leechers,
+                                    isTorrent:
+                                        protocol == ReleaseProtocol.torrent,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Column(
+                              children: [
+                                _GrabButton(
+                                  tone: tone,
+                                  busy: widget.isGrabbing,
+                                  onPressed: widget.onGrab,
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                AnimatedRotation(
+                                  turns: _expanded ? 0.5 : 0,
+                                  duration: AppAnimation.durationSm,
+                                  curve: AppAnimation.standardCurve,
+                                  child: Icon(
+                                    Icons.expand_more_rounded,
+                                    size: 18,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        AnimatedSize(
+                          duration: AppAnimation.durationSm,
+                          curve: AppAnimation.standardCurve,
+                          alignment: Alignment.topCenter,
+                          child: _expanded
+                              ? _ReleaseDetails(
+                                  release: release,
+                                  releaseTitle: releaseTitle,
+                                  tone: tone,
+                                  score: score,
+                                )
+                              : const SizedBox(width: double.infinity),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              }),
-            ],
-
-            // Empty custom formats message
-            if (customFormats.isEmpty && !isRejected)
-              const Text(
-                'No custom format data available',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
+                ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildLeadingIcon(Color statusColor, int score) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            score >= 0 ? '+$score' : '$score',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: statusColor,
-            ),
+/// Quality / protocol / custom-format score badges above the release title.
+class _ReleaseBadgeRow extends StatelessWidget {
+  final String quality;
+  final ReleaseProtocol? protocol;
+  final int score;
+  final ReleaseStatusTone tone;
+
+  const _ReleaseBadgeRow({
+    required this.quality,
+    required this.protocol,
+    required this.score,
+    required this.tone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Badges wrap onto a second run instead of overflowing: quality names and
+    // protocol labels vary a lot in width, and the score badge must stay put.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: [
+              if (quality.isNotEmpty)
+                _Pill(
+                  label: quality,
+                  color: colorScheme.primary,
+                  emphasize: true,
+                ),
+              if (protocol != null)
+                _Pill(
+                  label: protocol!.label,
+                  icon: protocol!.icon,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              if (tone == ReleaseStatusTone.rejected)
+                _Pill(
+                  label: tone.label,
+                  icon: Icons.block_rounded,
+                  color: tone.color,
+                ),
+            ],
           ),
-          Text('CF', style: TextStyle(fontSize: 8, color: statusColor)),
-        ],
-      ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        ScoreBadge(score: score),
+      ],
+    );
+  }
+}
+
+/// Metadata line under the release title.
+class _ReleaseMetaRow extends StatelessWidget {
+  final String indexer;
+  final String sizeStr;
+  final String ageStr;
+  final int? seeders;
+  final int? leechers;
+  final bool isTorrent;
+
+  const _ReleaseMetaRow({
+    required this.indexer,
+    required this.sizeStr,
+    required this.ageStr,
+    required this.seeders,
+    required this.leechers,
+    required this.isTorrent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final peerColor = _peerColor(context);
+
+    return Wrap(
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.xs,
+      children: [
+        InfoChip(icon: Icons.storage_outlined, text: sizeStr),
+        InfoChip(icon: Icons.schedule_outlined, text: ageStr),
+        InfoChip(icon: Icons.dns_outlined, text: indexer),
+        if (seeders != null)
+          InfoChip(
+            icon: Icons.arrow_upward_rounded,
+            text: leechers != null && isTorrent
+                ? '$seeders / $leechers'
+                : '$seeders',
+            color: peerColor,
+          ),
+      ],
     );
   }
 
-  Widget _buildSubtitleRow({
-    required String indexer,
-    required String sizeStr,
-    required int seeders,
-    required String quality,
-    required String ageStr,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          InfoChip(icon: Icons.dns_outlined, text: indexer),
-          InfoChip(icon: Icons.storage_outlined, text: sizeStr),
-          InfoChip(icon: Icons.arrow_upward, text: '$seeders'),
-          if (quality.isNotEmpty)
-            InfoChip(icon: Icons.hd_outlined, text: quality),
-          InfoChip(icon: Icons.schedule_outlined, text: ageStr),
-        ],
-      ),
-    );
+  /// Torrents with no seeders will never finish — call that out in colour.
+  Color? _peerColor(BuildContext context) {
+    if (!isTorrent || seeders == null) return null;
+    if (seeders == 0) return AppColors.error;
+    if (seeders! < 5) return AppColors.warning;
+    return AppColors.success;
   }
+}
 
-  Widget _buildSectionHeader(
-    BuildContext context,
-    String title,
-    int? score, {
-    bool isError = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: isError ? Colors.red : Colors.grey[400],
-            ),
-          ),
-          if (score != null) ...[
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: score >= 0
-                    ? Colors.green.withValues(alpha: 0.2)
-                    : Colors.red.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                'Score: ${score >= 0 ? '+$score' : score}',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: score >= 0 ? Colors.green : Colors.red,
+/// Expanded content: full title, custom formats and rejection reasons.
+class _ReleaseDetails extends StatelessWidget {
+  final dynamic release;
+  final String releaseTitle;
+  final ReleaseStatusTone tone;
+  final int score;
+
+  const _ReleaseDetails({
+    required this.release,
+    required this.releaseTitle,
+    required this.tone,
+    required this.score,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final customFormats =
+        release['customFormats'] as List<dynamic>? ?? const [];
+    final rejections = releaseRejectionReasons(release);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        Divider(
+          height: 1,
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+        const SizedBox(height: AppSpacing.md),
+
+        // Full, untruncated release name with a copy affordance.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SelectableText(
+                releaseTitle,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.35,
                 ),
               ),
             ),
+            const SizedBox(width: AppSpacing.sm),
+            IconButton(
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Copy release name',
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: releaseTitle));
+                if (context.mounted) {
+                  SnackBarHelper.info(context, 'Release name copied');
+                }
+              },
+            ),
           ],
+        ),
+
+        if (customFormats.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _SectionHeader(title: 'Custom Formats', score: score),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: customFormats.map<Widget>((cf) {
+              return CustomFormatChip(
+                name: cf['name'] as String? ?? 'Unknown',
+                score: (cf['score'] as num?)?.toInt() ?? 0,
+              );
+            }).toList(),
+          ),
+        ],
+
+        if (rejections.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          const _SectionHeader(title: 'Rejection Reasons', isError: true),
+          const SizedBox(height: AppSpacing.xs),
+          ...rejections.map(
+            (reason) => Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Icon(
+                      Icons.error_outline_rounded,
+                      size: 14,
+                      color: AppColors.error,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      reason,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+
+        if (customFormats.isEmpty && rejections.isEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'No custom format data available',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Circular grab affordance with an inline busy state.
+class _GrabButton extends StatelessWidget {
+  final ReleaseStatusTone tone;
+  final bool busy;
+
+  /// Null while any grab is in flight, which renders the button disabled.
+  final VoidCallback? onPressed;
+
+  const _GrabButton({
+    required this.tone,
+    required this.busy,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: busy
+          ? Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: tone.color,
+                ),
+              ),
+            )
+          : IconButton(
+              icon: const Icon(Icons.download_rounded, size: 20),
+              color: tone.color,
+              onPressed: onPressed,
+              tooltip: onPressed == null
+                  ? 'Another download is starting'
+                  : 'Grab Release',
+              style: IconButton.styleFrom(
+                backgroundColor: tone.color.withValues(
+                  alpha: onPressed == null ? 0.06 : 0.14,
+                ),
+                shape: const CircleBorder(),
+              ),
+            ),
+    );
+  }
+}
+
+/// Section label inside the expanded details, with an optional score badge.
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final int? score;
+  final bool isError;
+
+  const _SectionHeader({required this.title, this.score, this.isError = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        Text(
+          title.toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+            color: isError
+                ? AppColors.error
+                : theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        if (score != null) ...[
+          const Spacer(),
+          _Pill(
+            label: 'Score: ${_signed(score!)}',
+            color: score! >= 0 ? AppColors.success : AppColors.error,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Custom-format score badge shown on the right of the badge row.
+class ScoreBadge extends StatelessWidget {
+  final int score;
+
+  const ScoreBadge({super.key, required this.score});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final neutral = score == 0;
+    final color = neutral
+        ? theme.colorScheme.onSurfaceVariant
+        : (score > 0 ? AppColors.success : AppColors.error);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: neutral ? 0.10 : 0.16),
+        borderRadius: AppRadius.borderRadiusFull,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _signed(score),
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            'CF',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color.withValues(alpha: 0.8),
+              fontSize: 9,
+            ),
+          ),
         ],
       ),
     );
@@ -250,31 +585,39 @@ class CustomFormatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isPositive = score >= 0;
+    final color = isPositive ? AppColors.success : AppColors.error;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
-        color: isPositive
-            ? Colors.green.withValues(alpha: 0.15)
-            : Colors.red.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isPositive
-              ? Colors.green.withValues(alpha: 0.3)
-              : Colors.red.withValues(alpha: 0.3),
-        ),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: AppRadius.borderRadiusFull,
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(name, style: const TextStyle(fontSize: 10)),
-          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
           Text(
-            isPositive ? '+$score' : '$score',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isPositive ? Colors.green : Colors.red,
+            _signed(score),
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
           ),
         ],
@@ -288,17 +631,88 @@ class InfoChip extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const InfoChip({super.key, required this.icon, required this.text});
+  /// Optional semantic tint (e.g. peer health). Defaults to the variant tone.
+  final Color? color;
+
+  const InfoChip({
+    super.key,
+    required this.icon,
+    required this.text,
+    this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final effective = color ?? theme.colorScheme.onSurfaceVariant;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 11, color: Colors.grey),
-        const SizedBox(width: 2),
-        Text(text, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        Icon(icon, size: 13, color: effective),
+        const SizedBox(width: AppSpacing.xs),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(color: effective),
+          ),
+        ),
       ],
     );
   }
 }
+
+/// Compact tinted label used for quality, protocol and status.
+class _Pill extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final Color color;
+  final bool emphasize;
+
+  const _Pill({
+    required this.label,
+    required this.color,
+    this.icon,
+    this.emphasize = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: emphasize ? 0.16 : 0.10),
+        borderRadius: AppRadius.borderRadiusSm,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: emphasize ? FontWeight.w700 : FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _signed(int score) => score >= 0 ? '+$score' : '$score';

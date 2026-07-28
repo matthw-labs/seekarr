@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart' show Color, Icons, ThemeMode;
+import 'package:flutter/material.dart' show Icons, ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/features/settings/domain/nav_tab.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
@@ -119,12 +120,13 @@ void main() {
         'Search',
         'Settings',
       ]);
-      expect(NavTab.values.map((tab) => tab.accentColor), [
-        const Color(0xFF6366F1),
-        const Color(0xFFF59E0B),
-        const Color(0xFF6366F1),
-        const Color(0xFFB4BCCB),
-      ]);
+      // The app shell is a single colour: per-service accents belong to service
+      // surfaces, not to the nav bar. Asserted against the token rather than a
+      // hex literal so a palette change does not need a test edit.
+      expect(
+        NavTab.values.map((tab) => tab.accentColor),
+        everyElement(AppColors.primary),
+      );
     });
   });
 

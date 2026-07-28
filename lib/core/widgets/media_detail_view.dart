@@ -176,17 +176,25 @@ class _HeroBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The dark circle stays 36pt so it reads as a light touch over the backdrop
+    // art, but the tappable area is padded out to the 44pt HIG minimum.
     return SizedBox.square(
-      dimension: 36,
-      child: IconButton.filled(
-        onPressed: () => Navigator.of(context).maybePop(),
-        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-        style: IconButton.styleFrom(
-          backgroundColor: Colors.black.withValues(alpha: 0.45),
-          foregroundColor: Colors.white,
-          padding: EdgeInsets.zero,
+      dimension: 44,
+      child: Center(
+        child: SizedBox.square(
+          dimension: 36,
+          child: IconButton.filled(
+            onPressed: () => Navigator.of(context).maybePop(),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.black.withValues(alpha: 0.45),
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.zero,
+              tapTargetSize: MaterialTapTargetSize.padded,
+            ),
+            icon: const Icon(Icons.chevron_left_rounded, size: 22),
+          ),
         ),
-        icon: const Icon(Icons.chevron_left_rounded, size: 22),
       ),
     );
   }

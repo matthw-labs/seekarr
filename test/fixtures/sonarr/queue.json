@@ -1,0 +1,200 @@
+{
+  "page": 1,
+  "pageSize": 20,
+  "sortKey": "timeleft",
+  "sortDirection": "ascending",
+  "totalRecords": 6,
+  "records": [
+    {
+      "id": 1,
+      "seriesId": 201,
+      "episodeId": 3001,
+      "seasonNumber": 4,
+      "series": {
+        "id": 201,
+        "title": "Series A",
+        "status": "continuing",
+        "monitored": true,
+        "statistics": {
+          "episodeCount": 30,
+          "totalEpisodeCount": 40,
+          "episodeFileCount": 28
+        }
+      },
+      "episode": {
+        "id": 3001,
+        "seriesId": 201,
+        "seasonNumber": 4,
+        "episodeNumber": 7,
+        "title": "Episode Title",
+        "hasFile": false,
+        "monitored": true,
+        "airDateUtc": "2026-07-20T01:00:00Z"
+      },
+      "languages": [{ "id": 1, "name": "English" }],
+      "quality": {
+        "quality": {
+          "id": 9,
+          "name": "HDTV-1080p",
+          "source": "television",
+          "resolution": 1080
+        },
+        "revision": { "version": 1, "real": 0, "isRepack": false }
+      },
+      "size": 2147483648,
+      "title": "Series.A.S04E07.1080p.WEB-DL-GROUP",
+      "sizeleft": 1717986918,
+      "timeleft": "00:08:20",
+      "estimatedCompletionTime": "2026-07-28T12:08:20Z",
+      "status": "downloading",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "protocol": "usenet",
+      "downloadClient": "Download Client",
+      "indexer": "Indexer",
+      "outputPath": "/downloads/complete/series-a"
+    },
+    {
+      "id": 2,
+      "seriesId": 201,
+      "episodeId": 3002,
+      "seasonNumber": 4,
+      "series": {
+        "id": 201,
+        "title": "Series A",
+        "status": "continuing",
+        "monitored": true
+      },
+      "episode": {
+        "id": 3002,
+        "seriesId": 201,
+        "seasonNumber": 4,
+        "episodeNumber": 8,
+        "title": "Episode Title",
+        "hasFile": false,
+        "monitored": true
+      },
+      "size": 2147483648,
+      "title": "Series.A.S04E08.1080p.WEB-DL-GROUP",
+      "sizeleft": 429496729,
+      "status": "downloading",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "protocol": "usenet"
+    },
+    {
+      "id": 3,
+      "seriesId": 201,
+      "episodeId": 3003,
+      "seasonNumber": 4,
+      "series": {
+        "id": 201,
+        "title": "Series A",
+        "status": "continuing",
+        "monitored": true
+      },
+      "episode": {
+        "id": 3003,
+        "seriesId": 201,
+        "seasonNumber": 4,
+        "episodeNumber": 9,
+        "title": "Episode Title",
+        "hasFile": false,
+        "monitored": true
+      },
+      "size": 2147483648,
+      "title": "Series.A.S04E09.1080p.WEB-DL-GROUP",
+      "sizeleft": 2147483648,
+      "status": "queued",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "protocol": "usenet"
+    },
+    {
+      "id": 4,
+      "seriesId": 202,
+      "episodeId": 3010,
+      "seasonNumber": 1,
+      "series": {
+        "id": 202,
+        "title": "Series B",
+        "status": "ended",
+        "monitored": true,
+        "statistics": {
+          "episodeCount": 10,
+          "totalEpisodeCount": 10,
+          "episodeFileCount": 0
+        }
+      },
+      "episode": {
+        "id": 3010,
+        "seriesId": 202,
+        "seasonNumber": 1,
+        "episodeNumber": 1,
+        "title": "Episode Title",
+        "hasFile": false,
+        "monitored": true
+      },
+      "size": 1073741824,
+      "title": "Series.B.S01E01.1080p.WEB-DL-GROUP",
+      "sizeleft": 0,
+      "status": "completed",
+      "trackedDownloadStatus": "warning",
+      "trackedDownloadState": "importBlocked",
+      "statusMessages": [
+        {
+          "title": "Series.B.S01E01.1080p.WEB-DL-GROUP",
+          "messages": ["Unable to Import Automatically"]
+        }
+      ],
+      "protocol": "usenet"
+    },
+    {
+      "id": 5,
+      "seriesId": 203,
+      "episodeId": 3020,
+      "seasonNumber": 2,
+      "series": {
+        "id": 203,
+        "title": "Series C",
+        "status": "continuing",
+        "monitored": true
+      },
+      "episode": {
+        "id": 3020,
+        "seriesId": 203,
+        "seasonNumber": 2,
+        "episodeNumber": 5,
+        "title": "Episode Title",
+        "hasFile": false,
+        "monitored": true
+      },
+      "size": 3221225472,
+      "title": "Series.C.S02E05.2160p.WEB-DL-GROUP",
+      "sizeleft": 3221225472,
+      "status": "failed",
+      "trackedDownloadStatus": "error",
+      "trackedDownloadState": "failed",
+      "errorMessage": "The download failed in the download client",
+      "statusMessages": [],
+      "protocol": "torrent"
+    },
+    {
+      "id": 6,
+      "episodeId": 0,
+      "series": null,
+      "episode": null,
+      "size": 524288000,
+      "title": "Unknown.Release.1080p.WEB-DL-GROUP",
+      "sizeleft": 262144000,
+      "status": "downloading",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "protocol": "usenet"
+    }
+  ]
+}

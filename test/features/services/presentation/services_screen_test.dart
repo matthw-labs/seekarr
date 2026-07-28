@@ -231,7 +231,7 @@ List<Override> _providerOverrides({
             title: 'A Quiet Place',
             tmdbId: 123,
             posterPath: '/quiet-place.jpg',
-            status: MediaAvailability.available,
+            status: SeerrMediaAvailability.available,
           ),
           createdAt: '2024-01-01',
           type: 'movie',

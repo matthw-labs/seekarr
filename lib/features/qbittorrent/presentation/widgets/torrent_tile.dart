@@ -32,7 +32,8 @@ class TorrentTile extends StatelessWidget {
         color: selected
             ? AppColors.qbittorrent.withValues(alpha: 0.08)
             : colorScheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusMd,
+        // `shape` already carries the radius; passing `borderRadius` as well
+        // trips a Material assertion and blanks the whole list.
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.borderRadiusMd,
           side: BorderSide(
@@ -101,7 +102,9 @@ class TorrentTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    badge,
+                    // Flexible so a long state label — or any label at a large
+                    // text scale — shrinks instead of overflowing the row.
+                    Flexible(child: badge),
                   ],
                 ),
                 if (torrent.progress < 1 &&
@@ -127,20 +130,31 @@ class TorrentTile extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    if (isActive && torrent.dlSpeed > 0) ...[
-                      _SpeedLabel(
-                        speed: torrent.dlSpeedFormatted,
-                        color: AppColors.qbittorrent,
+                    // The speed labels give way to the progress figure when
+                    // space is tight (narrow screen, large text scale).
+                    Expanded(
+                      child: Row(
+                        children: [
+                          if (isActive && torrent.dlSpeed > 0) ...[
+                            Flexible(
+                              child: _SpeedLabel(
+                                speed: torrent.dlSpeedFormatted,
+                                color: AppColors.qbittorrent,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          if (isActive && torrent.upSpeed > 0)
+                            Flexible(
+                              child: _SpeedLabel(
+                                speed: torrent.upSpeedFormatted,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                    ],
-                    if (isActive && torrent.upSpeed > 0) ...[
-                      _SpeedLabel(
-                        speed: torrent.upSpeedFormatted,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ],
-                    const Spacer(),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
                     Text(
                       torrent.progressFormatted,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -172,6 +186,8 @@ class TorrentTile extends StatelessWidget {
       ),
       child: Text(
         state.label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: foreground,
           fontSize: 9,
@@ -246,12 +262,16 @@ class _SpeedLabel extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
-        Text(
-          speed,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: color,
-            fontSize: 10,
-            fontFeatures: const [FontFeature.tabularFigures()],
+        Flexible(
+          child: Text(
+            speed,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontSize: 10,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ],

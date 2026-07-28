@@ -14,7 +14,15 @@ import 'package:seekarr/features/settings/domain/service_key.dart';
 class DiscoverCollectionBanner extends StatelessWidget {
   final CollectionInfo collection;
 
-  const DiscoverCollectionBanner({super.key, required this.collection});
+  /// Accent for the section rule; see [DiscoverCastList.accent] — this widget is
+  /// reused inside the Radarr/Sonarr detail screens.
+  final Color? accent;
+
+  const DiscoverCollectionBanner({
+    super.key,
+    required this.collection,
+    this.accent,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +38,7 @@ class DiscoverCollectionBanner extends StatelessWidget {
       children: [
         MediaDetailSectionHeader(
           title: 'Collection',
-          accent: ServiceKey.seerr.accent,
+          accent: accent ?? ServiceKey.seerr.accent,
         ),
         PressableScale(
           onTap: () => context.push(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/release_list_widgets.dart';
 
 void main() {
@@ -104,28 +105,52 @@ void main() {
       expect(grabbed, isTrue);
     });
 
-    testWidgets('uses a green action color for approved releases', (
-      tester,
-    ) async {
+    testWidgets('uses the success tone for approved releases', (tester) async {
       await _pumpReleaseItem(
         tester,
         release: buildRelease(approved: true, rejections: const []),
       );
 
-      final button = tester.widget<IconButton>(find.byType(IconButton));
-      expect(button.color, Colors.green);
+      expect(_grabButtonColor(tester), AppColors.success);
     });
 
-    testWidgets('uses an orange action color for pending releases', (
-      tester,
-    ) async {
+    testWidgets('uses the warning tone for pending releases', (tester) async {
       await _pumpReleaseItem(
         tester,
         release: buildRelease(approved: false, rejections: const []),
       );
 
-      final button = tester.widget<IconButton>(find.byType(IconButton));
-      expect(button.color, Colors.orange);
+      expect(_grabButtonColor(tester), AppColors.warning);
+    });
+
+    testWidgets('shows a spinner instead of the grab button while grabbing', (
+      tester,
+    ) async {
+      await _pumpReleaseItem(
+        tester,
+        release: buildRelease(),
+        isGrabbing: true,
+        settle: false,
+      );
+
+      expect(find.byTooltip('Grab Release'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('shows the protocol and peer counts for torrents', (
+      tester,
+    ) async {
+      await _pumpReleaseItem(
+        tester,
+        release: {
+          ...buildRelease(seeders: 12),
+          'protocol': 'torrent',
+          'leechers': 3,
+        },
+      );
+
+      expect(find.text('Torrent'), findsOneWidget);
+      expect(find.text('12 / 3'), findsOneWidget);
     });
 
     testWidgets('shows string rejection reasons for rejected releases', (
@@ -141,9 +166,8 @@ void main() {
 
       await _expandRelease(tester);
 
-      final button = tester.widget<IconButton>(find.byType(IconButton));
-      expect(button.color, Colors.red);
-      expect(find.text('Rejection Reasons'), findsOneWidget);
+      expect(_grabButtonColor(tester), AppColors.error);
+      expect(find.text('REJECTION REASONS'), findsOneWidget);
       expect(find.text('Minimum seeders not met'), findsOneWidget);
     });
 
@@ -181,7 +205,7 @@ void main() {
 
       await _expandRelease(tester);
 
-      expect(find.text('Custom Formats'), findsOneWidget);
+      expect(find.text('CUSTOM FORMATS'), findsOneWidget);
       expect(find.text('Score: +4'), findsOneWidget);
       expect(find.text('HDR'), findsOneWidget);
       expect(find.text('+5'), findsOneWidget);
@@ -200,6 +224,39 @@ void main() {
       await _expandRelease(tester);
 
       expect(find.text('No custom format data available'), findsOneWidget);
+    });
+
+    testWidgets('does not overflow on a narrow screen with long labels', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await _pumpReleaseItem(
+        tester,
+        release: {
+          ...buildRelease(
+            title:
+                'Avatar.2009.Extended.Collectors.Edition.2160p.BluRay.DV.HDR.'
+                '10.bit.Encode.AV1.DTS.5.1-R and H',
+            indexer: 'Treasure Maps (Prowlarr)',
+            quality: {
+              'quality': {'name': 'Bluray-2160p Remux'},
+            },
+            customFormatScore: 2500,
+            rejections: const ['Italian is wanted, but found English'],
+            approved: false,
+          ),
+          'protocol': 'usenet',
+        },
+      );
+
+      expect(tester.takeException(), isNull);
+
+      await _expandRelease(tester);
+
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('formats file sizes across units', (tester) async {
@@ -260,22 +317,45 @@ Future<void> _pumpReleaseItem(
   WidgetTester tester, {
   required Map<String, dynamic> release,
   VoidCallback onGrab = _noop,
+  bool isGrabbing = false,
+  bool settle = true,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
         body: SingleChildScrollView(
-          child: ReleaseListItem(release: release, onGrab: onGrab),
+          child: ReleaseListItem(
+            release: release,
+            onGrab: onGrab,
+            isGrabbing: isGrabbing,
+          ),
         ),
       ),
     ),
   );
+  // A busy row spins forever, so settling is opt-out.
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
+}
+
+/// Taps the card body (anywhere but the grab button) to expand the details.
+Future<void> _expandRelease(WidgetTester tester) async {
+  await tester.tap(find.byType(InkWell).first);
   await tester.pumpAndSettle();
 }
 
-Future<void> _expandRelease(WidgetTester tester) async {
-  await tester.tap(find.byType(ExpansionTile));
-  await tester.pumpAndSettle();
+Color? _grabButtonColor(WidgetTester tester) {
+  return tester
+      .widget<IconButton>(
+        find.ancestor(
+          of: find.byTooltip('Grab Release'),
+          matching: find.byType(IconButton),
+        ),
+      )
+      .color;
 }
 
 void _noop() {}

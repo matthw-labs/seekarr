@@ -62,7 +62,7 @@ _providerOverrides() {
             title: 'A Quiet Place',
             tmdbId: 123,
             posterPath: '/quiet-place.jpg',
-            status: MediaAvailability.available,
+            status: SeerrMediaAvailability.available,
           ),
           createdAt: '2026-05-02T10:00:00Z',
           type: 'movie',
@@ -73,7 +73,7 @@ _providerOverrides() {
           status: RequestStatus.approved,
           media: RequestMedia(
             title: 'Shogun',
-            status: MediaAvailability.partiallyAvailable,
+            status: SeerrMediaAvailability.partiallyAvailable,
           ),
           createdAt: '2026-05-01T10:00:00Z',
           type: 'tv',

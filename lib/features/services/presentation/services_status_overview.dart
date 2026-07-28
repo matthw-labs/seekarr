@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/domain_section.dart';
@@ -224,7 +225,13 @@ class ServiceStatusGrid extends ConsumerWidget {
       // Peek ~80% of the next column to hint scrollable content.
       cardWidth = (screenWidth - AppSpacing.lg - AppSpacing.sm) / 1.8;
     }
-    const cardHeight = 76.0;
+    // Two text lines per card (name + host/metric), so the card has to follow
+    // the reading size or both lines clip.
+    final cardHeight = TextScaleMetrics.boxHeight(
+      context,
+      base: 76.0,
+      textHeight: 34,
+    );
     final gridHeight = cardHeight * rows + (rows > 1 ? AppSpacing.sm : 0);
 
     return Padding(

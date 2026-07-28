@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
+import 'package:seekarr/features/music/domain/lidarr_status.dart';
 import 'package:seekarr/features/music/domain/models/lidarr_artist.dart';
 import 'package:seekarr/features/music/presentation/music_provider.dart';
 import 'package:seekarr/features/music/presentation/music_search_provider.dart';
@@ -20,9 +21,9 @@ class MusicScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final queuedArtistIds = ref
-        .watch(lidarrQueuedArtistIdsProvider)
-        .maybeWhen(data: (ids) => ids, orElse: () => const <int>{});
+    final queue = ref
+        .watch(lidarrQueueSnapshotsProvider)
+        .maybeWhen(data: (snapshots) => snapshots.byArtist, orElse: () => null);
 
     return MediaBrowseScaffold<LidarrArtist>(
       title: 'Music',
@@ -43,16 +44,10 @@ class MusicScreen extends ConsumerWidget {
       sortTitleExtractor: (artist) => artist.artistName,
       imagesExtractor: (artist) => artist.images,
       idExtractor: (artist) => artist.id,
-      statusExtractor: (artist) => MediaAvailabilityInfo(
-        hasFile: artist.hasFiles,
-        status: artist.status,
-        fileCount: artist.trackFileCount,
-        totalCount: artist.trackCount,
-      ),
-      browseStatusExtractor: (artist) =>
-          queuedArtistIds.contains(artist.id) ? MediaStatus.queued : null,
+      statusExtractor: (artist) =>
+          lidarrArtistStatus(artist, queueEntry: queue?.entryFor(artist.id)),
       onRefresh: (ref) {
-        ref.invalidate(lidarrQueuedArtistIdsProvider);
+        ref.invalidate(lidarrQueueSnapshotsProvider);
       },
       settingsSelector: (settings) =>
           (settings.lidarrUrl, settings.lidarrApiKey),

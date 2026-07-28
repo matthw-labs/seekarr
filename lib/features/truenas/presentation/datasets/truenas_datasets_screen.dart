@@ -108,7 +108,9 @@ class _DatasetNode extends StatelessWidget {
           tooltip: 'Details',
           visualDensity: VisualDensity.compact,
           padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          // 44pt hit area even though the glyph is 16pt: the visual stays
+          // compact in a dense tree while the target meets the HIG minimum.
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           onPressed: () =>
               context.push(ServiceRoutes.truenasDataset(dataset.id)),
         ),

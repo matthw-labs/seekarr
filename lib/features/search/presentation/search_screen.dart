@@ -532,8 +532,19 @@ class _SearchEmptyState extends ConsumerWidget {
                 style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
               ),
               const Spacer(),
-              GestureDetector(
-                onTap: () => ref.read(recentSearchesProvider.notifier).clear(),
+              // TextButton rather than a bare GestureDetector on 11pt text: it
+              // brings a 44pt hit area, a button role for screen readers and a
+              // press state for free.
+              TextButton(
+                onPressed: () =>
+                    ref.read(recentSearchesProvider.notifier).clear(),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(44, 44),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
                 child: Text(
                   'Clear',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(

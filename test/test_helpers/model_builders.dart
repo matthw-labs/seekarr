@@ -27,6 +27,7 @@ RadarrMovie buildMovie({
   List<String> genres = const [],
   List<RatingSource> ratings = const [],
   List<dynamic> images = const [],
+  bool? isAvailable,
 }) {
   return RadarrMovie(
     id: id,
@@ -46,6 +47,7 @@ RadarrMovie buildMovie({
     genres: genres,
     certification: certification,
     ratings: ratings,
+    isAvailable: isAvailable,
   );
 }
 

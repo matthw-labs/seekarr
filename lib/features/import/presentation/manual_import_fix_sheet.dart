@@ -771,6 +771,7 @@ class _SearchStep extends StatelessWidget {
           trailing: [
             if (controller.text.isNotEmpty)
               IconButton(
+                tooltip: 'Clear search',
                 onPressed: () {
                   controller.clear();
                   onChanged('');
