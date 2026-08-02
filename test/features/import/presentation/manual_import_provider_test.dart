@@ -140,6 +140,17 @@ void main() {
       );
     });
 
+    test('a receiveTimeout blames the slow answer, not the URL', () {
+      final err = DioException(
+        requestOptions: RequestOptions(path: '/api/v3/manualimport'),
+        type: DioExceptionType.receiveTimeout,
+      );
+      final msg = mapImportError(err, ServiceKey.sonarr);
+      expect(msg, contains('took too long to answer'));
+      // The connection succeeded, so pointing at the URL is misleading.
+      expect(msg, isNot(contains('Check the URL')));
+    });
+
     test('returns the 500 hint message for statusCode 500 (radarr)', () {
       final err = DioException(
         requestOptions: RequestOptions(path: '/api/v3/command'),
@@ -383,6 +394,230 @@ void main() {
         expect(state.error, isNull);
       },
     );
+  });
+
+  group('ManualImportFlowNotifier.loadSelectedFolderItems', () {
+    test('preselects only files that are ready for import', () async {
+      final client = FakeApiClient();
+      client.getResponseQueue.addAll([
+        // getRootFolders
+        [
+          {'id': 1, 'path': '/downloads', 'accessible': true},
+        ],
+        // getFileSystem for '/'
+        {'parent': null, 'directories': <dynamic>[], 'files': <dynamic>[]},
+        // getManualImportItems
+        [
+          {
+            'path': '/downloads/Ready.mkv',
+            'name': 'Ready.mkv',
+            'movie': {'id': 42, 'title': 'Ready Movie'},
+          },
+          {'path': '/downloads/Unmatched.mkv', 'name': 'Unmatched.mkv'},
+          {
+            'path': '/downloads/Imported.mkv',
+            'name': 'Imported.mkv',
+            'movie': {'id': 7, 'title': 'Old Movie'},
+            'movieFileId': 99,
+          },
+        ],
+      ]);
+      final container = _container(client: client, service: ServiceKey.radarr);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      await notifier.start(ServiceKey.radarr, force: true);
+      await notifier.loadSelectedFolderItems();
+
+      final state = container.read(manualImportFlowProvider);
+      expect(state.items.length, 3);
+      // Only the fully matched file enters the import selection; the
+      // unmatched one waits in the attention group until it is fixed.
+      expect(state.selectedPaths, {'/downloads/Ready.mkv'});
+      expect(state.readyItems.map((item) => item.path), [
+        '/downloads/Ready.mkv',
+      ]);
+      expect(state.attentionItems.map((item) => item.path), [
+        '/downloads/Unmatched.mkv',
+      ]);
+      expect(state.importedItems.map((item) => item.path), [
+        '/downloads/Imported.mkv',
+      ]);
+      expect(state.canImportSelected, isTrue);
+    });
+
+    test('toggleItem refuses a file that is not ready', () {
+      final container = _container(
+        client: FakeApiClient(),
+        service: ServiceKey.radarr,
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      final unmatched = _radarrItem(movieId: 0, path: '/downloads/x.mkv');
+      final ready = _radarrItem(movieId: 5, path: '/downloads/y.mkv');
+      notifier.state = container
+          .read(manualImportFlowProvider)
+          .copyWith(service: ServiceKey.radarr, items: [unmatched, ready]);
+
+      notifier.toggleItem(unmatched, true);
+      expect(container.read(manualImportFlowProvider).selectedPaths, isEmpty);
+
+      notifier.toggleItem(ready, true);
+      expect(container.read(manualImportFlowProvider).selectedPaths, {
+        '/downloads/y.mkv',
+      });
+    });
+  });
+
+  group('a submitted batch can never be submitted twice', () {
+    FakeApiClient commandClient({String status = 'started'}) {
+      final client = FakeApiClient();
+      client.postResponseData = {'id': 77, 'status': status};
+      return client;
+    }
+
+    ProviderContainer seeded(FakeApiClient client, {int fileCount = 2}) {
+      final container = _container(client: client, service: ServiceKey.radarr);
+      final items = [
+        for (var index = 0; index < fileCount; index++)
+          _radarrItem(movieId: 100 + index, path: '/downloads/file$index.mkv'),
+      ];
+      container.read(manualImportFlowProvider.notifier).state = container
+          .read(manualImportFlowProvider)
+          .copyWith(
+            service: ServiceKey.radarr,
+            items: items,
+            selectedPaths: items.map((item) => item.path).toSet(),
+          );
+      return container;
+    }
+
+    test('the selection is spent once the command is posted', () async {
+      final client = commandClient();
+      final container = seeded(client);
+      addTearDown(container.dispose);
+      final notifier = container.read(manualImportFlowProvider.notifier);
+
+      final command = await notifier.confirmImport();
+      expect(command, isNotNull);
+      expect(client.postCallCount, 1);
+
+      final state = container.read(manualImportFlowProvider);
+      // Nothing left selected, nothing left ready: the button behind Track is
+      // disabled rather than armed with the same files.
+      expect(state.selectedPaths, isEmpty);
+      expect(state.readyItems, isEmpty);
+      expect(state.canImportSelected, isFalse);
+      expect(state.submittedPaths, {
+        '/downloads/file0.mkv',
+        '/downloads/file1.mkv',
+      });
+      expect(state.inFlightItems, hasLength(2));
+    });
+
+    test('pressing import again while it runs posts nothing', () async {
+      final client = commandClient();
+      final container = seeded(client);
+      addTearDown(container.dispose);
+      final notifier = container.read(manualImportFlowProvider.notifier);
+
+      await notifier.confirmImport();
+      // Simulate the user going back to Review and hitting the button again —
+      // the old flow queued a second identical ManualImport command here.
+      final again = await notifier.confirmImport();
+
+      expect(client.postCallCount, 1);
+      // Returns the running command so the caller just navigates to Track.
+      expect(again?.id, 77);
+      expect(container.read(manualImportFlowProvider).error, isNull);
+    });
+
+    test('a completed command keeps its files out of reach', () async {
+      final client = commandClient(status: 'completed');
+      final container = seeded(client);
+      addTearDown(container.dispose);
+      final notifier = container.read(manualImportFlowProvider.notifier);
+
+      await notifier.confirmImport();
+      // This is the FileNotFoundException case: the service already moved these
+      // files into the library, so re-posting them can only fail.
+      await notifier.confirmImport();
+
+      expect(client.postCallCount, 1);
+      final state = container.read(manualImportFlowProvider);
+      expect(state.readyItems, isEmpty);
+      expect(state.blockedPaths, hasLength(2));
+    });
+
+    test('toggling a submitted file back on is refused', () async {
+      final client = commandClient();
+      final container = seeded(client);
+      addTearDown(container.dispose);
+      final notifier = container.read(manualImportFlowProvider.notifier);
+
+      await notifier.confirmImport();
+      final submitted = container.read(manualImportFlowProvider).items.first;
+      notifier.toggleItem(submitted, true);
+      notifier.toggleAllReady();
+
+      expect(container.read(manualImportFlowProvider).selectedPaths, isEmpty);
+    });
+
+    test(
+      'a failed command releases its files so a retry is possible',
+      () async {
+        final client = commandClient(status: 'failed');
+        final container = seeded(client);
+        addTearDown(container.dispose);
+        final notifier = container.read(manualImportFlowProvider.notifier);
+
+        await notifier.confirmImport();
+
+        final state = container.read(manualImportFlowProvider);
+        // The files are still on disk — the import did not happen — so the user
+        // must be able to fix the cause and try again.
+        expect(state.blockedPaths, isEmpty);
+        expect(state.readyItems, hasLength(2));
+
+        notifier.toggleAllReady();
+        expect(
+          container.read(manualImportFlowProvider).selectedPaths,
+          hasLength(2),
+        );
+        await notifier.confirmImport();
+        expect(client.postCallCount, 2);
+      },
+    );
+
+    test('refreshing after import keeps the command and the block', () async {
+      final client = commandClient();
+      client.getResponseQueue.add([
+        // The service still lists the file: the import is in flight, the move
+        // has not happened yet. It must not become selectable again.
+        {
+          'path': '/downloads/file0.mkv',
+          'name': 'file0',
+          'movie': {'id': 100, 'title': 'Some Movie'},
+        },
+      ]);
+      final container = seeded(client, fileCount: 1);
+      addTearDown(container.dispose);
+      container.read(manualImportFlowProvider.notifier).state = container
+          .read(manualImportFlowProvider)
+          .copyWith(selectedFolder: '/downloads');
+      final notifier = container.read(manualImportFlowProvider.notifier);
+
+      await notifier.confirmImport();
+      await notifier.refreshAfterImport();
+
+      final state = container.read(manualImportFlowProvider);
+      expect(state.command?.id, 77);
+      expect(state.blockedPaths, {'/downloads/file0.mkv'});
+      expect(state.readyItems, isEmpty);
+      expect(state.selectedPaths, isEmpty);
+      expect(state.inFlightItems, hasLength(1));
+    });
   });
 
   group('ManualImportFlowNotifier.confirmImport', () {

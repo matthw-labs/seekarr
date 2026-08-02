@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_animation.dart';
+import 'package:seekarr/core/app_elevation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/import/domain/manual_import_models.dart';
 import 'package:seekarr/features/import/presentation/manual_import_provider.dart';
 import 'package:seekarr/features/import/presentation/manual_import_widgets.dart';
@@ -68,22 +71,14 @@ class _FixSheetChrome extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainer,
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppRadius.xl),
+          top: Radius.circular(AppRadius.lg),
         ),
-        border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
+        boxShadow: AppElevation.level3(colorScheme),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          const SizedBox(height: AppSpacing.sm),
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
-              borderRadius: AppRadius.borderRadiusFull,
-            ),
-          ),
+          const AppSheetHandle(),
           Expanded(child: child),
         ],
       ),
@@ -151,17 +146,21 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
       _ => 'Assign identity',
     };
     final subtitle = widget.isBulk
-        ? '$bulkCount unmatched files'
-        : widget.item?.name ?? 'Unmatched file';
+        ? 'Applying one identity to $bulkCount files'
+        : widget.item?.fileName ?? 'Unmatched file';
 
     return Column(
       children: [
         _SheetHeader(service: service, title: title, subtitle: subtitle),
+        // Naming the files is the guard against a bulk assignment doing
+        // something the user did not intend: one identity across a mixed
+        // selection is only ever correct if they can see what is in it.
+        if (widget.isBulk) _AppliesToStrip(items: widget.bulkItems),
         if (service != ServiceKey.radarr)
-          _FixStepper(
+          ImportStationBar(
             service: service,
-            labels: _stepLabels(service),
-            step: _step,
+            stations: _stepLabels(service),
+            activeIndex: _step,
           ),
         Expanded(
           child: AnimatedSwitcher(
@@ -578,7 +577,7 @@ class _SheetHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -588,14 +587,16 @@ class _SheetHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: service.accent.withValues(alpha: 0.15),
-              borderRadius: AppRadius.borderRadiusFull,
+          ExcludeSemantics(
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: serviceThemeFor(service).softContainer,
+                borderRadius: AppRadius.borderRadiusMd,
+              ),
+              child: Icon(service.icon, color: service.accent, size: 20),
             ),
-            child: Icon(service.icon, color: service.accent, size: 20),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -604,18 +605,18 @@ class _SheetHeader extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                // Wraps in full. Assigning an identity means reading the file
+                // name for the clues the service could not parse — the year,
+                // the date, the episode marker — so eliding it to one line
+                // hides the only evidence the decision can be made from.
                 Text(
                   subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurfaceVariant,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -627,20 +628,18 @@ class _SheetHeader extends StatelessWidget {
   }
 }
 
-class _FixStepper extends StatelessWidget {
-  final ServiceKey service;
-  final List<String> labels;
-  final int step;
+/// The files a bulk assignment will be written to.
+class _AppliesToStrip extends StatelessWidget {
+  final List<ManualImportItem> items;
 
-  const _FixStepper({
-    required this.service,
-    required this.labels,
-    required this.step,
-  });
+  const _AppliesToStrip({required this.items});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    const visible = 3;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -648,87 +647,36 @@ class _FixStepper extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.md,
       ),
-      child: Row(
-        children: [
-          for (var index = 0; index < labels.length; index++) ...[
-            _StepDot(
-              service: service,
-              label: labels[index],
-              active: index == step,
-              done: index < step,
-            ),
-            if (index != labels.length - 1)
-              Expanded(
-                child: Container(
-                  height: 2,
-                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                  color: index < step
-                      ? service.accent
-                      : colorScheme.outlineVariant,
+      child: AppCard.filled(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        backgroundColor: colorScheme.surfaceContainerHigh,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Full names, wrapped: this list is the guard against a bulk
+            // assignment doing something unintended, and a truncated name
+            // cannot be checked.
+            for (final item in items.take(visible))
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Text(
+                  item.fileName,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            if (items.length > visible)
+              Text(
+                '+${items.length - visible} more',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
           ],
-        ],
+        ),
       ),
-    );
-  }
-}
-
-class _StepDot extends StatelessWidget {
-  final ServiceKey service;
-  final String label;
-  final bool active;
-  final bool done;
-
-  const _StepDot({
-    required this.service,
-    required this.label,
-    required this.active,
-    required this.done,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final highlighted = active || done;
-    return Column(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: highlighted
-                ? service.accent
-                : colorScheme.surfaceContainerHigh,
-            borderRadius: AppRadius.borderRadiusFull,
-            border: Border.all(
-              color: highlighted ? service.accent : colorScheme.outlineVariant,
-            ),
-          ),
-          child: done
-              ? const Icon(Icons.check_rounded, color: Colors.white, size: 14)
-              : Text(
-                  label.characters.first,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: highlighted
-                        ? Colors.white
-                        : colorScheme.onSurfaceVariant,
-                  ),
-                ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
-            color: highlighted ? service.accent : colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -787,27 +735,26 @@ class _SearchStep extends StatelessWidget {
           onChanged: onChanged,
           elevation: WidgetStateProperty.all(0),
           backgroundColor: WidgetStateProperty.all(
-            colorScheme.surfaceContainerHigh,
+            colorScheme.surfaceContainerHighest,
           ),
-          side: WidgetStateProperty.all(
-            BorderSide(color: service.accent, width: 1.5),
-          ),
+          side: WidgetStateProperty.all(BorderSide.none),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
           ),
-          constraints: const BoxConstraints(minHeight: 40),
+          constraints: const BoxConstraints(minHeight: 48),
           padding: WidgetStateProperty.all(
             const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         if (!loading && results.isEmpty)
-          ImportMessage(
+          AppEmptyState.compact(
             icon: Icons.manage_search_rounded,
-            message: 'No matches available',
-            detail: controller.text.trim().isEmpty
+            title: 'No matches available',
+            message: controller.text.trim().isEmpty
                 ? 'No items were found in your library for this service.'
                 : 'Try a different query to filter the library or load more results.',
+            accentColor: service.accent,
           ),
         for (final result in results)
           _ResultTile(
@@ -845,9 +792,10 @@ class _ChoiceList<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (values.isEmpty) {
-      return ImportMessage(
+      return AppEmptyState.compact(
         icon: Icons.manage_search_rounded,
-        message: emptyMessage,
+        title: emptyMessage,
+        accentColor: service.accent,
       );
     }
     return ListView.builder(
@@ -894,9 +842,10 @@ class _BulkMap<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     if (values.isEmpty) {
-      return const ImportMessage(
+      return AppEmptyState.compact(
         icon: Icons.manage_search_rounded,
-        message: 'No assignable items found.',
+        title: 'No assignable items found',
+        accentColor: service.accent,
       );
     }
     return ListView.separated(
@@ -921,13 +870,12 @@ class _BulkMap<T> extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                item.name,
+                item.fileName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: AppSpacing.sm),
               DropdownButtonFormField<T>(
@@ -988,26 +936,25 @@ class _ResultTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final accent = service.accent;
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       decoration: BoxDecoration(
         color: selected ? accent.withValues(alpha: 0.1) : Colors.transparent,
         borderRadius: AppRadius.borderRadiusSm,
-        border: Border.all(
-          color: selected ? accent.withValues(alpha: 0.45) : Colors.transparent,
-        ),
       ),
       child: ListTile(
-        dense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        selected: selected,
+        selectedColor: colorScheme.onSurface,
         leading: Container(
-          width: 28,
-          height: 40,
+          width: 36,
+          height: 36,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHigh,
+            color: serviceThemeFor(service).softContainer,
             borderRadius: AppRadius.borderRadiusSm,
           ),
           child: Icon(service.icon, size: 16, color: accent),
@@ -1016,7 +963,9 @@ class _ResultTile extends StatelessWidget {
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
         ),
         subtitle: subtitle == null
             ? null
@@ -1024,13 +973,12 @@ class _ResultTile extends StatelessWidget {
                 subtitle!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10,
+                style: theme.textTheme.labelSmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
         trailing: selected
-            ? Icon(Icons.check_rounded, size: 16, color: accent)
+            ? Icon(Icons.check_rounded, size: 18, color: accent)
             : null,
         onTap: onTap,
       ),
@@ -1091,15 +1039,15 @@ class _SheetFooter extends StatelessWidget {
                 : (canGoNext ? onNext : null),
             style: FilledButton.styleFrom(
               backgroundColor: service.accent,
-              foregroundColor: Colors.white,
-              shape: const StadiumBorder(),
+              foregroundColor: ServiceTheme.foregroundOn(service.accent),
+              minimumSize: const Size(0, 48),
             ),
             child: applying
-                ? const SizedBox.square(
+                ? SizedBox.square(
                     dimension: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: ServiceTheme.foregroundOn(service.accent),
                     ),
                   )
                 : Text(isLastStep ? 'Apply' : 'Next'),

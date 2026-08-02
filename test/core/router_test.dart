@@ -20,7 +20,7 @@ import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/settings/presentation/settings_appearance_screen.dart';
-import 'package:seekarr/features/settings/presentation/settings_services_screen.dart';
+import 'package:seekarr/features/settings/presentation/settings_connections_screen.dart';
 import 'package:seekarr/features/settings/presentation/service_settings_screen.dart';
 
 import '../test_helpers/fake_services.dart';
@@ -218,7 +218,7 @@ void main() {
       expect(find.text('Seerr Settings'), findsOneWidget);
     });
 
-    testWidgets('supports appearance and services settings subroutes', (
+    testWidgets('supports appearance and connections settings subroutes', (
       tester,
     ) async {
       final container = await _pumpRouter(tester);
@@ -229,10 +229,26 @@ void main() {
 
       expect(find.byType(SettingsAppearanceScreen), findsOneWidget);
 
+      router.go('/settings/connections');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SettingsConnectionsScreen), findsOneWidget);
+    });
+
+    testWidgets('the old services settings path redirects to connections', (
+      tester,
+    ) async {
+      // '/settings/services' was the route before the two service lists were
+      // merged; a saved deep link should land on the screen that replaced it
+      // rather than 404.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
       router.go('/settings/services');
       await tester.pumpAndSettle();
 
-      expect(find.byType(SettingsServicesScreen), findsOneWidget);
+      expect(find.byType(SettingsConnectionsScreen), findsOneWidget);
+      expect(router.state.uri.toString(), '/settings/connections');
     });
 
     testWidgets('supports global search route', (tester) async {

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'package:seekarr/core/network/connection_failure.dart';
+import 'package:seekarr/core/utils/url_utils.dart';
 
 import 'package:seekarr/features/sabnzbd/domain/models/sabnzbd_models.dart';
 
@@ -42,7 +43,7 @@ String redactSabnzbdSecrets(String input) {
 /// needs a dedicated client rather than the shared header-auth [ApiClient].
 class SabnzbdClient {
   SabnzbdClient({required String url, required String apiKey, Dio? dio})
-    : baseUrl = _normalizeBaseUrl(url),
+    : baseUrl = UrlUtils.normalizeBaseUrl(url),
       _apiKey = apiKey.trim() {
     _dio =
         dio ??
@@ -58,18 +59,6 @@ class SabnzbdClient {
   final String baseUrl;
   final String _apiKey;
   late final Dio _dio;
-
-  static String _normalizeBaseUrl(String url) {
-    var n = url.trim();
-    if (n.isEmpty) return '';
-    // Default a scheme-less URL to HTTPS (security §10.2 #1); an explicit
-    // http:// is honoured. Strip a trailing slash before appending `/api`.
-    if (!n.startsWith('http://') && !n.startsWith('https://')) {
-      n = 'https://$n';
-    }
-    if (n.endsWith('/')) n = n.substring(0, n.length - 1);
-    return n;
-  }
 
   Future<Map<String, dynamic>> _call(
     String mode, {

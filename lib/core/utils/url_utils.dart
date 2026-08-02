@@ -14,34 +14,43 @@ class UrlUtils {
     return '$cleanBaseUrl$cleanPath';
   }
 
+  /// The base URL every client feeds to Dio: trimmed, scheme-qualified, with no
+  /// trailing slash.
+  ///
+  /// A scheme-less host defaults to HTTPS so an omitted scheme never downgrades
+  /// an API key or a Basic-auth password to cleartext (security standard
+  /// §10.2 #9); an explicit `http://` is honoured.
+  ///
+  /// Qualifying the scheme is not cosmetic: `BaseOptions(baseUrl: 'host:7878')`
+  /// throws `ArgumentError` from Dio's own setter, and the onboarding and
+  /// settings fields both accept a bare host — so without this a plausible
+  /// address wedged the caller instead of failing as a connection error.
+  static String normalizeBaseUrl(String url) {
+    var normalized = url.trim();
+    if (normalized.isEmpty) return '';
+    if (!RegExp(r'^https?://', caseSensitive: false).hasMatch(normalized)) {
+      normalized = 'https://$normalized';
+    }
+    while (normalized.endsWith('/')) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
+    return normalized;
+  }
+
   static const _invalidUrl =
       'Enter a valid URL (e.g. https://192.168.1.100:7878)';
   static const _credentialsInUrl =
       'Remove the username:password from the URL — enter credentials in their '
       'own fields';
 
-  /// Validates a service URL that must carry an explicit scheme.
-  ///
-  /// Used by the settings form, where the stored value is shown back to the
-  /// user verbatim. For the onboarding fields — whose clients default a
-  /// scheme-less host to HTTPS — use [validateServiceHost] instead.
-  static String? validateServiceUrl(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Server URL is required';
-    }
-
-    final trimmed = value.trim();
-    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-      return 'URL must start with http:// or https://';
-    }
-
-    return _validateParsed(trimmed);
-  }
-
   /// Validates a service URL that may omit the scheme.
   ///
-  /// Every client normalises a scheme-less host to `https://`, so accepting it
-  /// here matches what actually happens on connect. Anything that is not a
+  /// The single rule for every address field in the app: onboarding and the
+  /// settings form share it, so an address accepted during setup is still
+  /// accepted when reopened for editing.
+  ///
+  /// [normalizeBaseUrl] turns a scheme-less host into `https://`, so accepting
+  /// it here matches what actually happens on connect. Anything that is not a
   /// plausible host — an unknown scheme, embedded whitespace, embedded
   /// credentials — is rejected up front so the user is told the address is
   /// malformed instead of being told the server is unreachable.

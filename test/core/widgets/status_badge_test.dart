@@ -295,4 +295,82 @@ void main() {
       expect(find.byType(Icon), findsNothing);
     });
   });
+
+  group('MediaStatusInfo.semanticLabel', () {
+    test('spells out the percentage the badge only draws as a ring', () {
+      const info = MediaStatusInfo(
+        availability: MediaAvailability.missing,
+        pipeline: MediaPipeline.downloading,
+        progress: 0.42,
+      );
+
+      expect(info.semanticLabel, 'Downloading, 42 percent');
+    });
+
+    test('spells out a warning carried only by the tone colour', () {
+      // hasWarning replaced a "… (Warning)" text suffix, so since then nothing
+      // writes it down — the amber tone is the whole signal.
+      const info = MediaStatusInfo(
+        availability: MediaAvailability.available,
+        hasWarning: true,
+      );
+
+      expect(info.tone, StatusTone.warning);
+      expect(info.semanticLabel, 'Available, warning');
+    });
+
+    test('stays silent about progress that is not being drawn', () {
+      // A queued item carries a progress value the badge deliberately hides.
+      const info = MediaStatusInfo(
+        availability: MediaAvailability.missing,
+        pipeline: MediaPipeline.queued,
+        progress: 0.42,
+      );
+
+      expect(info.progressPercent, isNull);
+      expect(info.semanticLabel, 'Queued');
+    });
+  });
+
+  group('StatusBadge semantics', () {
+    testWidgets('all three variants announce the same status', (tester) async {
+      const info = MediaStatusInfo(
+        availability: MediaAvailability.missing,
+        pipeline: MediaPipeline.downloading,
+        progress: 0.42,
+      );
+
+      for (final variant in [
+        const StatusBadge(info: info),
+        const StatusBadge(info: info, compact: true),
+        const StatusBadge(info: info, iconOnly: true),
+      ]) {
+        await tester.pumpWidget(MaterialApp(home: Scaffold(body: variant)));
+
+        expect(
+          find.semantics.byLabel('Downloading, 42 percent'),
+          findsOneWidget,
+          reason: 'compact=${variant.compact} iconOnly=${variant.iconOnly}',
+        );
+      }
+    });
+
+    testWidgets('excludeFromSemantics leaves the badge silent', (tester) async {
+      // Set by tiles that speak the status themselves, so the badge is not a
+      // second stop for the same information.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StatusBadge(
+              info: MediaStatusInfo(availability: MediaAvailability.available),
+              iconOnly: true,
+              excludeFromSemantics: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.semantics.byLabel('Available'), findsNothing);
+    });
+  });
 }

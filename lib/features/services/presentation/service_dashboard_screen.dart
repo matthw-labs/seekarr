@@ -232,45 +232,60 @@ class _ServicePickerOption extends StatelessWidget {
 
     return Material(
       color: selected ? colorScheme.surfaceContainerHigh : Colors.transparent,
-      child: InkWell(
+      // The only indication of the current service is a bare check glyph, so
+      // without `selected:` a screen-reader user cannot tell which row is
+      // active. The key lives on the Semantics rather than the InkWell so
+      // `tester.getSemantics` resolves this annotation instead of walking up to
+      // an ancestor; the render object covers the same rect, so taps are
+      // unaffected.
+      child: Semantics(
         key: ValueKey('service-dashboard-option-${service.routeParam}'),
+        container: true,
+        button: true,
+        selected: selected,
+        excludeSemantics: true,
+        label: service.title,
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: 13,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: service.accent.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
+          excludeFromSemantics: true,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: 13,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: service.accent.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(service.icon, size: 16, color: service.accent),
                 ),
-                child: Icon(service.icon, size: 16, color: service.accent),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(
-                  service.title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w700,
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    service.title,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              if (selected)
-                Icon(
-                  Icons.check_rounded,
-                  key: ValueKey(
-                    'service-dashboard-selected-${service.routeParam}',
+                if (selected)
+                  Icon(
+                    Icons.check_rounded,
+                    key: ValueKey(
+                      'service-dashboard-selected-${service.routeParam}',
+                    ),
+                    size: 18,
+                    color: service.accent,
                   ),
-                  size: 18,
-                  color: service.accent,
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

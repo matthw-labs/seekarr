@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:seekarr/core/network/connection_failure.dart';
+import 'package:seekarr/features/settings/data/service_connection_provider.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
+import 'package:seekarr/features/settings/data/service_verification.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/data/settings_service.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
@@ -19,10 +22,84 @@ void main() {
       await _pumpSettingsHome(tester);
 
       expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('CONNECTIONS'), findsOneWidget);
       expect(find.text('GENERAL'), findsOneWidget);
-      expect(find.text('SERVICES'), findsNothing);
       expect(find.text('ABOUT'), findsOneWidget);
       expect(find.text('Seekarr v1.0.0'), findsNothing);
+    });
+
+    testWidgets('the connections summary says when nothing is set up', (
+      tester,
+    ) async {
+      await _pumpSettingsHome(tester);
+
+      expect(find.text('No services set up yet'), findsOneWidget);
+    });
+
+    testWidgets('the connections summary counts what is set up', (
+      tester,
+    ) async {
+      await _pumpSettingsHome(
+        tester,
+        settings: const SettingsModel(
+          radarrUrl: 'https://radarr.local:7878',
+          radarrApiKey: 'radarr-key',
+        ),
+        diagnosis: const ServiceDiagnosis.connected(),
+      );
+
+      expect(find.text('1 service connected'), findsOneWidget);
+    });
+
+    testWidgets('healthy services stay off this screen', (tester) async {
+      // Thirteen services means a list of the working ones is an inventory
+      // nobody reads. Only trouble earns a row here.
+      await _pumpSettingsHome(
+        tester,
+        settings: const SettingsModel(
+          radarrUrl: 'https://radarr.local:7878',
+          radarrApiKey: 'radarr-key',
+          sonarrUrl: 'https://sonarr.local:8989',
+          sonarrApiKey: 'sonarr-key',
+        ),
+        diagnosis: const ServiceDiagnosis.connected(),
+      );
+
+      expect(find.text('All 2 connected'), findsOneWidget);
+      expect(find.text('Radarr'), findsNothing);
+      expect(find.text('Sonarr'), findsNothing);
+    });
+
+    testWidgets('a failing service is promoted with its cause', (tester) async {
+      await _pumpSettingsHome(
+        tester,
+        settings: const SettingsModel(
+          radarrUrl: 'https://radarr.local:7878',
+          radarrApiKey: 'radarr-key',
+        ),
+        diagnosis: ServiceDiagnosis.failed(_UnauthorizedFailure()),
+      );
+
+      expect(find.text('1 of 1 need attention'), findsOneWidget);
+      expect(find.text('API key rejected · radarr.local:7878'), findsOneWidget);
+    });
+
+    testWidgets('tapping a promoted failure opens that service', (
+      tester,
+    ) async {
+      await _pumpSettingsHome(
+        tester,
+        settings: const SettingsModel(
+          radarrUrl: 'https://radarr.local:7878',
+          radarrApiKey: 'radarr-key',
+        ),
+        diagnosis: ServiceDiagnosis.failed(_UnauthorizedFailure()),
+      );
+
+      await tester.tap(find.text('Radarr'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ServicePage:radarr'), findsOneWidget);
     });
 
     testWidgets('formats the selected region label', (tester) async {
@@ -34,32 +111,63 @@ void main() {
       expect(find.text('United Kingdom (GB)'), findsOneWidget);
     });
 
-    testWidgets('dashboard navigates to the services settings screen', (
-      tester,
-    ) async {
+    testWidgets('the summary row opens the connections list', (tester) async {
       await _pumpSettingsHome(tester);
 
-      await tester.tap(find.text('Dashboard'));
+      await tester.tap(find.text('All connections'));
       await tester.pumpAndSettle();
 
-      expect(find.text('ServicesPage'), findsOneWidget);
+      expect(find.text('ConnectionsPage'), findsOneWidget);
     });
 
-    testWidgets('shows configured services on the home screen', (tester) async {
-      await _pumpSettingsHome(
+    group('semantics', () {
+      testWidgets('a promoted service speaks its connection state', (
         tester,
-        settings: const SettingsModel(
-          radarrUrl: 'https://radarr.local:7878',
-          radarrApiKey: 'radarr-key',
-        ),
-      );
+      ) async {
+        // The indicator is a bare glyph — a cloud, a key, a spinner — so
+        // without a label for it the connection state is simply unreadable:
+        // the subtitle beside it is only the host.
+        await _pumpSettingsHome(
+          tester,
+          settings: const SettingsModel(
+            radarrUrl: 'https://radarr.local:7878',
+            radarrApiKey: 'radarr-key',
+          ),
+          diagnosis: const ServiceDiagnosis(
+            ServiceConnectionStatus.disconnected,
+            ServiceFailureReason.unreachable,
+          ),
+        );
 
-      expect(find.text('SERVICES'), findsOneWidget);
-      expect(
-        _settingsCard('Radarr', subtitle: 'radarr.local:7878'),
-        findsOneWidget,
-      );
-      expect(find.text('radarr.local:7878'), findsOneWidget);
+        expect(
+          find.semantics.byLabel('Radarr, Unreachable, radarr.local:7878'),
+          containsSemantics(
+            isButton: true,
+            hasTapAction: true,
+            hint: 'opens Radarr settings',
+          ),
+        );
+        // The host used to be its own focus stop.
+        expect(find.semantics.byLabel('radarr.local:7878'), findsNothing);
+      });
+
+      testWidgets('section labels are headings, read without the caps', (
+        tester,
+      ) async {
+        await _pumpSettingsHome(tester);
+
+        expect(
+          find.semantics.byLabel('General'),
+          containsSemantics(isHeader: true),
+        );
+        expect(
+          find.semantics.byLabel('Connections'),
+          containsSemantics(isHeader: true),
+        );
+        // '.toUpperCase()' is typography; VoiceOver spells out all-caps tokens.
+        expect(find.semantics.byLabel('GENERAL'), findsNothing);
+        expect(find.text('GENERAL'), findsOneWidget);
+      });
     });
 
     testWidgets('tapping Region navigates to the region screen', (
@@ -73,40 +181,12 @@ void main() {
       expect(find.text('RegionPage'), findsOneWidget);
     });
 
-    testWidgets('tapping a service card navigates to its route', (
-      tester,
-    ) async {
-      await _pumpSettingsHome(
-        tester,
-        settings: const SettingsModel(
-          radarrUrl: 'https://radarr.local:7878',
-          radarrApiKey: 'radarr-key',
-        ),
-      );
-
-      await tester.tap(find.text('Radarr'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('ServicePage:radarr'), findsOneWidget);
-    });
-
-    testWidgets('Share App shows the coming soon snackbar', (tester) async {
-      await _pumpSettingsHome(tester);
-
-      await tester.scrollUntilVisible(find.text('Share App'), 300);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Share App'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Coming soon!'), findsOneWidget);
-    });
-
     testWidgets('renders tappable settings cards', (tester) async {
       await _pumpSettingsHome(tester);
 
       expect(find.byType(SettingsCard), findsAtLeastNWidgets(6));
-      expect(find.byType(SettingsGroupCard), findsNWidgets(3));
+      // Connections, General, About, Danger Zone.
+      expect(find.byType(SettingsGroupCard), findsNWidgets(4));
 
       await tester.scrollUntilVisible(find.text('Send Feedback'), 300);
       await tester.pumpAndSettle();
@@ -254,6 +334,7 @@ void main() {
 Future<void> _pumpSettingsHome(
   WidgetTester tester, {
   SettingsModel settings = const SettingsModel(),
+  ServiceDiagnosis? diagnosis,
 }) async {
   final router = GoRouter(
     initialLocation: '/settings',
@@ -267,8 +348,8 @@ Future<void> _pumpSettingsHome(
             builder: (_, __) => const Scaffold(body: Text('RegionPage')),
           ),
           GoRoute(
-            path: 'services',
-            builder: (_, __) => const Scaffold(body: Text('ServicesPage')),
+            path: 'connections',
+            builder: (_, __) => const Scaffold(body: Text('ConnectionsPage')),
           ),
           GoRoute(
             path: 'service/:service',
@@ -284,21 +365,30 @@ Future<void> _pumpSettingsHome(
 
   addTearDown(router.dispose);
 
+  // A tall viewport so every section of this lazy ListView is built and
+  // counted, independent of scroll position.
+  tester.view.physicalSize = const Size(1000, 2400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [currentSettingsProvider.overrideWith((ref) => settings)],
+      overrides: [
+        currentSettingsProvider.overrideWith((ref) => settings),
+        if (diagnosis != null)
+          serviceDiagnosisProvider.overrideWith((ref, service) async {
+            return diagnosis;
+          }),
+      ],
       child: MaterialApp.router(routerConfig: router),
     ),
   );
   await tester.pumpAndSettle();
 }
 
-Finder _settingsCard(String title, {String? subtitle}) {
-  return find.byWidgetPredicate(
-    (widget) =>
-        widget is SettingsCard &&
-        widget.title == title &&
-        (subtitle == null || widget.subtitle == subtitle),
-    skipOffstage: false,
-  );
+/// An error that already knows why it failed, the way the service clients do.
+class _UnauthorizedFailure implements HasFailureReason {
+  @override
+  ServiceFailureReason get reason => ServiceFailureReason.unauthorized;
 }

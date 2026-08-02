@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import 'package:seekarr/core/network/connection_failure.dart';
 import 'package:seekarr/core/network/redirect_guard.dart';
+import 'package:seekarr/core/utils/url_utils.dart';
 import 'package:seekarr/features/unraid/domain/models/unraid_models.dart';
 
 /// Error thrown by [UnraidClient]. Carries the [reason] so a caller verifying
@@ -32,7 +33,7 @@ class UnraidException implements Exception, HasFailureReason {
 /// Unraid release; confirm against the instance's SDL.
 class UnraidClient {
   UnraidClient({required String url, required String apiKey, Dio? dio})
-    : baseUrl = _normalizeBaseUrl(url),
+    : baseUrl = UrlUtils.normalizeBaseUrl(url),
       _apiKey = apiKey.trim() {
     _dio =
         dio ??
@@ -55,16 +56,6 @@ class UnraidClient {
   final String baseUrl;
   final String _apiKey;
   late final Dio _dio;
-
-  static String _normalizeBaseUrl(String url) {
-    var n = url.trim();
-    if (n.isEmpty) return '';
-    if (!n.startsWith('http://') && !n.startsWith('https://')) {
-      n = 'https://$n';
-    }
-    if (n.endsWith('/')) n = n.substring(0, n.length - 1);
-    return n;
-  }
 
   /// Decodes a GraphQL response body, or throws an [UnraidException] the caller
   /// can classify.

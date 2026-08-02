@@ -30,11 +30,13 @@ class FakeApiClient extends ApiClient {
   String? lastGetPath;
   Map<String, dynamic>? lastGetQueryParameters;
   CancelToken? lastGetCancelToken;
+  Duration? lastGetReceiveTimeout;
   int getCallCount = 0;
 
   String? lastPostPath;
   dynamic lastPostData;
   Map<String, dynamic>? lastPostQueryParameters;
+  Duration? lastPostReceiveTimeout;
   int postCallCount = 0;
 
   String? lastPutPath;
@@ -59,10 +61,12 @@ class FakeApiClient extends ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     CancelToken? cancelToken,
+    Duration? receiveTimeout,
   }) async {
     lastGetPath = path;
     lastGetQueryParameters = queryParameters;
     lastGetCancelToken = cancelToken;
+    lastGetReceiveTimeout = receiveTimeout;
     getCallCount++;
 
     if (getException != null) throw getException!;
@@ -82,10 +86,12 @@ class FakeApiClient extends ApiClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    Duration? receiveTimeout,
   }) async {
     lastPostPath = path;
     lastPostData = data;
     lastPostQueryParameters = queryParameters;
+    lastPostReceiveTimeout = receiveTimeout;
     postCallCount++;
 
     if (postException != null) throw postException!;

@@ -99,7 +99,10 @@ void main() {
         queueEntry: ArrQueueEntry.fromQueueItem(blocked),
       );
 
-      expect(status.label, 'Import Pending');
+      // "Not a Custom Format upgrade for existing movie file" is the canonical
+      // reason an \*arr blocks an import: it needs a person to decide. It used to
+      // render as "Import Pending", the state that clears itself in seconds.
+      expect(status.label, 'Import Blocked');
       expect(status.hasWarning, isTrue);
       expect(status.tone, StatusTone.warning);
       expect(
@@ -243,14 +246,22 @@ void main() {
       expect(status.label, 'Unknown');
     });
 
-    test('a partially available series still surfaces its active download', () {
-      final details = jsonFixtureMap('seerr/tv_details_partial.json');
-      final status = seerrMediaStatus(mapOrNull(details['mediaInfo']));
+    test(
+      'a partially available series reports the episode that needs a person',
+      () {
+        final details = jsonFixtureMap('seerr/tv_details_partial.json');
+        final status = seerrMediaStatus(mapOrNull(details['mediaInfo']));
 
-      expect(status.availability, MediaAvailability.partial);
-      expect(status.label, 'Downloading');
-      expect(status.hasWarning, isTrue);
-    });
+        // Two records in this payload: S02E04 downloading healthily, S02E05
+        // `importBlocked`. The headline used to be "Downloading" with a bare
+        // warning marker — the actionable episode hidden behind the healthy one,
+        // and no way to tell why the marker was there. Gravity ranking surfaces the
+        // blocked one, which is the only one that will still be stuck tomorrow.
+        expect(status.availability, MediaAvailability.partial);
+        expect(status.label, 'Import Blocked');
+        expect(status.hasWarning, isTrue);
+      },
+    );
   });
 
   group('captured payloads', () {

@@ -148,9 +148,8 @@ class _DetailBody extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        SectionHeader(
+        SectionHeader.action(
           title: 'Snapshots',
-          showChevron: false,
           trailing: TextButton.icon(
             onPressed: () => createSnapshotFlow(context, ref, dataset.id),
             icon: const Icon(Icons.add_rounded, size: 16),

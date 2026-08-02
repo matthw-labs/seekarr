@@ -120,13 +120,17 @@ void main() {
         'Search',
         'Settings',
       ]);
-      // The app shell is a single colour: per-service accents belong to service
-      // surfaces, not to the nav bar. Asserted against the token rather than a
-      // hex literal so a palette change does not need a test edit.
-      expect(
-        NavTab.values.map((tab) => tab.accentColor),
-        everyElement(AppColors.primary),
-      );
+      // Each tab carries its own section accent — sections, not services, per
+      // DESIGN.md's nav-* tokens. Services keeps `primary`: it is the app's
+      // own colour and the home tab. Asserted against the tokens rather than
+      // hex literals so a palette change does not need a test edit.
+      expect(NavTab.values.map((tab) => tab.accentColor), [
+        AppColors.navServices,
+        AppColors.navActivity,
+        AppColors.navSearch,
+        AppColors.navSettings,
+      ]);
+      expect(NavTab.services.accentColor, AppColors.primary);
     });
   });
 

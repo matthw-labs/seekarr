@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/widgets/ambient_scaffold.dart';
+import 'package:seekarr/core/widgets/app_card.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
-
-const _appearanceScreenDescription =
-    'Choose how Seekarr looks. System will follow your device setting.';
+import 'package:seekarr/features/settings/presentation/widgets/settings_choice_row.dart';
 
 class SettingsAppearanceScreen extends ConsumerWidget {
   const SettingsAppearanceScreen({super.key});
@@ -16,46 +18,56 @@ class SettingsAppearanceScreen extends ConsumerWidget {
     final settings = ref.watch(currentSettingsProvider);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Appearance')),
+    return AmbientScaffold(
+      appBar: const GlassAppBar(title: Text('Appearance')),
       body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+        ),
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.only(bottom: AppSpacing.lg),
             child: Text(
-              _appearanceScreenDescription,
+              'Both themes are first-class — light is not an inverted '
+              'afterthought. Each service keeps its own colour either way.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
-          const Divider(height: 1),
-          ...AppThemeMode.values.map((mode) {
-            return RadioListTile<AppThemeMode>(
-              title: Text(mode.label),
-              value: mode,
-              // TODO(seekarr): Migrate to the replacement Radio API once this
-              // project updates to the Flutter SDK version that fully supports
-              // it across our targets.
-              // ignore: deprecated_member_use
-              groupValue: settings.themeMode,
-              // ignore: deprecated_member_use
-              onChanged: (value) => _updateThemeMode(ref, settings, value),
-            );
-          }),
+          SettingsGroupCard(
+            children: [
+              for (final mode in AppThemeMode.values)
+                SettingsChoiceRow(
+                  label: mode.label,
+                  description: _describe(mode),
+                  selected: settings.themeMode == mode,
+                  onSelected: () => _updateThemeMode(ref, settings, mode),
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 
+  String _describe(AppThemeMode mode) {
+    return switch (mode) {
+      AppThemeMode.system => 'Follows your device setting',
+      AppThemeMode.light => 'Always light',
+      AppThemeMode.dark => 'Always dark',
+    };
+  }
+
   Future<void> _updateThemeMode(
     WidgetRef ref,
     SettingsModel settings,
-    AppThemeMode? value,
+    AppThemeMode value,
   ) async {
-    if (value == null || value == settings.themeMode) {
-      return;
-    }
+    if (value == settings.themeMode) return;
 
     await ref
         .read(settingsProvider.notifier)

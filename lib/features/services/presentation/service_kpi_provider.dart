@@ -20,6 +20,7 @@ import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:seekarr/features/series/presentation/series_provider.dart';
+import 'package:seekarr/features/services/domain/service_signal.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
@@ -60,6 +61,23 @@ final serviceKpiProvider = FutureProvider.autoDispose
         case ServiceKey.unraid:
           return _unraidKpis(ref);
       }
+    });
+
+/// The single live figure a service contributes to the stack matrix on
+/// `/services`.
+///
+/// Reads [serviceKpiProvider] and reduces it through [resolveServiceSignal], so
+/// the matrix costs nothing beyond what the KPI rails already fetch and the
+/// hub's cell agrees with the service page's peek by construction.
+///
+/// Note the deliberate lack of error handling: an unreachable service leaves
+/// this in `AsyncError`, and the cell renders its reachability instead of a
+/// signal. Swallowing the error into a null signal here would make "no metric to
+/// report" and "this service is down" the same value.
+final serviceSignalProvider = FutureProvider.autoDispose
+    .family<ServiceSignal?, ServiceKey>((ref, service) async {
+      final kpis = await ref.watch(serviceKpiProvider(service).future);
+      return resolveServiceSignal(kpis);
     });
 
 int _statInt(Map<String, dynamic>? stats, String key) =>

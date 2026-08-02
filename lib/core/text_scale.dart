@@ -20,6 +20,16 @@ class TextScaleMetrics {
   /// still legible and still not clipped.
   static const double defaultMaxScaleFactor = 1.6;
 
+  /// Ceiling for compact chrome that must stay on one line.
+  ///
+  /// A strip of pills with connectors between them, or a bar of destinations,
+  /// cannot reflow: past a point the only options are to clip or to elide, and
+  /// eliding a two-word label destroys it. So this kind of chrome follows the
+  /// reading size to 1.3× and stops — the value the floating navigation bar has
+  /// always used, promoted to a token now that the import station bar needs the
+  /// same guarantee.
+  static const double singleLineChromeMaxScaleFactor = 1.3;
+
   /// The reading scale used for compact boxes, clamped to
   /// [defaultMaxScaleFactor].
   static TextScaler clampedScalerOf(
@@ -47,5 +57,29 @@ class TextScaleMetrics {
     final grown = scaler.scale(textHeight);
     final delta = grown - textHeight;
     return delta > 0 ? base + delta : base;
+  }
+
+  /// Share of a grid cell's height that is text, used by [aspectRatio].
+  ///
+  /// The tiles this is applied to are an icon, a label and a value line: most of
+  /// the height moves with the reading size, but not all of it.
+  static const double _textShareOfCell = 0.7;
+
+  /// A `childAspectRatio` that grows the cell taller as text grows.
+  ///
+  /// `GridView`'s ratio is fixed while its labels are not, so a tile tuned at
+  /// the default reading size clips its own text at an accessibility size.
+  /// Lowering the ratio makes each cell taller by roughly the amount the text
+  /// gained.
+  static double aspectRatio(
+    BuildContext context, {
+    required double base,
+    double maxScaleFactor = defaultMaxScaleFactor,
+  }) {
+    final scaler = clampedScalerOf(context, maxScaleFactor: maxScaleFactor);
+    // Growth of one body line, relative to its unscaled size.
+    final growth = scaler.scale(14.0) / 14.0;
+    if (growth <= 1) return base;
+    return base / (1 + ((growth - 1) * _textShareOfCell));
   }
 }

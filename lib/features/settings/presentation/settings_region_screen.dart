@@ -1,58 +1,139 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:seekarr/core/widgets/ambient_scaffold.dart';
+import 'package:seekarr/core/widgets/app_card.dart';
+import 'package:seekarr/core/widgets/app_empty_state.dart';
+import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/regions.dart';
+import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:seekarr/features/settings/presentation/widgets/settings_choice_row.dart';
 
 const _regionScreenDescription =
-    'This setting allows the app to show accurate release dates, content '
-    'ratings, and watch providers for your region.';
+    'Release dates, content ratings and watch providers are all reported for '
+    'the region you pick here.';
 
-class SettingsRegionScreen extends ConsumerWidget {
+class SettingsRegionScreen extends ConsumerStatefulWidget {
   const SettingsRegionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsRegionScreen> createState() =>
+      _SettingsRegionScreenState();
+}
+
+class _SettingsRegionScreenState extends ConsumerState<SettingsRegionScreen> {
+  final _queryController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _queryController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(currentSettingsProvider);
-    final selectedRegion = SettingsModel.normalizeRegion(settings.region);
+    final selected = SettingsModel.normalizeRegion(settings.region);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Region')),
+    // The current region is pinned above the list: on a thirty-entry picker,
+    // finding what is already set should not mean scrolling for it.
+    final matches = commonRegions.entries
+        .where((entry) => entry.key != selected && _matches(entry))
+        .toList(growable: false);
+
+    return AmbientScaffold(
+      appBar: const GlassAppBar(title: Text('Region')),
       body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+        ),
         children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Text(
-              _regionScreenDescription,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+          Text(
+            _regionScreenDescription,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const Divider(height: 1),
-          ...commonRegions.entries.map((entry) {
-            return RadioListTile<String>(
-              title: Text('${entry.value} (${entry.key})'),
-              value: entry.key,
-              // TODO(seekarr): Migrate to the replacement Radio API once this
-              // project updates to the Flutter SDK version that fully supports
-              // it across our targets.
-              // ignore: deprecated_member_use
-              groupValue: selectedRegion,
-              // ignore: deprecated_member_use
-              onChanged: (String? value) async {
-                if (value != null) {
-                  await ref
-                      .read(settingsProvider.notifier)
-                      .updateSettings(settings.copyWith(region: value));
-                }
-              },
-            );
-          }),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: _queryController,
+            decoration: InputDecoration(
+              hintText: 'Search regions',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.clear_rounded),
+                      tooltip: 'Clear search',
+                      onPressed: () {
+                        _queryController.clear();
+                        setState(() => _query = '');
+                      },
+                    ),
+            ),
+            textInputAction: TextInputAction.search,
+            autocorrect: false,
+            onChanged: (value) => setState(() => _query = value),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          if (_query.isEmpty) ...[
+            SettingsGroupCard(
+              children: [
+                SettingsChoiceRow(
+                  label: _label(selected),
+                  description: 'Current region',
+                  selected: true,
+                  onSelected: () {},
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+          if (matches.isEmpty)
+            AppEmptyState.compact(
+              icon: Icons.travel_explore_rounded,
+              title: 'No matching region',
+              message: 'Try the country name or its two-letter code.',
+            )
+          else
+            SettingsGroupCard(
+              children: [
+                for (final entry in matches)
+                  SettingsChoiceRow(
+                    label: '${entry.value} (${entry.key})',
+                    selected: entry.key == selected,
+                    onSelected: () => _select(settings, entry.key),
+                  ),
+              ],
+            ),
         ],
       ),
     );
+  }
+
+  bool _matches(MapEntry<String, String> entry) {
+    if (_query.trim().isEmpty) return true;
+    final query = _query.trim().toLowerCase();
+    return entry.value.toLowerCase().contains(query) ||
+        entry.key.toLowerCase().contains(query);
+  }
+
+  String _label(String code) {
+    final name = commonRegions[code] ?? code;
+    return '$name ($code)';
+  }
+
+  Future<void> _select(SettingsModel settings, String code) async {
+    await ref
+        .read(settingsProvider.notifier)
+        .updateSettings(settings.copyWith(region: code));
   }
 }

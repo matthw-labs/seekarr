@@ -24,13 +24,12 @@ import 'package:seekarr/features/discover/presentation/discover_see_all_screen.d
 import 'package:seekarr/features/settings/presentation/settings_appearance_screen.dart';
 import 'package:seekarr/features/settings/presentation/settings_home_screen.dart';
 import 'package:seekarr/features/settings/presentation/settings_region_screen.dart';
-import 'package:seekarr/features/settings/presentation/settings_services_screen.dart';
+import 'package:seekarr/features/settings/presentation/settings_connections_screen.dart';
 import 'package:seekarr/features/settings/presentation/service_settings_screen.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/import/presentation/manual_import_browse_screen.dart';
-import 'package:seekarr/features/import/presentation/manual_import_folder_screen.dart';
-import 'package:seekarr/features/import/presentation/manual_import_match_screen.dart';
+import 'package:seekarr/features/import/presentation/manual_import_locate_screen.dart';
 import 'package:seekarr/features/import/presentation/manual_import_progress_screen.dart';
+import 'package:seekarr/features/import/presentation/manual_import_review_screen.dart';
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/onboarding/presentation/onboarding_screen.dart';
@@ -122,6 +121,15 @@ Page<void> _libraryDetailPage<T>(
 
 Page<void> _settingsSubpage(GoRouterState state, Widget child) {
   return RouteUtils.cupertinoPage(key: state.pageKey, child: child);
+}
+
+String _redirectLegacyManualImport(GoRouterState state) {
+  return Uri(
+    path: manualImportReviewPath,
+    queryParameters: state.uri.queryParameters.isEmpty
+        ? null
+        : state.uri.queryParameters,
+  ).toString();
 }
 
 Page<void> _manualImportPage(
@@ -887,29 +895,32 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: manualImportBrowsePath,
             pageBuilder: (context, state) => _manualImportPage(
               state,
-              (service, targetId) => ManualImportBrowseScreen(
+              (service, targetId) => ManualImportLocateScreen(
+                service: service,
+                targetId: targetId,
+                initialPath: state.uri.queryParameters['path'],
+              ),
+            ),
+          ),
+          GoRoute(
+            path: manualImportReviewPath,
+            pageBuilder: (context, state) => _manualImportPage(
+              state,
+              (service, targetId) => ManualImportReviewScreen(
                 service: service,
                 targetId: targetId,
               ),
             ),
           ),
+          // Steps of the retired four-screen flow; an old deep link lands on
+          // the merged Review station instead of dead-ending.
           GoRoute(
             path: manualImportFolderPath,
-            pageBuilder: (context, state) => _manualImportPage(
-              state,
-              (service, targetId) => ManualImportFolderScreen(
-                service: service,
-                targetId: targetId,
-              ),
-            ),
+            redirect: (context, state) => _redirectLegacyManualImport(state),
           ),
           GoRoute(
             path: manualImportMatchPath,
-            pageBuilder: (context, state) => _manualImportPage(
-              state,
-              (service, targetId) =>
-                  ManualImportMatchScreen(service: service, targetId: targetId),
-            ),
+            redirect: (context, state) => _redirectLegacyManualImport(state),
           ),
           GoRoute(
             path: manualImportProgressPath,
@@ -937,9 +948,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                     _settingsSubpage(state, const SettingsAppearanceScreen()),
               ),
               GoRoute(
-                path: 'services',
+                path: 'connections',
                 pageBuilder: (context, state) =>
-                    _settingsSubpage(state, const SettingsServicesScreen()),
+                    _settingsSubpage(state, const SettingsConnectionsScreen()),
+              ),
+              // Former name of the connections screen, kept so an existing
+              // deep link or a shortcut does not dead-end.
+              GoRoute(
+                path: 'services',
+                redirect: (context, state) => '/settings/connections',
               ),
               GoRoute(
                 path: 'region',

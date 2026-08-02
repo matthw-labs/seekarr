@@ -8,6 +8,8 @@ import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/features/shell/presentation/shell_screen.dart';
 
+import '../../../test_helpers/semantics_announcements.dart';
+
 void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -123,6 +125,63 @@ void main() {
         );
       },
     );
+
+    testWidgets('re-tapping the active Services tab announces the refresh', (
+      tester,
+    ) async {
+      // A re-tap refresh changes nothing on screen — no spinner, no route
+      // change — so without this the tap is indistinguishable from a no-op for a
+      // screen-reader user.
+      final announcements = SemanticsAnnouncementRecorder.install(tester);
+      final harness = await _pumpShell(tester, initialLocation: '/services');
+
+      await tester.tap(_navItem('Services'));
+      await tester.pumpAndSettle();
+
+      expect(announcements.messages, ['Refreshing Services']);
+      expect(
+        harness.container.read(
+          navigationRefreshProvider(NavigationSection.services),
+        ),
+        1,
+      );
+    });
+
+    testWidgets('switching tabs does not announce', (tester) async {
+      // Replacing the whole screen is its own feedback, and an announcement
+      // interrupts the reader's speech queue. This guards an over-eager
+      // announce() in the navigate branch.
+      final announcements = SemanticsAnnouncementRecorder.install(tester);
+      await _pumpShell(tester, initialLocation: '/services');
+
+      await tester.tap(_navItem('Search'));
+      await tester.pumpAndSettle();
+
+      expect(announcements.messages, isEmpty);
+    });
+
+    testWidgets('switching tabs fires one selection haptic, not two', (
+      tester,
+    ) async {
+      // The bar used to fire a selection click of its own on top of the shell's,
+      // so a tab change buzzed twice.
+      final haptics = <String>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            if (call.method == 'HapticFeedback.vibrate') {
+              haptics.add(call.arguments as String);
+            }
+            return null;
+          });
+
+      await _pumpShell(tester, initialLocation: '/services');
+      haptics.clear();
+
+      await tester.tap(_navItem('Search'));
+      await tester.pumpAndSettle();
+
+      expect(haptics, ['HapticFeedbackType.selectionClick']);
+    });
 
     testWidgets('tapping the current Settings tab does not trigger refresh', (
       tester,

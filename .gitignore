@@ -53,6 +53,15 @@ test/fixtures/**/*.captured*
 # Local planning and design notes.
 *_plan.md
 PRODUCT.md
+DESIGN.md
+
+# Golden-test output. `matchesGoldenFile` writes the four
+# master/test/isolatedDiff/maskedDiff PNGs here on every failure; they are a
+# local debugging aid, never a repo artifact.
+test/failures/
+
+# Coverage reports (`flutter test --coverage`).
+coverage/
 
 # Syncthing conflict copies (the repo is inside a synced folder).
 *sync-conflict-*

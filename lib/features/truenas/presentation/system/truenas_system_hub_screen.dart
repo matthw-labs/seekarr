@@ -4,6 +4,7 @@ import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/service_theme.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
@@ -79,7 +80,9 @@ class TrueNasSystemHubScreen extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: AppSpacing.md,
             crossAxisSpacing: AppSpacing.md,
-            childAspectRatio: 1.4,
+            // Grows the cells taller with the reading size; a fixed ratio
+            // clipped the tile labels at accessibility text sizes.
+            childAspectRatio: TextScaleMetrics.aspectRatio(context, base: 1.4),
             children: [for (final entry in _entries) _SystemTile(entry: entry)],
           ),
           // Entry point for inspecting raw JSON-RPC responses. Debug builds

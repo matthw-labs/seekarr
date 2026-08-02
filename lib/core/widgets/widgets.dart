@@ -4,7 +4,6 @@
 library;
 
 // Animation
-export 'animated_widgets.dart';
 export 'shimmer_placeholder.dart';
 export 'app_skeleton.dart';
 export 'staggered_entrance.dart';
@@ -18,6 +17,7 @@ export 'service_kpi_peek.dart';
 // States
 export 'app_empty_state.dart';
 export 'app_error_state.dart';
+export 'service_offline_state.dart';
 
 // Layout
 export 'ambient_background.dart';
@@ -62,3 +62,4 @@ export 'media_search_popup_menu.dart';
 
 // Navigation
 export 'floating_bottom_nav_bar.dart';
+export 'selection_pills.dart';

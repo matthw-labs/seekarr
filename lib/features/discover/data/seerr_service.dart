@@ -1,10 +1,31 @@
 import 'dart:isolate';
+import 'package:dio/dio.dart';
 import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_genre.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/core/models/media_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// Thrown when a request has already been acted on somewhere else.
+///
+/// Worth a type of its own because it is the *only* way the request write
+/// actions realistically fail, and it is not an error on our side. Seekarr
+/// authenticates to Seerr with the instance API key, which Seerr treats as
+/// admin — so approve and decline are never refused for lack of permission,
+/// there is no per-user permission bitfield to read first, and no 403 to design
+/// around. What does happen is a race: the same request approved from the web UI
+/// a moment earlier, or deleted outright. Seerr answers 404 or 409, and the
+/// honest response is to say the state moved and reload — not to report a
+/// transport failure for something that already succeeded, by someone else.
+class SeerrRequestConflict implements Exception {
+  final String message;
+
+  const SeerrRequestConflict(this.message);
+
+  @override
+  String toString() => message;
+}
 
 final seerrServiceProvider = Provider<SeerrService>((ref) {
   final settings = ref.watch(currentSettingsProvider);
@@ -92,7 +113,42 @@ class SeerrService {
   }
 
   Future<void> deleteRequest(int requestId) async {
-    await _client.delete('/api/v1/request/$requestId');
+    await _guardConflict(() => _client.delete('/api/v1/request/$requestId'));
+  }
+
+  /// Approves a request that is waiting for approval.
+  ///
+  /// The request then goes to whichever \*arr handles that media type, which is
+  /// why Activity can show a request turning into a queue row minutes later.
+  Future<void> approveRequest(int requestId) async {
+    await _guardConflict(
+      () => _client.post('/api/v1/request/$requestId/approve'),
+    );
+  }
+
+  /// Declines a request, leaving the media untouched.
+  Future<void> declineRequest(int requestId) async {
+    await _guardConflict(
+      () => _client.post('/api/v1/request/$requestId/decline'),
+    );
+  }
+
+  /// Translates the one HTTP outcome these writes actually produce.
+  ///
+  /// See [SeerrRequestConflict]: with an admin API key there is no authorisation
+  /// failure to handle, only the race.
+  Future<void> _guardConflict(Future<void> Function() action) async {
+    try {
+      await action();
+    } on DioException catch (error) {
+      final code = error.response?.statusCode;
+      if (code == 404 || code == 409) {
+        throw const SeerrRequestConflict(
+          'That request had already been updated somewhere else.',
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<List<MediaPreview>> getDiscoverMovies({

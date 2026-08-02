@@ -23,11 +23,20 @@ class StatusBadge extends StatelessWidget {
   /// An 8px tone-coloured dot, for dense poster rails.
   final bool iconOnly;
 
+  /// Suppresses this badge's own semantics node.
+  ///
+  /// Set it when an enclosing tile already speaks the status — a poster cell
+  /// passing `info.semanticLabel` as its `semanticValue`, say. Without it the
+  /// tile and the badge are two stops for one piece of information; with it the
+  /// badge is decoration, which is what a coloured dot on a poster is.
+  final bool excludeFromSemantics;
+
   const StatusBadge({
     super.key,
     required this.info,
     this.compact = false,
     this.iconOnly = false,
+    this.excludeFromSemantics = false,
   });
 
   @override
@@ -41,7 +50,7 @@ class StatusBadge extends StatelessWidget {
           colorScheme: colorScheme,
         );
 
-    final accentColor = _resolveToneColor(colorScheme, info.tone);
+    final accentColor = statusToneColor(colorScheme, info.tone);
     final backgroundColor = compact
         ? accentColor.withValues(alpha: 0.9)
         : seekarrColors.statusBadgeBackground;
@@ -59,18 +68,20 @@ class StatusBadge extends StatelessWidget {
         : seekarrColors.statusBadgeForeground;
 
     if (iconOnly) {
-      return Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: accentColor,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              spreadRadius: 1.5,
-            ),
-          ],
+      return _spoken(
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: accentColor,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                spreadRadius: 1.5,
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -78,43 +89,67 @@ class StatusBadge extends StatelessWidget {
     final foreground = compact ? onAccentColor : accentColor;
     final percentText = _percentText;
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
-        vertical: compact ? 2 : AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: AppRadius.borderRadiusSm,
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _leading(size: compact ? 10 : 12, color: foreground),
-          if (!compact) ...[
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              info.label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: textColor,
+    return _spoken(
+      Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
+          vertical: compact ? 2 : AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: AppRadius.borderRadiusSm,
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _leading(size: compact ? 10 : 12, color: foreground),
+            if (!compact) ...[
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                info.label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
               ),
-            ),
-          ],
-          if (percentText != null) ...[
-            SizedBox(width: compact ? 2 : AppSpacing.xs),
-            Text(
-              percentText,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: textColor,
-                fontFeatures: const [FontFeature.tabularFigures()],
+            ],
+            if (percentText != null) ...[
+              SizedBox(width: compact ? 2 : AppSpacing.xs),
+              Text(
+                percentText,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
+    );
+  }
+
+  /// One spoken form for all three variants.
+  ///
+  /// The `iconOnly` dot is pure colour and the `compact` overlay is colour plus
+  /// a glyph, so neither has anything to read. Even the full badge paints only
+  /// [MediaStatusInfo.label] and a percentage — the warning carried by the tone
+  /// is never written down. So the string always comes from
+  /// [MediaStatusInfo.semanticLabel] and the painted children are excluded,
+  /// which keeps one code path instead of three and stops the full badge
+  /// announcing the same pill twice over.
+  ///
+  /// No `button:` role: in every call site the tap lives on the enclosing tile.
+  Widget _spoken(Widget badge) {
+    if (excludeFromSemantics) return ExcludeSemantics(child: badge);
+
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      label: info.semanticLabel,
+      child: badge,
     );
   }
 
@@ -137,21 +172,30 @@ class StatusBadge extends StatelessWidget {
   }
 
   String? get _percentText {
-    final progress = info.progress;
-    if (progress == null || !info.isActive) return null;
-    return '${(progress * 100).round()}%';
+    final percent = info.progressPercent;
+    return percent == null ? null : '$percent%';
   }
+}
 
-  Color _resolveToneColor(ColorScheme colorScheme, StatusTone tone) {
-    return switch (tone) {
-      StatusTone.primary => colorScheme.primary,
-      StatusTone.success => AppColors.success,
-      StatusTone.warning => AppColors.warning,
-      StatusTone.info => AppColors.info,
-      StatusTone.error => colorScheme.error,
-      StatusTone.neutral => colorScheme.onSurfaceVariant,
-    };
-  }
+/// The single mapping from a semantic [StatusTone] to a real colour.
+///
+/// Top-level rather than private to the badge because a status is not always
+/// drawn *as* a badge: a queue row tints its progress bar by tone so a failed
+/// transfer reads red instead of the service accent, and the Activity feed tints
+/// its leading icon well the same way. Every one of those was previously a
+/// widget-local `switch` on something other than the resolved status — which is
+/// how a `downloadFailed` event ended up rendering in the success green.
+///
+/// Anything that colours by status calls this. Nothing re-derives it.
+Color statusToneColor(ColorScheme colorScheme, StatusTone tone) {
+  return switch (tone) {
+    StatusTone.primary => colorScheme.primary,
+    StatusTone.success => AppColors.success,
+    StatusTone.warning => AppColors.warning,
+    StatusTone.info => AppColors.info,
+    StatusTone.error => colorScheme.error,
+    StatusTone.neutral => colorScheme.onSurfaceVariant,
+  };
 }
 
 /// Maps a resolved status onto its icon.
@@ -164,15 +208,39 @@ IconData statusIconFor(MediaStatusInfo info) {
     return switch (pipeline) {
       MediaPipeline.queued => Icons.schedule_rounded,
       MediaPipeline.downloading => Icons.downloading_rounded,
+      // A transfer that should be moving and is not — distinct from a pause,
+      // which the user chose.
+      MediaPipeline.stalled => Icons.sync_problem_rounded,
       MediaPipeline.importPending => Icons.hourglass_bottom_rounded,
+      MediaPipeline.importBlocked => Icons.block_rounded,
       MediaPipeline.importing => Icons.drive_file_move_rounded,
       MediaPipeline.paused => Icons.pause_circle_rounded,
+      // `cloud_off` already means "this service did not answer" elsewhere in the
+      // app (the Activity health strip and service tiles); an unreachable
+      // download client is the same fact one layer down.
+      MediaPipeline.clientUnavailable => Icons.cloud_off_rounded,
       MediaPipeline.failed => Icons.error_rounded,
     };
   }
 
   if (info.unmonitored && !info.isAvailable) {
     return Icons.bookmark_border_rounded;
+  }
+
+  // A status can describe an *event* rather than a thing on disk — a history
+  // record, a blocked release — in which case it carries a tone override and no
+  // availability. Falling through to the availability switch gave all of those
+  // the `unknown` question mark, which is the one glyph that tells the user
+  // nothing. Read the severity instead.
+  if (info.availability == MediaAvailability.unknown && info.pipeline == null) {
+    return switch (info.tone) {
+      StatusTone.error => Icons.error_rounded,
+      StatusTone.warning => Icons.warning_amber_rounded,
+      StatusTone.success => Icons.check_circle_rounded,
+      StatusTone.info => Icons.info_rounded,
+      StatusTone.primary => Icons.add_circle_rounded,
+      StatusTone.neutral => Icons.help_outline_rounded,
+    };
   }
 
   return switch (info.availability) {

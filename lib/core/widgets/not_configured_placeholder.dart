@@ -1,35 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:seekarr/core/widgets/app_empty_state.dart';
+
+/// Shown where a service has no address or credentials stored yet.
+///
+/// Built on [AppEmptyState] rather than as its own layout, because a service you
+/// have not set up is a normal daily condition, not a fault: the app is meant to
+/// have thirteen integrations and nobody runs all of them. It used to paint a
+/// 64pt settings glyph in `colorScheme.error` — alarm chrome for a state the user
+/// created on purpose by not filling in a form — and `AppEmptyState`'s own doc
+/// already named this placeholder as one of the states it exists to unify.
 class NotConfiguredPlaceholder extends StatelessWidget {
   final String serviceName;
   const NotConfiguredPlaceholder({super.key, required this.serviceName});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.settings_applications_rounded,
-            size: 64,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '$serviceName not configured',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          const Text('Please set the URL and API Key in Settings.'),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => context.go('/settings'),
-            icon: const Icon(Icons.settings),
-            label: const Text('Go to Settings'),
-          ),
-        ],
+    return AppEmptyState(
+      icon: Icons.settings_outlined,
+      // The same voice as the rest of the app's connection states, which say a
+      // service "isn't answering" rather than reporting a config condition.
+      title: "$serviceName isn't set up",
+      // "Credentials" rather than "the URL and API Key": four of the thirteen
+      // services authenticate with a WebUI login and have no API key to paste, so
+      // naming one told a third of the roster to look for a field that is not
+      // there. The "Please" went with it — the UI is not asking a favour.
+      message: "Add its address and credentials in Settings.",
+      action: FilledButton.icon(
+        onPressed: () => context.go('/settings'),
+        icon: const Icon(Icons.settings_outlined, size: 18),
+        label: const Text('Open Settings'),
       ),
     );
   }

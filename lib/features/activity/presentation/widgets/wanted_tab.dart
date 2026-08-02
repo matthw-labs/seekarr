@@ -30,7 +30,29 @@ class _WantedTabState extends ConsumerState<WantedTab> with ActivityTabHelpers {
   Key _refreshKey = UniqueKey();
   Future<Map<int, String>>? _movieQualityProfilesFuture;
 
+  /// The in-flight request, held in state rather than created in `build`.
+  ///
+  /// `_loadItemsForSelectedSegment(service)` was called from `build`, so every
+  /// rebuild — including the `TabBarView` swipe animation — started a fresh
+  /// `getAllMissing()` and dropped the `FutureBuilder` back to its loading
+  /// state. On a 500-item Wanted list that is an expensive way to redraw.
+  late Future<List<dynamic>> _items;
+
   bool get _isCutoffSelected => _selectedSegment == WantedSegment.cutoffUnmet;
+
+  @override
+  void initState() {
+    super.initState();
+    _items = _load();
+  }
+
+  Future<List<dynamic>> _load() {
+    final service = ref.read(resolvedArrServiceProvider(widget.serviceType));
+    return switch (_selectedSegment) {
+      WantedSegment.missing => service.getAllMissing(),
+      WantedSegment.cutoffUnmet => service.getAllCutoff(),
+    };
+  }
 
   void _refresh({WantedSegment? nextSegment}) {
     setState(() {
@@ -39,20 +61,12 @@ class _WantedTabState extends ConsumerState<WantedTab> with ActivityTabHelpers {
       }
       _movieQualityProfilesFuture = null;
       _refreshKey = UniqueKey();
+      _items = _load();
     });
   }
 
-  Future<List<dynamic>> _loadItemsForSelectedSegment(ArrActivityMixin service) {
-    switch (_selectedSegment) {
-      case WantedSegment.missing:
-        return service.getAllMissing();
-      case WantedSegment.cutoffUnmet:
-        return service.getAllCutoff();
-    }
-  }
-
   Widget _buildContentSliver(ArrActivityMixin service) {
-    final future = _loadItemsForSelectedSegment(service);
+    final future = _items;
 
     if (widget.serviceType == ServiceType.series) {
       return buildAsyncGroupedContentSliver(

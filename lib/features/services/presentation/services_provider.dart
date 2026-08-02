@@ -4,15 +4,13 @@ import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/core/status/arr_queue_snapshot.dart';
 import 'package:seekarr/core/utils/arr_activity_display.dart';
 import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/features/dockge/presentation/dockge_provider.dart';
-import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
 import 'package:seekarr/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:seekarr/features/readarr/presentation/readarr_provider.dart';
 import 'package:seekarr/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_provider.dart';
-import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/movies/presentation/movies_provider.dart';
@@ -22,14 +20,16 @@ import 'package:seekarr/features/music/presentation/music_provider.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/series/presentation/series_provider.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:seekarr/features/services/domain/recently_added.dart';
 import 'package:seekarr/features/services/domain/service_summary.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
 import 'package:seekarr/features/unraid/data/unraid_client.dart';
-import 'package:seekarr/features/unraid/presentation/unraid_provider.dart';
 
 final serviceSummaryProvider =
     FutureProvider.family<ServiceSummary, ServiceKey>((ref, service) async {
@@ -63,15 +63,11 @@ Future<ServiceSummary> _loadServiceSummary(
     return _offlineSummary(service, host: host);
   }
 
-  final itemCount = await _loadItemCountOrNull(ref, service);
-
   return ServiceSummary(
     service: service,
     status: ServiceSummaryStatus.online,
     host: host,
     version: version,
-    itemCount: itemCount,
-    itemLabel: service.itemLabel,
   );
 }
 
@@ -81,8 +77,6 @@ ServiceSummary _offlineSummary(ServiceKey service, {required String host}) {
     status: ServiceSummaryStatus.offline,
     host: host,
     version: null,
-    itemCount: null,
-    itemLabel: service.itemLabel,
   );
 }
 
@@ -237,45 +231,6 @@ String _statusEndpointFor(ServiceKey service) {
   }
 }
 
-Future<int> _loadItemCount(Ref ref, ServiceKey service) async {
-  switch (service) {
-    case ServiceKey.seerr:
-      return (await ref.watch(seerrServiceProvider).getRequests()).length;
-    case ServiceKey.radarr:
-      return (await ref.watch(radarrServiceProvider).getMovies()).length;
-    case ServiceKey.sonarr:
-      return (await ref.watch(sonarrServiceProvider).getSeries()).length;
-    case ServiceKey.lidarr:
-      return (await ref.watch(lidarrServiceProvider).getArtists()).length;
-    case ServiceKey.qbittorrent:
-      return (await ref.watch(qbittorrentServiceProvider).getTorrents()).length;
-    case ServiceKey.bazarr:
-      return (await ref.watch(bazarrServiceProvider).getBadges()).totalWanted;
-    case ServiceKey.truenas:
-      return (await ref.watch(truenasServiceProvider).getPools()).length;
-    case ServiceKey.dockge:
-      return (await ref.watch(dockgeServiceProvider).fetchStacks()).length;
-    case ServiceKey.prowlarr:
-      return (await ref.watch(prowlarrServiceProvider).getIndexers()).length;
-    case ServiceKey.readarr:
-      return (await ref.watch(readarrServiceProvider).getAuthors()).length;
-    case ServiceKey.sabnzbd:
-      return (await ref.watch(sabnzbdQueueProvider.future)).slots.length;
-    case ServiceKey.nzbget:
-      return (await ref.watch(nzbgetQueueProvider.future)).length;
-    case ServiceKey.unraid:
-      return (await ref.watch(unraidDockerProvider.future)).length;
-  }
-}
-
-Future<int?> _loadItemCountOrNull(Ref ref, ServiceKey service) async {
-  try {
-    return await _loadItemCount(ref, service);
-  } catch (_) {
-    return null;
-  }
-}
-
 final servicesTrendingProvider = discoverTrendingProvider;
 final servicesRequestsProvider = requestsProvider;
 final servicesMoviesProvider = moviesProvider;
@@ -403,16 +358,279 @@ final lidarrQueuedArtistIdsProvider = FutureProvider<Set<int>>((ref) async {
   return snapshots.byArtist.entriesById.keys.toSet();
 });
 
+/// How many items the merged Recently Added rail shows.
+const int servicesRecentlyAddedLimit = 12;
+
+/// Newest library additions across Radarr, Sonarr and Lidarr, actually sorted.
+///
+/// One rail instead of the two it replaces, so Lidarr finally appears: the hub
+/// already fetched `servicesMusicProvider` on every pull-to-refresh and rendered
+/// it nowhere, paying for the whole artist library and discarding it.
+///
+/// Readarr is deliberately absent. `ReadarrAuthor` carries no `added` timestamp
+/// and there is no per-author detail route to open, so including it would mean
+/// either inventing an order or shipping a tile that goes nowhere. Both are worse
+/// than its absence; adding the field and the route is its own change.
+final servicesRecentlyAddedProvider = FutureProvider<List<RecentlyAddedItem>>((
+  ref,
+) async {
+  final settings = ref.watch(currentSettingsProvider);
+
+  Future<List<RecentlyAddedItem>> from(
+    ServiceKey service,
+    Future<List<RecentlyAddedItem>> Function() load,
+  ) async {
+    if (!settings.isServiceConfigured(service)) return const [];
+    try {
+      return await load();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  final results = await Future.wait([
+    from(ServiceKey.radarr, () async {
+      final movies = await ref.watch(moviesProvider.future);
+      return movies
+          .map(
+            (movie) => RecentlyAddedItem(
+              service: ServiceKey.radarr,
+              id: movie.id,
+              title: movie.title,
+              // `year` is an int defaulting to 0, so an item with no year
+              // printed "0" and announced "Zero".
+              subtitle: movie.year == 0 ? '' : movie.year.toString(),
+              posterUrl: ImageUtils.extractPosterUrl(
+                movie.images,
+                baseUrl: settings.radarrUrl,
+                apiKey: settings.radarrApiKey,
+              ).url,
+              addedAt: parseAddedTimestamp(movie.added),
+            ),
+          )
+          .toList(growable: false);
+    }),
+    from(ServiceKey.sonarr, () async {
+      final series = await ref.watch(seriesProvider.future);
+      return series
+          .map(
+            (show) => RecentlyAddedItem(
+              service: ServiceKey.sonarr,
+              id: show.id,
+              title: show.title,
+              subtitle: show.year == 0 ? '' : show.year.toString(),
+              posterUrl: ImageUtils.extractPosterUrl(
+                show.images,
+                baseUrl: settings.sonarrUrl,
+                apiKey: settings.sonarrApiKey,
+              ).url,
+              addedAt: parseAddedTimestamp(show.added),
+            ),
+          )
+          .toList(growable: false);
+    }),
+    from(ServiceKey.lidarr, () async {
+      final artists = await ref.watch(musicProvider.future);
+      return artists
+          .map(
+            (artist) => RecentlyAddedItem(
+              service: ServiceKey.lidarr,
+              id: artist.id,
+              title: artist.artistName,
+              // An artist has no year, so the qualifier is its scale.
+              subtitle: artist.albumCount == 1
+                  ? '1 album'
+                  : '${artist.albumCount} albums',
+              posterUrl: ImageUtils.extractPosterUrl(
+                artist.images,
+                baseUrl: settings.lidarrUrl,
+                apiKey: settings.lidarrApiKey,
+              ).url,
+              addedAt: parseAddedTimestamp(artist.added),
+            ),
+          )
+          .toList(growable: false);
+    }),
+  ]);
+
+  return sortRecentlyAdded(
+    results.expand((items) => items).toList(),
+    limit: servicesRecentlyAddedLimit,
+  );
+});
+
+/// How many in-flight items the hub shows before deferring to `/activity`.
+///
+/// Raised from three when the provider stopped being Radarr-plus-Sonarr: with
+/// seven possible sources, three slots meant a busy usenet queue could hide every
+/// torrent on the screen.
+const int servicesQueuePreviewLimit = 5;
+
+/// Everything currently transferring, across every configured source.
+///
+/// This is the region the old dashboard put *last*, below three browse rails,
+/// while sourcing it from Radarr and Sonarr only — so the most time-sensitive
+/// thing on a control-room screen was both buried and mostly blind. It now covers
+/// the two arr services it always did, plus Lidarr and Readarr, plus the three
+/// download clients that actually move the bytes.
+///
+/// Every source is gated on being configured and degrades to `[]` on failure, so
+/// one unreachable client cannot empty or block the region.
 final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
   ref,
 ) async {
+  final settings = ref.watch(currentSettingsProvider);
+
+  Future<List<ServiceQueueItem>> from(
+    ServiceKey service,
+    Future<List<ServiceQueueItem>> Function() load,
+  ) async {
+    if (!settings.isServiceConfigured(service)) return const [];
+    try {
+      return await load();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   final results = await Future.wait([
-    _loadServiceQueueItems(ref, ServiceKey.radarr),
-    _loadServiceQueueItems(ref, ServiceKey.sonarr),
+    from(
+      ServiceKey.radarr,
+      () => _loadServiceQueueItems(ref, ServiceKey.radarr),
+    ),
+    from(
+      ServiceKey.sonarr,
+      () => _loadServiceQueueItems(ref, ServiceKey.sonarr),
+    ),
+    from(
+      ServiceKey.lidarr,
+      () => _loadServiceQueueItems(ref, ServiceKey.lidarr),
+    ),
+    from(
+      ServiceKey.readarr,
+      () => _loadServiceQueueItems(ref, ServiceKey.readarr),
+    ),
+    from(ServiceKey.qbittorrent, () => _loadQbittorrentQueueItems(ref)),
+    from(ServiceKey.sabnzbd, () => _loadSabnzbdQueueItems(ref)),
+    from(ServiceKey.nzbget, () => _loadNzbgetQueueItems(ref)),
   ]);
 
-  return results.expand((items) => items).take(3).toList(growable: false);
+  final items = results.expand((items) => items).toList();
+
+  // Closest to landing first. An item whose client reports no progress sorts
+  // last rather than as zero: unknown is not the same as "just started", and
+  // pushing it to the top would bury the transfer that is about to finish.
+  //
+  // Decorated with the source index because `List.sort` is not guaranteed
+  // stable. Without it, several progress-less items — normal for a usenet queue
+  // that has not started — could come back in a different order on each build,
+  // which reads on screen as rows shuffling for no reason.
+  final ordered =
+      List.generate(
+        items.length,
+        (index) => (index: index, item: items[index]),
+        growable: false,
+      )..sort((a, b) {
+        final progressA = a.item.progress;
+        final progressB = b.item.progress;
+        if (progressA != progressB) {
+          if (progressA == null) return 1;
+          if (progressB == null) return -1;
+          final byProgress = progressB.compareTo(progressA);
+          if (byProgress != 0) return byProgress;
+        }
+        return a.index.compareTo(b.index);
+      });
+
+  return ordered
+      .take(servicesQueuePreviewLimit)
+      .map((entry) => entry.item)
+      .toList(growable: false);
 });
+
+/// Active torrents, as in-flight items.
+///
+/// Filters to transfers that are genuinely moving or waiting to: a seeding
+/// library of four hundred torrents is not "in flight", and unfiltered it would
+/// crowd out every other source.
+Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(Ref ref) async {
+  final torrents = await ref.watch(allTorrentsProvider.future);
+  return torrents
+      .where(
+        (torrent) => switch (torrent.parsedState) {
+          // `stalled` is only ever `stalledDL` — a stalled *upload* parses as
+          // seeding — so it belongs here rather than being filtered out with the
+          // rest of the seeding library.
+          TorrentState.downloading ||
+          TorrentState.metaDownloading ||
+          TorrentState.stalled ||
+          TorrentState.queuedDl => true,
+          TorrentState.seeding ||
+          TorrentState.checking ||
+          TorrentState.paused ||
+          TorrentState.queuedUp ||
+          TorrentState.error ||
+          TorrentState.unknown => false,
+        },
+      )
+      .map(
+        (torrent) => ServiceQueueItem(
+          service: ServiceKey.qbittorrent,
+          title: torrent.name,
+          subtitle: joinDisplayParts([
+            _queueTypeLabel(ServiceKey.qbittorrent),
+            torrent.category.isEmpty ? null : torrent.category,
+            formatSpeed(torrent.dlSpeed),
+          ]),
+          progress: torrent.progress.clamp(0, 1).toDouble(),
+          // A stalled transfer is the one qBittorrent state worth surfacing on a
+          // hub: it looks identical to a slow download until you notice it has
+          // not moved.
+          warning: torrent.parsedState == TorrentState.stalled
+              ? 'Stalled'
+              : null,
+        ),
+      )
+      .toList(growable: false);
+}
+
+Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(Ref ref) async {
+  final queue = await ref.watch(sabnzbdQueueProvider.future);
+  return queue.slots
+      .map(
+        (slot) => ServiceQueueItem(
+          service: ServiceKey.sabnzbd,
+          title: slot.filename,
+          subtitle: joinDisplayParts([
+            _queueTypeLabel(ServiceKey.sabnzbd),
+            slot.category.isEmpty ? null : slot.category,
+            slot.sizeLeftLabel,
+          ]),
+          progress: slot.progress,
+          warning: queue.paused ? 'Paused' : null,
+        ),
+      )
+      .toList(growable: false);
+}
+
+Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(Ref ref) async {
+  final groups = await ref.watch(nzbgetQueueProvider.future);
+  return groups
+      .map(
+        (group) => ServiceQueueItem(
+          service: ServiceKey.nzbget,
+          title: group.name,
+          subtitle: joinDisplayParts([
+            _queueTypeLabel(ServiceKey.nzbget),
+            group.category.isEmpty ? null : group.category,
+            group.remainingLabel,
+          ]),
+          progress: group.progress,
+          warning: null,
+        ),
+      )
+      .toList(growable: false);
+}
 
 class ServiceQueueItem {
   final ServiceKey service;
@@ -454,14 +672,16 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
     final items = switch (service) {
       ServiceKey.radarr => await ref.watch(radarrServiceProvider).getQueue(),
       ServiceKey.sonarr => await ref.watch(sonarrServiceProvider).getQueue(),
+      ServiceKey.lidarr => await ref.watch(lidarrServiceProvider).getQueue(),
+      ServiceKey.readarr => await ref.watch(readarrServiceProvider).getQueue(),
+      // The download clients are not `/queue` shaped and have their own loaders;
+      // the rest have no queue at all.
       ServiceKey.seerr ||
-      ServiceKey.lidarr ||
       ServiceKey.qbittorrent ||
       ServiceKey.bazarr ||
       ServiceKey.truenas ||
       ServiceKey.dockge ||
       ServiceKey.prowlarr ||
-      ServiceKey.readarr ||
       ServiceKey.sabnzbd ||
       ServiceKey.nzbget ||
       ServiceKey.unraid => const <dynamic>[],
@@ -503,13 +723,16 @@ String _queueTypeLabel(ServiceKey service) {
     ServiceKey.radarr => 'Movie',
     ServiceKey.sonarr => 'Series',
     ServiceKey.lidarr => 'Music',
+    ServiceKey.readarr => 'Book',
+    // The download clients name themselves: the row's whole point is that the
+    // bytes are coming through this client rather than through an arr, and the
+    // media type is already in the release name.
     ServiceKey.seerr ||
     ServiceKey.qbittorrent ||
     ServiceKey.bazarr ||
     ServiceKey.truenas ||
     ServiceKey.dockge ||
     ServiceKey.prowlarr ||
-    ServiceKey.readarr ||
     ServiceKey.sabnzbd ||
     ServiceKey.nzbget ||
     ServiceKey.unraid => service.title,

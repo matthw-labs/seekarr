@@ -88,6 +88,17 @@ class AppEmptyState extends StatelessWidget {
       ],
     );
 
+    // Deliberately not scrollable, and deliberately `mainAxisSize.min`: this is
+    // a leaf, and it is the page that knows whether there is a viewport to
+    // scroll. At an accessibility reading size a 72pt icon well, a wrapped
+    // title, a two-line message and a 40pt button can clear a short phone —
+    // a full-page caller must therefore put this inside a scroll view whose
+    // `minHeight` is the viewport, which keeps it centred while it fits and lets
+    // it grow past that. `ServicesScreen` is the worked example.
+    //
+    // Owning the viewport here instead was tried and is wrong: a `LayoutBuilder`
+    // cannot report intrinsic dimensions, so it breaks every caller that
+    // measures them — `SliverFillRemaining` among them.
     return Center(
       child: Padding(
         padding: EdgeInsets.symmetric(

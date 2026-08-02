@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/api/base_arr_service.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:seekarr/core/widgets/app_empty_state.dart';
+import 'package:seekarr/core/widgets/app_error_state.dart';
+import 'package:seekarr/core/widgets/app_skeleton.dart';
 import 'package:seekarr/core/widgets/interactive_search_sheet.dart';
 import 'package:seekarr/features/activity/presentation/activity_screen.dart';
 import 'package:seekarr/features/activity/presentation/widgets/activity_formatters.dart';
@@ -55,7 +58,10 @@ Future<void> runWantedAutoSearch(
     SnackBarHelper.success(context, 'Search started');
   } catch (error) {
     if (!context.mounted) return;
-    SnackBarHelper.error(context, 'Search failed: $error');
+    SnackBarHelper.error(
+      context,
+      'Could not start the search. The service may be unreachable.',
+    );
   }
 }
 
@@ -153,7 +159,8 @@ mixin ActivityTabHelpers {
       return SliverList.separated(
         itemCount: items.length,
         itemBuilder: (context, index) => itemBuilder(items[index]),
-        separatorBuilder: (context, index) => const Divider(height: 1),
+        // No divider: these rows are outlined cards with a gap already.
+        separatorBuilder: (context, index) => const SizedBox.shrink(),
       );
     });
   }
@@ -188,51 +195,28 @@ mixin ActivityTabHelpers {
     AsyncSnapshot<List<dynamic>> snapshot,
   ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
-      return const SliverFillRemaining(
-        hasScrollBody: false,
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return SliverToBoxAdapter(child: AppSkeleton.listRows(count: 6));
     }
 
     if (snapshot.hasError) {
-      return _buildMessageSliver(
-        context,
-        'Error: ${snapshot.error}',
-        color: Theme.of(context).colorScheme.error,
-        textAlign: TextAlign.center,
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: AppErrorState(error: snapshot.error!),
       );
     }
 
     final items = snapshot.data ?? const [];
     if (items.isEmpty) {
-      return _buildMessageSliver(
-        context,
-        'Nothing here',
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: AppEmptyState(
+          icon: Icons.inbox_rounded,
+          title: 'Nothing to show',
+          message: 'Anything this service reports will appear here.',
+        ),
       );
     }
 
     return null;
-  }
-
-  Widget _buildMessageSliver(
-    BuildContext context,
-    String message, {
-    required Color color,
-    TextAlign? textAlign,
-  }) {
-    return SliverFillRemaining(
-      hasScrollBody: false,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            message,
-            style: TextStyle(color: color),
-            textAlign: textAlign,
-          ),
-        ),
-      ),
-    );
   }
 }

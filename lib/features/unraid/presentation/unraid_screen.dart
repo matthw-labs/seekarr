@@ -94,13 +94,23 @@ class _UnraidDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final arrayAsync = ref.watch(unraidArrayProvider);
     final dockerAsync = ref.watch(unraidDockerProvider);
+    final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.unraid));
+    final isOffline = summaryAsync.maybeWhen(
+      data: (summary) => !summary.isOnline,
+      orElse: () => false,
+    );
+
+    if (isOffline) {
+      return ServiceOfflineState(
+        serviceName: ServiceKey.unraid.title,
+        accent: AppColors.unraid,
+        onRetry: () => _invalidateAll(ref),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(unraidArrayProvider);
-        ref.invalidate(unraidDockerProvider);
-        ref.invalidate(serviceKpiProvider(ServiceKey.unraid));
-        ref.invalidate(serviceSummaryProvider(ServiceKey.unraid));
+        _invalidateAll(ref);
         await Future<void>.delayed(const Duration(milliseconds: 300));
       },
       child: ListView(
@@ -126,6 +136,13 @@ class _UnraidDashboard extends ConsumerWidget {
       ),
     );
   }
+}
+
+void _invalidateAll(WidgetRef ref) {
+  ref.invalidate(unraidArrayProvider);
+  ref.invalidate(unraidDockerProvider);
+  ref.invalidate(serviceKpiProvider(ServiceKey.unraid));
+  ref.invalidate(serviceSummaryProvider(ServiceKey.unraid));
 }
 
 class _DiskList extends ConsumerWidget {

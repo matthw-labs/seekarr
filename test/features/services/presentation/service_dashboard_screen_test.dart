@@ -55,6 +55,42 @@ void main() {
     expect(find.text('Services home'), findsOneWidget);
   });
 
+  testWidgets('the picker announces which service is selected', (tester) async {
+    // The only indication of the current service is a bare check glyph, so
+    // without `selected:` a screen-reader user cannot tell which row is active.
+    final router = _buildRouter('/services/radarr');
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('service-dashboard-switcher')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSemantics(
+        find.byKey(const ValueKey('service-dashboard-option-radarr')),
+      ),
+      containsSemantics(
+        label: 'Radarr',
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+      ),
+    );
+    expect(
+      tester.getSemantics(
+        find.byKey(const ValueKey('service-dashboard-option-sonarr')),
+      ),
+      containsSemantics(
+        label: 'Sonarr',
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: false,
+      ),
+    );
+  });
+
   testWidgets('back and activity actions navigate to parent routes', (
     tester,
   ) async {

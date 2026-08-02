@@ -21,8 +21,9 @@ class DetailSheets {
 
   static Future<void> showQueueDetail(
     BuildContext context,
-    Map<String, dynamic> item,
-  ) {
+    Map<String, dynamic> item, {
+    Widget? actions,
+  }) {
     final title =
         arrPrimaryMediaTitle(item, includeMovieYear: true) ??
         arrReleaseTitle(item) ??
@@ -32,6 +33,7 @@ class DetailSheets {
       title: title,
       subtitle: _detailHeaderSubtitle(title, arrReleaseTitle(item)),
       sections: _buildQueueSections(item),
+      actions: actions,
     );
   }
 
@@ -84,7 +86,17 @@ class DetailSheets {
     required String title,
     required List<_DetailSection> sections,
     String? subtitle,
+
+    /// Write actions for this record, pinned as the first item.
+    ///
+    /// The sheet was a read-only field dump with a close button, so drilling
+    /// into a stalled download told you more about it and still left you unable
+    /// to do anything.
+    Widget? actions,
   }) {
+    final hasActions = actions != null;
+    final itemCount = sections.length + (hasActions ? 1 : 0);
+
     return AppBottomSheet.showScrollable<void>(
       context: context,
       title: title,
@@ -102,13 +114,17 @@ class DetailSheets {
             AppSpacing.lg,
             AppSpacing.xxxl,
           ),
-          itemBuilder: (context, index) => AppCard.outlined(
-            padding: EdgeInsets.zero,
-            child: _SectionContent(section: sections[index]),
-          ),
+          itemBuilder: (context, index) {
+            if (hasActions && index == 0) return actions;
+            final section = sections[index - (hasActions ? 1 : 0)];
+            return AppCard.outlined(
+              padding: EdgeInsets.zero,
+              child: _SectionContent(section: section),
+            );
+          },
           separatorBuilder: (context, index) =>
               const SizedBox(height: AppSpacing.lg),
-          itemCount: sections.length,
+          itemCount: itemCount,
         );
       },
     );
@@ -339,6 +355,11 @@ class _SectionFieldContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Deliberately *not* the eyebrow style. A detail sheet is twenty-odd
+          // field labels in a scrolling list, and uppercase tracking on all of
+          // them is the "eyebrow everywhere" noise the eyebrow exists to avoid —
+          // it earns its emphasis by being rare. The eyebrow belongs on a KPI
+          // value or a section kicker, not on every row of a data dump.
           Text(
             field.label,
             style: theme.textTheme.labelMedium?.copyWith(

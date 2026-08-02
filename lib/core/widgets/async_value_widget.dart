@@ -31,6 +31,14 @@ class AsyncValueWidget<T> extends StatelessWidget {
   /// Optional widget shown when [isEmpty] returns true.
   final Widget? emptyBuilder;
 
+  /// What a screen reader hears while [value] is loading.
+  ///
+  /// A shimmer skeleton is a set of bare `Container`s and a bare spinner has no
+  /// text either, so both publish an empty semantics tree: a screen reader lands
+  /// on a page with nothing to read and no way to tell "loading" from "empty".
+  /// Defaults to `'Loading <serviceName>'`.
+  final String? loadingLabel;
+
   const AsyncValueWidget({
     super.key,
     required this.value,
@@ -41,6 +49,7 @@ class AsyncValueWidget<T> extends StatelessWidget {
     this.onRetry,
     this.isEmpty,
     this.emptyBuilder,
+    this.loadingLabel,
   });
 
   @override
@@ -52,15 +61,32 @@ class AsyncValueWidget<T> extends StatelessWidget {
         }
         return data(value);
       },
-      loading: () =>
-          skeleton ??
-          loadingWidget ??
-          const Center(child: CircularProgressIndicator()),
+      loading: () => Semantics(
+        container: true,
+        // The placeholder is decoration: its shimmer boxes carry no text, and
+        // its ListView/GridView would otherwise publish a scroll container over
+        // content that does not exist yet.
+        //
+        // No `liveRegion`: this widget rebuilds on every provider tick, so a
+        // polling dashboard would announce "Loading Radarr" on a loop.
+        excludeSemantics: true,
+        label: loadingLabel ?? 'Loading $serviceName',
+        child:
+            skeleton ??
+            loadingWidget ??
+            const Center(child: CircularProgressIndicator()),
+      ),
       error: (e, stack) {
         if (e.toString().contains('not configured')) {
           return NotConfiguredPlaceholder(serviceName: serviceName);
         }
-        return AppErrorState(error: e, onRetry: onRetry);
+        // The same name the loading and not-configured states use, so a region
+        // says which service it is talking about in every state.
+        return AppErrorState(
+          error: e,
+          onRetry: onRetry,
+          serviceName: serviceName,
+        );
       },
     );
   }

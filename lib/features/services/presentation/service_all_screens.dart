@@ -4,24 +4,41 @@ import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/service_theme.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/utils/route_utils.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
+import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
+import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
+import 'package:seekarr/features/services/domain/seerr_request_filter.dart';
+import 'package:seekarr/features/services/domain/services_semantics.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
-class ServiceAllRequestsScreen extends ConsumerWidget {
+class ServiceAllRequestsScreen extends ConsumerStatefulWidget {
   const ServiceAllRequestsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ServiceAllRequestsScreen> createState() =>
+      _ServiceAllRequestsScreenState();
+}
+
+class _ServiceAllRequestsScreenState
+    extends ConsumerState<ServiceAllRequestsScreen> {
+  // Screen-local rather than a provider: the chosen bucket is not worth
+  // restoring when the user comes back to this screen.
+  SeerrRequestFilter _filter = SeerrRequestFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final requests = ref.watch(servicesRequestsProvider);
 
     return Scaffold(
@@ -42,7 +59,8 @@ class ServiceAllRequestsScreen extends ConsumerWidget {
           children: [
             _FilterChipRow(
               accent: ServiceKey.seerr.accent,
-              filters: const ['All', 'Pending', 'Approved', 'Declined'],
+              selected: _filter,
+              onSelected: (filter) => setState(() => _filter = filter),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -50,13 +68,14 @@ class ServiceAllRequestsScreen extends ConsumerWidget {
                 value: requests,
                 serviceName: 'Seerr requests',
                 data: (items) {
-                  if (items.isEmpty) {
-                    return const _EmptyListState(label: 'No requests found');
+                  final visible = _filter.apply(items);
+                  if (visible.isEmpty) {
+                    return _EmptyListState(label: _filter.emptyLabel);
                   }
 
                   return Column(
                     children: [
-                      for (final request in items)
+                      for (final request in visible)
                         Padding(
                           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                           child: _RequestListRow(request: request),
@@ -106,12 +125,19 @@ class _ServiceListAppBar extends StatelessWidget
 
 class _FilterChipRow extends StatelessWidget {
   final Color accent;
-  final List<String> filters;
+  final SeerrRequestFilter selected;
+  final ValueChanged<SeerrRequestFilter> onSelected;
 
-  const _FilterChipRow({required this.accent, required this.filters});
+  const _FilterChipRow({
+    required this.accent,
+    required this.selected,
+    required this.onSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
+    const filters = SeerrRequestFilter.values;
+
     return SizedBox(
       height: 44,
       child: ListView.separated(
@@ -120,19 +146,22 @@ class _FilterChipRow extends StatelessWidget {
         itemCount: filters.length,
         separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
         itemBuilder: (context, index) {
-          final selected = index == 0;
+          final filter = filters[index];
+          final isSelected = filter == selected;
+          // FilterChip supplies the button role and the selected state to
+          // assistive technology, so no explicit Semantics is needed here.
           return FilterChip(
-            label: Text(filters[index]),
-            selected: selected,
+            label: Text(filter.label),
+            selected: isSelected,
             showCheckmark: false,
-            onSelected: (_) {},
+            onSelected: (_) => onSelected(filter),
             labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: selected ? Colors.white : accent,
+              color: isSelected ? ServiceTheme.foregroundOn(accent) : accent,
               fontWeight: FontWeight.w700,
             ),
             selectedColor: accent,
             backgroundColor: accent.withValues(alpha: 0.10),
-            side: BorderSide(color: selected ? accent : Colors.transparent),
+            side: BorderSide(color: isSelected ? accent : Colors.transparent),
             shape: const StadiumBorder(),
           );
         },
@@ -141,13 +170,13 @@ class _FilterChipRow extends StatelessWidget {
   }
 }
 
-class _RequestListRow extends StatelessWidget {
+class _RequestListRow extends ConsumerWidget {
   final SeerrRequest request;
 
   const _RequestListRow({required this.request});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final media = request.media;
     final title = media?.title ?? 'Unknown Media';
@@ -160,92 +189,110 @@ class _RequestListRow extends StatelessWidget {
 
     return AppCard.outlined(
       onTap: () => _openRequest(context, request, heroTag: heroTag),
+      // The body is seven fragments on screen — including a bare '·' that reads
+      // as "middle dot" — so it is composed into one label here. The delete
+      // button is left out of the exclusion so it keeps a node of its own.
+      semanticLabel: title,
+      semanticValue: seerrRequestRowValue(
+        mediaTypeLabel: mediaType,
+        requester: requester,
+        statusLabel: displayStatus.label,
+        dateLabel: _formatRequestDate(request.createdAt),
+      ),
       backgroundColor: colorScheme.surfaceContainer,
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 38,
-            height: 54,
-            child: posterUrl.isEmpty
-                ? Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(6),
+          ExcludeSemantics(
+            child: SizedBox(
+              width: 38,
+              height: 54,
+              child: posterUrl.isEmpty
+                  ? Container(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        request.type == 'tv'
+                            ? Icons.tv_rounded
+                            : Icons.movie_rounded,
+                        size: 18,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  : Hero(
+                      tag: heroTag,
+                      child: ContentCard(imageUrl: posterUrl),
                     ),
-                    child: Icon(
-                      request.type == 'tv'
-                          ? Icons.tv_rounded
-                          : Icons.movie_rounded,
-                      size: 18,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  )
-                : Hero(
-                    tag: heroTag,
-                    child: ContentCard(imageUrl: posterUrl),
-                  ),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    _RequesterAvatar(name: requester),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        requester,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+            child: ExcludeSemantics(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      _RequesterAvatar(name: requester),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          requester,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                      Text(
+                        '·',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    ),
-                    Text(
-                      '·',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                      const SizedBox(width: 5),
+                      Text(
+                        mediaType,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      mediaType,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _formatRequestDate(request.createdAt),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    _formatRequestDate(request.createdAt),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _SmallPill(label: displayStatus.label, color: statusColor),
+              ExcludeSemantics(
+                child: _SmallPill(
+                  label: displayStatus.label,
+                  color: statusColor,
+                ),
+              ),
               const SizedBox(height: AppSpacing.sm),
               SizedBox.square(
                 dimension: 28,
@@ -256,8 +303,9 @@ class _RequestListRow extends StatelessWidget {
                     backgroundColor: AppColors.error.withValues(alpha: 0.10),
                     padding: EdgeInsets.zero,
                   ),
-                  onPressed: () {},
-                  tooltip: 'Delete request',
+                  onPressed: () => _deleteRequest(context, ref, title),
+                  // Names which request: there is one of these per row.
+                  tooltip: 'Delete request for $title',
                 ),
               ),
             ],
@@ -265,6 +313,33 @@ class _RequestListRow extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _deleteRequest(
+    BuildContext context,
+    WidgetRef ref,
+    String title,
+  ) async {
+    final result = await showAppConfirmDialog(
+      context: context,
+      title: 'Delete Request?',
+      message: 'This removes the request for $title from Seerr.',
+      destructive: true,
+      confirmLabel: 'Delete',
+    );
+    if (!result.confirmed || !context.mounted) return;
+
+    try {
+      await ref.read(seerrServiceProvider).deleteRequest(request.id);
+      ref.invalidate(servicesRequestsProvider);
+      if (!context.mounted) return;
+      // The row simply vanishes otherwise, which reads as a glitch rather than a
+      // result. SnackBar carries liveRegion, so this is also the announcement.
+      SnackBarHelper.success(context, 'Deleted the request for $title');
+    } catch (error) {
+      if (!context.mounted) return;
+      SnackBarHelper.error(context, 'Could not delete the request: $error');
+    }
   }
 
   void _openRequest(

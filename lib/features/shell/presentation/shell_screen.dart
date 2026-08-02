@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
+import 'package:seekarr/core/utils/a11y_announce.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/settings/domain/nav_tab.dart';
@@ -105,10 +106,18 @@ class ShellScreen extends ConsumerWidget {
       final section = _refreshSectionFor(tab);
       if (section != null) {
         ref.triggerNavigationRefresh(section);
+        // A re-tap refresh changes nothing on screen — no spinner, no route
+        // change, no focus move — so for a screen-reader user it is otherwise
+        // indistinguishable from a no-op. Start only: the shell never learns
+        // when the invalidated providers settle, so there is no completion to
+        // announce.
+        announce(context, 'Refreshing ${tab.label}');
       }
       return;
     }
 
+    // Not announced: switching tabs replaces the whole screen, which is its own
+    // feedback.
     context.go(tab.routePath);
   }
 

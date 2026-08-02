@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 
 import 'package:seekarr/core/network/connection_failure.dart';
+import 'package:seekarr/core/utils/url_utils.dart';
 
 /// Error thrown by [QbittorrentClient], carrying the [reason] so a caller
 /// verifying the connection can tell rejected credentials from an unreachable
@@ -38,7 +39,7 @@ class QbittorrentClient {
     this.password,
     Dio? dio,
     CookieJar? cookieJar,
-  }) : baseUrl = _normalizeBaseUrl(url),
+  }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _cookieJar = cookieJar ?? CookieJar() {
     _dio =
         dio ??
@@ -82,21 +83,6 @@ class QbittorrentClient {
         },
       ),
     );
-  }
-
-  static String _normalizeBaseUrl(String url) {
-    var normalized = url.trim();
-    if (normalized.isEmpty) return '';
-    if (!normalized.startsWith('http://') &&
-        !normalized.startsWith('https://')) {
-      // Default a scheme-less URL to HTTPS so credentials are not sent in the
-      // clear when the user omits the scheme. An explicit http:// is honoured.
-      normalized = 'https://$normalized';
-    }
-    if (normalized.endsWith('/')) {
-      normalized = normalized.substring(0, normalized.length - 1);
-    }
-    return normalized;
   }
 
   bool get hasCredentials =>

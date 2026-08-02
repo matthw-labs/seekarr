@@ -138,6 +138,33 @@ void main() {
       expect(find.text('LauncherPage'), findsOneWidget);
       expect(find.text('Sonarr settings saved'), findsOneWidget);
     });
+
+    testWidgets('the connection verdict is a live region that names the outcome', (
+      tester,
+    ) async {
+      // The verdict is the whole point of the action, but it appears below the
+      // button while focus stays on it. Under the test binding every request
+      // returns 400, so this exercises the failure verdict.
+      await _pumpServiceSettings(
+        tester,
+        service: ServiceKey.radarr,
+        settings: const SettingsModel(
+          radarrUrl: 'https://radarr.local:7878',
+          radarrApiKey: 'key',
+        ),
+      );
+
+      await tester.tap(find.text('Test connection'));
+      await tester.pumpAndSettle();
+
+      // Icon + text were two nodes and neither said "failed" — the tint carried
+      // it. liveRegion is what makes the panel announce itself on both platforms;
+      // a programmatic announcement would be dropped on Android.
+      expect(
+        find.semantics.byLabel(RegExp(r'^Connection test failed\. ')),
+        containsSemantics(isLiveRegion: true),
+      );
+    });
   });
 }
 

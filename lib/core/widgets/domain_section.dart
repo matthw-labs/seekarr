@@ -26,22 +26,35 @@ class DomainSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: padding,
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label.toUpperCase(),
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      header: true,
+      // The un-uppercased label: `.toUpperCase()` is typography, and VoiceOver
+      // spells out all-caps tokens it does not recognise. The eye gets the caps,
+      // the ear gets the word.
+      label: label,
+      child: Padding(
+        padding: padding,
+        child: Row(
+          children: [
+            Expanded(
+              child: ExcludeSemantics(
+                child: Text(
+                  label.toUpperCase(),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
               ),
             ),
-          ),
-          if (trailing != null) trailing!,
-        ],
+            // Left audible: callers use it for a live count, which is worth its
+            // own node.
+            if (trailing != null) trailing!,
+          ],
+        ),
       ),
     );
   }
@@ -101,35 +114,56 @@ class _CollapsibleDomainSectionState extends State<CollapsibleDomainSection> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        InkWell(
+        // `expanded:` rather than an announcement on toggle: the platform speaks
+        // the change off the node update, it works on TalkBack (where
+        // announcements are dropped), and the current state stays discoverable
+        // on re-focus instead of only at the moment of the tap.
+        Semantics(
+          container: true,
+          explicitChildNodes: true,
+          header: true,
+          button: true,
+          expanded: _expanded,
+          label: widget.label,
+          hint: _expanded ? 'collapses this group' : 'expands this group',
           onTap: _toggle,
-          borderRadius: BorderRadius.circular(AppSpacing.sm),
-          child: Padding(
-            padding: widget.headerPadding,
-            child: Row(
-              children: [
-                AnimatedRotation(
-                  turns: _expanded ? 0.25 : 0.0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Text(
-                    widget.label.toUpperCase(),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
+          child: InkWell(
+            onTap: _toggle,
+            borderRadius: BorderRadius.circular(AppSpacing.sm),
+            excludeFromSemantics: true,
+            child: Padding(
+              padding: widget.headerPadding,
+              child: Row(
+                children: [
+                  // The rotation is the visual expand cue; `expanded:` above is
+                  // the audible one.
+                  ExcludeSemantics(
+                    child: AnimatedRotation(
+                      turns: _expanded ? 0.25 : 0.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                ),
-                if (widget.trailing != null) widget.trailing!,
-              ],
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: ExcludeSemantics(
+                      child: Text(
+                        widget.label.toUpperCase(),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.trailing != null) widget.trailing!,
+                ],
+              ),
             ),
           ),
         ),

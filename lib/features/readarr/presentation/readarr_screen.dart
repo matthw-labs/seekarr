@@ -88,14 +88,23 @@ class _ReadarrDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authorsAsync = ref.watch(readarrAuthorsProvider);
     final historyAsync = ref.watch(readarrRecentHistoryProvider);
+    final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.readarr));
+    final isOffline = summaryAsync.maybeWhen(
+      data: (summary) => !summary.isOnline,
+      orElse: () => false,
+    );
+
+    if (isOffline) {
+      return ServiceOfflineState(
+        serviceName: ServiceKey.readarr.title,
+        accent: AppColors.readarr,
+        onRetry: () => _invalidateAll(ref),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(readarrAuthorsProvider);
-        ref.invalidate(readarrRecentHistoryProvider);
-        ref.invalidate(readarrQueueProvider);
-        ref.invalidate(serviceKpiProvider(ServiceKey.readarr));
-        ref.invalidate(serviceSummaryProvider(ServiceKey.readarr));
+        _invalidateAll(ref);
         await Future<void>.delayed(const Duration(milliseconds: 300));
       },
       child: ListView(
@@ -125,6 +134,14 @@ class _ReadarrDashboard extends ConsumerWidget {
       ),
     );
   }
+}
+
+void _invalidateAll(WidgetRef ref) {
+  ref.invalidate(readarrAuthorsProvider);
+  ref.invalidate(readarrRecentHistoryProvider);
+  ref.invalidate(readarrQueueProvider);
+  ref.invalidate(serviceKpiProvider(ServiceKey.readarr));
+  ref.invalidate(serviceSummaryProvider(ServiceKey.readarr));
 }
 
 class _AuthorPreview extends ConsumerWidget {

@@ -39,103 +39,72 @@ void main() {
       });
     });
 
-    group('validateServiceUrl', () {
-      test('returns required error for null', () {
-        expect(UrlUtils.validateServiceUrl(null), 'Server URL is required');
-      });
-
-      test('returns required error for empty string', () {
-        expect(UrlUtils.validateServiceUrl(''), 'Server URL is required');
-      });
-
-      test('returns required error for whitespace only', () {
-        expect(UrlUtils.validateServiceUrl('  '), 'Server URL is required');
-      });
-
-      test('rejects non-http schemes', () {
+    group('normalizeBaseUrl', () {
+      test('qualifies a scheme-less host with https', () {
+        // Dio's `baseUrl` setter throws ArgumentError on a bare host, and both
+        // address fields accept one — so this is what keeps a plausible address
+        // from wedging its caller.
         expect(
-          UrlUtils.validateServiceUrl('ftp://host.com'),
-          'URL must start with http:// or https://',
+          UrlUtils.normalizeBaseUrl('192.168.1.10:7878'),
+          'https://192.168.1.10:7878',
+        );
+        expect(UrlUtils.normalizeBaseUrl('radarr.lan'), 'https://radarr.lan');
+      });
+
+      test('honours an explicit scheme, whatever its case', () {
+        expect(
+          UrlUtils.normalizeBaseUrl('http://10.0.0.5:8989'),
+          'http://10.0.0.5:8989',
+        );
+        expect(
+          UrlUtils.normalizeBaseUrl('HTTP://10.0.0.5:8989'),
+          'HTTP://10.0.0.5:8989',
         );
       });
 
-      test('rejects non-url values', () {
+      test('trims surrounding space and trailing slashes', () {
         expect(
-          UrlUtils.validateServiceUrl('not-a-url'),
-          'URL must start with http:// or https://',
+          UrlUtils.normalizeBaseUrl('  https://nas.local:7878//  '),
+          'https://nas.local:7878',
         );
       });
 
-      test('rejects bare http scheme', () {
+      test('leaves an empty value empty', () {
+        expect(UrlUtils.normalizeBaseUrl(''), '');
+        expect(UrlUtils.normalizeBaseUrl('   '), '');
+      });
+
+      test('preserves a reverse-proxy base path', () {
         expect(
-          UrlUtils.validateServiceUrl('http://'),
-          'Enter a valid URL (e.g. https://192.168.1.100:7878)',
-        );
-      });
-
-      test('rejects bare https scheme', () {
-        expect(
-          UrlUtils.validateServiceUrl('https://'),
-          'Enter a valid URL (e.g. https://192.168.1.100:7878)',
-        );
-      });
-
-      test('accepts localhost with port', () {
-        expect(UrlUtils.validateServiceUrl('http://localhost:7878'), isNull);
-      });
-
-      test('accepts fqdn over https', () {
-        expect(
-          UrlUtils.validateServiceUrl('https://radarr.mydomain.com'),
-          isNull,
-        );
-      });
-
-      test('accepts private ip with port', () {
-        expect(
-          UrlUtils.validateServiceUrl('http://192.168.1.100:8989'),
-          isNull,
-        );
-      });
-
-      test('accepts local hostname with port', () {
-        expect(UrlUtils.validateServiceUrl('http://mynas.local:7878'), isNull);
-      });
-
-      test('accepts reverse proxy base path', () {
-        expect(
-          UrlUtils.validateServiceUrl('https://proxy.example.com/radarr'),
-          isNull,
-        );
-      });
-
-      test('accepts trailing slash', () {
-        expect(UrlUtils.validateServiceUrl('http://10.0.0.1:7878/'), isNull);
-      });
-
-      test('accepts whitespace around valid URL', () {
-        expect(
-          UrlUtils.validateServiceUrl('  http://localhost:7878  '),
-          isNull,
-        );
-      });
-
-      test('rejects embedded credentials', () {
-        expect(
-          UrlUtils.validateServiceUrl('https://user:pass@radarr.example.com'),
-          contains('Remove the username:password'),
-        );
-      });
-
-      test('rejects internal whitespace', () {
-        expect(
-          UrlUtils.validateServiceUrl('https://not a url'),
-          'Enter a valid URL (e.g. https://192.168.1.100:7878)',
+          UrlUtils.normalizeBaseUrl('https://proxy.example.com/radarr'),
+          'https://proxy.example.com/radarr',
         );
       });
     });
 
     group('validateServiceHost', () {
+      test('accepts a reverse-proxy base path', () {
+        expect(
+          UrlUtils.validateServiceHost('https://proxy.example.com/radarr'),
+          isNull,
+        );
+      });
+
+      test('accepts a trailing slash and surrounding whitespace', () {
+        expect(UrlUtils.validateServiceHost('http://10.0.0.1:7878/'), isNull);
+        expect(
+          UrlUtils.validateServiceHost('  http://localhost:7878  '),
+          isNull,
+        );
+      });
+
+      test('rejects internal whitespace', () {
+        expect(
+          UrlUtils.validateServiceHost('https://not a url'),
+          'Enter a valid URL (e.g. https://192.168.1.100:7878)',
+        );
+      });
+
       test('requires a value', () {
         expect(UrlUtils.validateServiceHost(''), 'Server URL is required');
         expect(UrlUtils.validateServiceHost('   '), 'Server URL is required');

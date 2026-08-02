@@ -1,12 +1,12 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:seekarr/core/app_animation.dart';
 import 'package:seekarr/core/app_elevation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/service_theme.dart';
 import 'package:seekarr/core/theme.dart';
 
 /// A destination for the [FloatingBottomNavBar].
@@ -230,9 +230,9 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
   }
 
   void _handleDestinationTap(int index) {
-    if (index != widget.selectedIndex) {
-      HapticFeedback.selectionClick();
-    }
+    // No haptic here: the shell fires one selection click for every tap, and it
+    // is the only call site that covers both this bar and the wide-window rail.
+    // Firing here as well buzzed twice on a tab change.
     widget.onDestinationSelected(index);
   }
 
@@ -381,6 +381,9 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
                                                 widget.destinations[index],
                                             isSelected:
                                                 index == widget.selectedIndex,
+                                            index: index,
+                                            destinationCount:
+                                                widget.destinations.length,
                                             onTap: () =>
                                                 _handleDestinationTap(index),
                                           ),
@@ -407,6 +410,15 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
 }
 
 class _NavBarIndicator extends StatelessWidget {
+  /// Alpha of the accent fill behind the selected destination.
+  ///
+  /// Shared with [_NavBarItem], which has to measure its label against this exact
+  /// value: the fill and the label on top of it are one contrast decision, and
+  /// letting the two read different constants is how a legible pill silently
+  /// becomes an illegible one.
+  static double tintAlphaFor(Brightness brightness) =>
+      brightness == Brightness.dark ? 0.16 : 0.13;
+
   final double left;
   final double width;
   final double barHeight;
@@ -422,10 +434,9 @@ class _NavBarIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
     final accentColor = selectedDestination.accentColor;
     final activeBackground = accentColor.withValues(
-      alpha: isDark ? 0.16 : 0.13,
+      alpha: tintAlphaFor(colorScheme.brightness),
     );
     final activeBorder = accentColor.withValues(alpha: 0.27);
     final pillHeight = _NavBarItem.pillHeightFor(
@@ -630,7 +641,10 @@ class _NavBarLayoutMetrics {
 class _NavBarItem extends StatelessWidget {
   static const double _iconSize = 20.0;
   static const double _itemHorizontalPadding = 14.0;
-  static const double itemRadius = 20.0;
+
+  /// The app's selected-affordance radius, shared with the Activity segment
+  /// pills so "this one is active" reads the same in both places.
+  static const double itemRadius = AppRadius.pill;
   static const double _labelGap = 6.0;
   static const double _selectedLabelFontSize = 12.0;
   static const double _labelLineHeight = 1.3;
@@ -643,11 +657,18 @@ class _NavBarItem extends StatelessWidget {
 
   final FloatingNavDestination destination;
   final bool isSelected;
+
+  /// Zero-based position in the bar, announced as "Tab 2 of 4".
+  final int index;
+  final int destinationCount;
+
   final VoidCallback onTap;
 
   const _NavBarItem({
     required this.destination,
     required this.isSelected,
+    required this.index,
+    required this.destinationCount,
     required this.onTap,
   });
 
@@ -700,14 +721,42 @@ class _NavBarItem extends StatelessWidget {
     final accentColor = destination.accentColor;
     final scaler = FloatingNavBarMetrics.effectiveTextScaler(context);
 
-    final itemColor = isSelected ? accentColor : colorScheme.onSurfaceVariant;
+    // The selected label and icon sit *on top of* the indicator pill, which is
+    // this same accent at a low alpha (see [_NavBarIndicator]). Painting the raw
+    // accent there was the exact failure DESIGN.md's Luminance Rule describes: in
+    // light theme an accent over a 13% tint of itself measures under 2:1 against a
+    // 4.5:1 requirement, so every service accent was failing AA in daylight while
+    // looking fine in dark, where the same combination clears about 7.7:1.
+    //
+    // `onTint` keeps the hue and darkens only as far as AA needs, so the bar stays
+    // accent-coloured rather than dropping to a neutral.
+    final itemColor = isSelected
+        ? ServiceTheme.onTint(
+            accentColor,
+            // The pill floats on the glass bar, whose own fill is translucent, so
+            // the true composite is not knowable here. `surface` is the opaque
+            // base the ambient background paints from, which makes this the
+            // conservative choice in light theme — where the risk actually is.
+            surface: colorScheme.surface,
+            tintAlpha: _NavBarIndicator.tintAlphaFor(colorScheme.brightness),
+          )
+        : colorScheme.onSurfaceVariant;
+
+    // Rail parity: NavigationRail and NavigationBar both append this, so the
+    // wide-window rail already announced "Tab 1 of 4" while this bar did not —
+    // the same app saying two different things about the same navigation. '\n'
+    // is the separator Flutter itself uses when merging labels, so the string is
+    // byte-identical to Material's.
+    final indexLabel = MaterialLocalizations.of(
+      context,
+    ).tabLabel(tabIndex: index + 1, tabCount: destinationCount);
 
     return Semantics(
       key: ValueKey('floating-nav-item-${destination.label.toLowerCase()}'),
       button: true,
       container: true,
       excludeSemantics: true,
-      label: destination.label,
+      label: '${destination.label}\n$indexLabel',
       selected: isSelected,
       enabled: true,
       onTap: onTap,

@@ -99,12 +99,38 @@ String? arrPrimaryMediaTitle(
       arrArtistName(item);
 }
 
-bool arrQueueHasWarning(Map<String, dynamic> item) {
+/// How badly an \*arr queue record is doing, as the service itself reports it.
+///
+/// `trackedDownloadStatus` carries three values and this layer used to collapse
+/// two of them into a single `bool`: a record the service marked `error` came out
+/// identical to one marked `warning`, so a definite failure and a passing notice
+/// were the same colour and the same weight on screen. [StatusTone] has had
+/// distinct `warning` and `error` all along — the information existed upstream
+/// and was thrown away in the middle.
+enum ArrQueueSeverity { ok, warning, error }
+
+/// Reads the severity an \*arr reported for a queue record.
+///
+/// Note that a non-empty `statusMessages` counts as a warning even when
+/// `trackedDownloadStatus` is absent or `ok`. That is deliberate and matches the
+/// \*arr web UI: on the queue endpoint those messages are the mechanism by which
+/// a service says something needs looking at ("Unable to Import Automatically"
+/// is the canonical one), unlike on history where they can be incidental.
+ArrQueueSeverity arrQueueSeverity(Map<String, dynamic> item) {
   final trackedStatus = stringOrNull(
     item['trackedDownloadStatus'],
   )?.toLowerCase();
-  return trackedStatus == 'warning' ||
-      extractArrStatusMessages(item['statusMessages']).isNotEmpty;
+
+  if (trackedStatus == 'error') return ArrQueueSeverity.error;
+  if (trackedStatus == 'warning' ||
+      extractArrStatusMessages(item['statusMessages']).isNotEmpty) {
+    return ArrQueueSeverity.warning;
+  }
+  return ArrQueueSeverity.ok;
+}
+
+bool arrQueueHasWarning(Map<String, dynamic> item) {
+  return arrQueueSeverity(item) != ArrQueueSeverity.ok;
 }
 
 String? arrQueueWarningMessage(Map<String, dynamic> item) {

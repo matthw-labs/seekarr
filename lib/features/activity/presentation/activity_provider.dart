@@ -1,24 +1,110 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:seekarr/core/api/base_arr_service.dart';
+import 'package:seekarr/core/status/media_status.dart';
 import 'package:seekarr/core/utils/arr_activity_display.dart';
 import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:seekarr/features/activity/domain/global_activity_status.dart';
+import 'package:seekarr/features/activity/presentation/activity_screen.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
-import 'package:seekarr/features/activity/presentation/activity_screen.dart';
-import 'package:seekarr/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/music/data/lidarr_service.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
+import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
+
+export 'package:seekarr/features/activity/domain/global_activity_status.dart'
+    show GlobalActivityKind;
 
 final activityRefreshVersionProvider = StateProvider<int>((ref) => 0);
 
 const _globalActivityPageSize = 50;
 
-enum GlobalActivityKind { request, queue, history, blocklist, missing, cutoff }
+/// How often the "Now" bucket refreshes itself.
+///
+/// A bucket named "Now" that shows a snapshot from whenever the tab was last
+/// opened is not a live readout — a download sat at 43% until the user pulled to
+/// refresh. Deliberately far slower than qBittorrent's 3s: that polls one local
+/// endpoint for one list, whereas each tick here fans out to three \*arr
+/// services, over a LAN, VPN or Tailscale link where a request can take a
+/// second. 15s keeps the number honest without hammering someone's home server.
+const _nowPollInterval = Duration(seconds: 15);
+
+/// One service's contribution to a feed load.
+///
+/// The whole point of this type is that a failure is *reportable*. Every service
+/// used to be wrapped in `catch (_) { return const []; }`, so a dead Sonarr and
+/// an idle Sonarr produced byte-identical output and the screen confidently
+/// said "Nothing downloading right now". Errors are caught per service — one
+/// unreachable instance must never blank the others — but they are carried, not
+/// swallowed.
+class ActivityServiceResult {
+  final ServiceKey service;
+  final List<GlobalActivityItem> items;
+
+  /// Non-null when the service was configured but did not answer.
+  final Object? error;
+
+  /// False when the user has not set this service up at all.
+  final bool configured;
+
+  const ActivityServiceResult({
+    required this.service,
+    required this.items,
+    required this.configured,
+    this.error,
+  });
+
+  const ActivityServiceResult.unconfigured(this.service)
+    : items = const [],
+      error = null,
+      configured = false;
+
+  /// Configured, asked, and answered.
+  bool get reached => configured && error == null;
+
+  /// Configured, asked, and did not answer.
+  bool get failed => configured && error != null;
+}
+
+/// A whole feed load: the merged items plus what happened to each service.
+class ActivityFeed {
+  final List<GlobalActivityItem> items;
+  final List<ActivityServiceResult> results;
+
+  const ActivityFeed({required this.items, required this.results});
+
+  const ActivityFeed.empty() : items = const [], results = const [];
+
+  Iterable<ActivityServiceResult> get configured =>
+      results.where((r) => r.configured);
+
+  Iterable<ActivityServiceResult> get failures =>
+      results.where((r) => r.failed);
+
+  Iterable<ActivityServiceResult> get unconfigured =>
+      results.where((r) => !r.configured);
+
+  bool get hasConfiguredService => configured.isNotEmpty;
+
+  /// Nothing was actually reached — every configured service errored.
+  ///
+  /// This is the case that must surface as an error with a retry rather than as
+  /// an empty state, because "no items" here means "we have no idea".
+  bool get allConfiguredFailed =>
+      hasConfiguredService && configured.every((r) => r.failed);
+
+  /// Some services answered and some did not, so the list is incomplete.
+  bool get isPartial => failures.isNotEmpty && !allConfiguredFailed;
+
+  /// The first error, for the whole-feed error state.
+  Object? get firstError => failures.isEmpty ? null : failures.first.error;
+}
 
 class GlobalActivityItem {
   final GlobalActivityKind kind;
@@ -26,9 +112,15 @@ class GlobalActivityItem {
   final ServiceType serviceType;
   final String title;
   final String subtitle;
-  final String status;
-  final double? progress;
-  final String? warning;
+
+  /// The fully resolved status — tone, label, progress, warning and all.
+  ///
+  /// Replaces the previous `String status` + `double? progress` +
+  /// `String? warning` triple. Those were flattened at load time, which left the
+  /// tile with nothing to colour by except the row's *kind* — the bug that made
+  /// a failed import render in the success green.
+  final MediaStatusInfo status;
+
   final DateTime? sortDate;
   final Map<String, dynamic>? raw;
   final SeerrRequest? request;
@@ -40,92 +132,129 @@ class GlobalActivityItem {
     required this.title,
     required this.subtitle,
     required this.status,
-    this.progress,
-    this.warning,
     this.sortDate,
     this.raw,
     this.request,
   });
+
+  double? get progress => status.progress;
+
+  /// The service's own explanation, when it gave one.
+  String? get detail => status.detail;
+
+  /// Wants the user's eye: failed, stalled, blocked, missing.
+  bool get needsAttention =>
+      status.tone == StatusTone.error || status.tone == StatusTone.warning;
+
+  /// The \*arr record id, used by the queue write actions.
+  int? get recordId => intOrNull(raw?['id']);
 }
 
-final globalActivityFeedProvider = FutureProvider<List<GlobalActivityItem>>((
-  ref,
-) async {
-  ref.watch(activityRefreshVersionProvider);
-  final results = await Future.wait([
-    _loadRequestItems(ref),
-    _loadArrItems(ref, GlobalActivityKind.queue),
-    _loadArrItems(ref, GlobalActivityKind.history),
-  ]);
-
-  return _sortItems(results.expand((items) => items).toList(growable: false));
+/// Auto-refresh for the "Now" bucket.
+///
+/// `autoDispose` so the timer only runs while something is watching it — the
+/// screen watches it exclusively from the Now section, so leaving the tab or
+/// switching to History stops the polling instead of quietly refetching three
+/// services forever.
+final activityNowPollingProvider = Provider.autoDispose<void>((ref) {
+  final timer = Timer.periodic(_nowPollInterval, (_) {
+    ref.read(activityRefreshVersionProvider.notifier).state++;
+  });
+  ref.onDispose(timer.cancel);
 });
 
-final globalQueueItemsProvider = FutureProvider<List<GlobalActivityItem>>((
-  ref,
-) async {
-  ref.watch(activityRefreshVersionProvider);
-  return _loadArrItems(ref, GlobalActivityKind.queue);
+/// The services that can appear in the global feed, in display order.
+const globalActivityServices = [
+  ServiceKey.radarr,
+  ServiceKey.sonarr,
+  ServiceKey.lidarr,
+  ServiceKey.seerr,
+];
+
+/// Only the services the user has actually configured.
+///
+/// The filter row used to be a `static const` of four, so a user running Radarr
+/// alone still got Sonarr, Lidarr and Seerr chips, each leading to a confident
+/// "Nothing downloading right now".
+final configuredActivityServicesProvider = Provider<List<ServiceKey>>((ref) {
+  final settings = ref.watch(settingsProvider);
+  return globalActivityServices
+      .where(settings.isServiceConfigured)
+      .toList(growable: false);
 });
 
-/// "Now" bucket for the global Activity screen: active downloads (queue) plus
-/// current Seerr requests, so requests remain first-class in the unified view.
-final globalNowItemsProvider = FutureProvider<List<GlobalActivityItem>>((
-  ref,
-) async {
+final globalActivityFeedProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
-  final results = await Future.wait([
-    _loadRequestItems(ref),
-    _loadArrItems(ref, GlobalActivityKind.queue),
-  ]);
-  return _sortItems(results.expand((items) => items).toList(growable: false));
+  return _merge(
+    await Future.wait([
+      _loadRequestResult(ref),
+      ..._loadArrResults(ref, GlobalActivityKind.queue),
+      ..._loadArrResults(ref, GlobalActivityKind.history),
+    ]),
+  );
+});
+
+final globalQueueItemsProvider = FutureProvider<ActivityFeed>((ref) async {
+  ref.watch(activityRefreshVersionProvider);
+  return _merge(
+    await Future.wait(_loadArrResults(ref, GlobalActivityKind.queue)),
+  );
+});
+
+/// "Now" bucket: active downloads (queue) plus current Seerr requests, so
+/// requests remain first-class in the unified view.
+final globalNowItemsProvider = FutureProvider<ActivityFeed>((ref) async {
+  ref.watch(activityRefreshVersionProvider);
+  return _merge(
+    await Future.wait([
+      _loadRequestResult(ref),
+      ..._loadArrResults(ref, GlobalActivityKind.queue),
+    ]),
+  );
 });
 
 /// Seerr requests only — the "Requests" sub-segment of the global "Now" bucket.
-final globalRequestItemsProvider = FutureProvider<List<GlobalActivityItem>>((
-  ref,
-) async {
+final globalRequestItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
-  return _sortItems(await _loadRequestItems(ref));
+  return _merge([await _loadRequestResult(ref)]);
 });
 
-final globalHistoryItemsProvider = FutureProvider<List<GlobalActivityItem>>((
-  ref,
-) async {
+final globalHistoryItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
-  return _loadArrItems(ref, GlobalActivityKind.history);
+  return _merge(
+    await Future.wait(_loadArrResults(ref, GlobalActivityKind.history)),
+  );
 });
 
-final globalWantedItemsProvider = FutureProvider<List<GlobalActivityItem>>((
-  ref,
-) async {
+final globalWantedItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
-  final results = await Future.wait([
-    _loadArrItems(ref, GlobalActivityKind.missing),
-    _loadArrItems(ref, GlobalActivityKind.cutoff),
-  ]);
-  return _sortItems(results.expand((items) => items).toList(growable: false));
+  return _merge(
+    await Future.wait([
+      ..._loadArrResults(ref, GlobalActivityKind.missing),
+      ..._loadArrResults(ref, GlobalActivityKind.cutoff),
+    ]),
+  );
 });
 
-final globalBlocklistItemsProvider = FutureProvider<List<GlobalActivityItem>>((
-  ref,
-) async {
+final globalBlocklistItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
-  return _loadArrItems(ref, GlobalActivityKind.blocklist);
+  return _merge(
+    await Future.wait(_loadArrResults(ref, GlobalActivityKind.blocklist)),
+  );
 });
 
-final globalMissingItemsProvider = FutureProvider<List<GlobalActivityItem>>((
-  ref,
-) async {
+final globalMissingItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
-  return _loadArrItems(ref, GlobalActivityKind.missing);
+  return _merge(
+    await Future.wait(_loadArrResults(ref, GlobalActivityKind.missing)),
+  );
 });
 
-final globalCutoffItemsProvider = FutureProvider<List<GlobalActivityItem>>((
-  ref,
-) async {
+final globalCutoffItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
-  return _loadArrItems(ref, GlobalActivityKind.cutoff);
+  return _merge(
+    await Future.wait(_loadArrResults(ref, GlobalActivityKind.cutoff)),
+  );
 });
 
 /// Resolves a [ServiceType] to the corresponding *arr service.
@@ -157,37 +286,103 @@ final resolvedArrServiceProvider =
       }
     });
 
-Future<List<GlobalActivityItem>> _loadRequestItems(Ref ref) async {
+/// Folds per-service results into one feed, merging duplicate services.
+///
+/// A bucket can ask the same service for two kinds (Wanted asks for missing and
+/// cutoff), so results arrive keyed by service more than once and have to be
+/// combined before the health strip can report one row per service.
+ActivityFeed _merge(List<ActivityServiceResult> results) {
+  final byService = <ServiceKey, ActivityServiceResult>{};
+  for (final result in results) {
+    final existing = byService[result.service];
+    if (existing == null) {
+      byService[result.service] = result;
+      continue;
+    }
+    byService[result.service] = ActivityServiceResult(
+      service: result.service,
+      items: [...existing.items, ...result.items],
+      configured: existing.configured || result.configured,
+      // Either half failing means the list for this service is incomplete.
+      error: existing.error ?? result.error,
+    );
+  }
+
+  final ordered = globalActivityServices
+      .where(byService.containsKey)
+      .map((service) => byService[service]!)
+      .toList(growable: false);
+
+  return ActivityFeed(
+    items: _sortItems(
+      ordered.expand((result) => result.items).toList(growable: false),
+    ),
+    results: ordered,
+  );
+}
+
+Future<ActivityServiceResult> _loadRequestResult(Ref ref) async {
+  final settings = ref.read(settingsProvider);
+  if (!settings.isServiceConfigured(ServiceKey.seerr)) {
+    return const ActivityServiceResult.unconfigured(ServiceKey.seerr);
+  }
+
   try {
     final requests = await ref.read(requestsProvider.future);
-    return requests.map(_requestItem).toList(growable: false);
-  } catch (_) {
-    return const [];
+    return ActivityServiceResult(
+      service: ServiceKey.seerr,
+      items: requests.map(_requestItem).toList(growable: false),
+      configured: true,
+    );
+  } catch (error) {
+    return ActivityServiceResult(
+      service: ServiceKey.seerr,
+      items: const [],
+      configured: true,
+      error: error,
+    );
   }
 }
 
-Future<List<GlobalActivityItem>> _loadArrItems(
+List<Future<ActivityServiceResult>> _loadArrResults(
   Ref ref,
   GlobalActivityKind kind,
-) async {
-  final results = await Future.wait(
-    const [ServiceType.movies, ServiceType.series, ServiceType.music].map((
-      serviceType,
-    ) async {
-      try {
-        final service = ref.read(resolvedArrServiceProvider(serviceType));
-        final items = await _loadRawItems(service, kind);
-        return items
-            .whereType<Map>()
-            .map((item) => _arrItem(kind, serviceType, stringKeyMap(item)))
-            .toList(growable: false);
-      } catch (_) {
-        return const <GlobalActivityItem>[];
-      }
-    }),
-  );
+) {
+  const serviceTypes = [
+    ServiceType.movies,
+    ServiceType.series,
+    ServiceType.music,
+  ];
 
-  return _sortItems(results.expand((items) => items).toList(growable: false));
+  return serviceTypes
+      .map((serviceType) async {
+        final service = _serviceKeyFor(serviceType);
+        final settings = ref.read(settingsProvider);
+        if (!settings.isServiceConfigured(service)) {
+          return ActivityServiceResult.unconfigured(service);
+        }
+
+        try {
+          final arrService = ref.read(resolvedArrServiceProvider(serviceType));
+          final items = await _loadRawItems(arrService, kind);
+          return ActivityServiceResult(
+            service: service,
+            items: items
+                .whereType<Map>()
+                .map((item) => _arrItem(kind, serviceType, stringKeyMap(item)))
+                .toList(growable: false),
+            configured: true,
+          );
+        } catch (error) {
+          return ActivityServiceResult(
+            service: service,
+            items: const [],
+            configured: true,
+            error: error,
+          );
+        }
+      })
+      .toList(growable: false);
 }
 
 Future<List<dynamic>> _loadRawItems(
@@ -218,7 +413,7 @@ GlobalActivityItem _requestItem(SeerrRequest request) {
     serviceType: ServiceType.discover,
     title: title,
     subtitle: [requester, type].whereType<String>().join(' · '),
-    status: request.displayStatus.label,
+    status: resolveRequestStatus(request),
     sortDate: DateTime.tryParse(request.createdAt),
     request: request,
   );
@@ -236,24 +431,54 @@ GlobalActivityItem _arrItem(
     serviceType: serviceType,
     title: _titleFor(kind, serviceType, item),
     subtitle: _subtitleFor(kind, serviceType, item),
-    status: _statusFor(kind, item),
-    progress: kind == GlobalActivityKind.queue ? queueProgress(item) : null,
-    warning: kind == GlobalActivityKind.queue
-        ? arrQueueWarningMessage(item)
-        : null,
+    status: resolveActivityStatus(kind, item),
     sortDate: _sortDateFor(kind, item),
     raw: item,
   );
 }
 
+/// Orders a feed so trouble surfaces first.
+///
+/// The previous comparator sorted purely by date descending, which for the queue
+/// meant `estimatedCompletionTime` descending: the download finishing soonest
+/// went last, and anything stalled — no ETA at all — sorted dead last. The one
+/// row the user opened the screen to find was at the bottom.
+///
+/// Three keys, in order:
+///  1. severity: errors, then warnings, then everything calm;
+///  2. liveness: an in-flight queue item outranks a request from last Tuesday;
+///  3. time: soonest-first for the queue (an ETA counts down), newest-first for
+///     everything else (history counts up). Undated rows go last.
+///
+/// Comparing dates only ever happens inside one liveness group, so the two
+/// opposite directions never meet and the ordering stays a valid total order.
 List<GlobalActivityItem> _sortItems(List<GlobalActivityItem> items) {
+  int severity(GlobalActivityItem item) => switch (item.status.tone) {
+    StatusTone.error => 0,
+    StatusTone.warning => 1,
+    _ => 2,
+  };
+
+  // Queue rows are live; everything else is a record of something settled.
+  int liveness(GlobalActivityItem item) =>
+      item.kind == GlobalActivityKind.queue ? 0 : 1;
+
   return [...items]..sort((a, b) {
+    final bySeverity = severity(a).compareTo(severity(b));
+    if (bySeverity != 0) return bySeverity;
+
+    final byLiveness = liveness(a).compareTo(liveness(b));
+    if (byLiveness != 0) return byLiveness;
+
     final left = a.sortDate;
     final right = b.sortDate;
     if (left == null && right == null) return 0;
     if (left == null) return 1;
     if (right == null) return -1;
-    return right.compareTo(left);
+
+    final chronological = left.compareTo(right);
+    // Ascending for the queue: the nearest ETA is the most imminent.
+    return liveness(a) == 0 ? chronological : -chronological;
   });
 }
 
@@ -314,22 +539,6 @@ String _subtitleFor(
       _wantedContext(serviceType, item),
     ].whereType<String>().join(' · '),
     GlobalActivityKind.request => _serviceKeyFor(serviceType).title,
-  };
-}
-
-String _statusFor(GlobalActivityKind kind, Map<String, dynamic> item) {
-  return switch (kind) {
-    GlobalActivityKind.queue => queueDisplayLabel(
-      resolveQueueDisplayStatus(item),
-      includeWarningSuffix: false,
-    ),
-    GlobalActivityKind.history => humanizeEventType(
-      stringOrNull(item['eventType']) ?? 'History',
-    ),
-    GlobalActivityKind.blocklist => 'Blocked',
-    GlobalActivityKind.missing => 'Missing',
-    GlobalActivityKind.cutoff => 'Cutoff',
-    GlobalActivityKind.request => 'Request',
   };
 }
 

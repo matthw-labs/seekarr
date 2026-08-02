@@ -33,7 +33,7 @@ void main() {
 
       expect(queued?.pipeline, MediaPipeline.queued);
       expect(paused?.pipeline, MediaPipeline.paused);
-      expect(unavailable?.pipeline, MediaPipeline.paused);
+      expect(unavailable?.pipeline, MediaPipeline.clientUnavailable);
     });
 
     test('trackedDownloadState alone still implies an active download', () {
@@ -47,7 +47,10 @@ void main() {
 
     final trackedStates = <String, MediaPipeline>{
       'importPending': MediaPipeline.importPending,
-      'importBlocked': MediaPipeline.importPending,
+      // Not `importPending`: the two used to share it, which hid every record
+      // asking for a manual import inside the queue's most common transient
+      // state. `importBlocked` waits for a person; `importPending` clears itself.
+      'importBlocked': MediaPipeline.importBlocked,
       'importing': MediaPipeline.importing,
       'failedPending': MediaPipeline.failed,
       'failed': MediaPipeline.failed,
@@ -109,14 +112,124 @@ void main() {
       );
     });
 
-    test('downloadClientUnavailable is a paused state with a warning', () {
+    test('downloadClientUnavailable is a state of its own, not a label', () {
       final entry = ArrQueueEntry.fromQueueItem({
         'status': 'downloadClientUnavailable',
       });
 
-      expect(entry?.pipeline, MediaPipeline.paused);
-      expect(entry?.label, 'Client Unavailable');
-      expect(entry?.hasWarning, isTrue);
+      // It used to be `paused` carrying a `label`, which had two consequences:
+      // it inherited the lowest salience in the enum, and a label is precisely
+      // what the merge is entitled to drop. See the merge test below.
+      expect(entry?.pipeline, MediaPipeline.clientUnavailable);
+      expect(entry?.label, isNull);
+      expect(entry?.toneOverride, isNull);
+    });
+
+    test('an unreachable client outranks a healthy sibling in the merge', () {
+      // The regression this exists for: one episode blocked by a dead download
+      // client and one merely queued reported "Queued", because
+      // `clientUnavailable` was `paused` at salience 0 and the queued record
+      // outranked it — taking the reason for the outage down with it.
+      final snapshot = ArrQueueSnapshot.fromQueueItems([
+        {'seriesId': 1, 'status': 'queued'},
+        {'seriesId': 1, 'status': 'downloadClientUnavailable'},
+      ], idsFor: (item) => [item['seriesId'] as int]);
+
+      final entry = snapshot.entryFor(1);
+      expect(entry?.pipeline, MediaPipeline.clientUnavailable);
+      expect(
+        mediaStatusFromQueue(
+          availability: MediaAvailability.missing,
+          monitored: true,
+          queueEntry: entry,
+        ).label,
+        'Client Unavailable',
+      );
+    });
+
+    test('a stalled transfer does not report itself as downloading', () {
+      // The \*arr services have no `stalled` status; they say it in prose. Before
+      // this, the row read "Downloading" — the opposite of the truth — for the
+      // most common reason anyone opens Activity.
+      final entry = ArrQueueEntry.fromQueueItem({
+        'status': 'downloading',
+        'trackedDownloadState': 'downloading',
+        'errorMessage': 'The download is stalled with no connections',
+        'size': 100,
+        'sizeleft': 57,
+      });
+
+      expect(entry?.pipeline, MediaPipeline.stalled);
+      expect(entry?.progress, closeTo(0.43, 1e-9));
+    });
+
+    test('a stalled transfer keeps showing how far it got', () {
+      // "Stalled at 43%" is how the user chooses between waiting and
+      // blocklisting, so `progressPercent` has to survive a state that is not
+      // `isActive`.
+      final status = mediaStatusFromQueue(
+        availability: MediaAvailability.missing,
+        monitored: true,
+        queueEntry: ArrQueueEntry.fromQueueItem({
+          'status': 'downloading',
+          'trackedDownloadState': 'downloading',
+          'statusMessages': ['The download is stalled with no connections'],
+          'size': 100,
+          'sizeleft': 57,
+        }),
+      );
+
+      expect(status.label, 'Stalled');
+      expect(status.isActive, isFalse);
+      expect(status.showsProgress, isTrue);
+      expect(status.progressPercent, 43);
+    });
+
+    test('unrecognised wording degrades to downloading, never to stalled', () {
+      // The stall signal is text-matched, so it has to fail safe: if the
+      // upstream phrasing changes, the record must fall back to the previous
+      // behaviour rather than mislabel a healthy transfer.
+      final entry = ArrQueueEntry.fromQueueItem({
+        'status': 'downloading',
+        'trackedDownloadState': 'downloading',
+        'errorMessage': 'Something nobody has seen before',
+      });
+
+      expect(entry?.pipeline, MediaPipeline.downloading);
+    });
+
+    test('status "warning" is a state, not an unknown string', () {
+      // It used to fall through to the unrecognised-status branch, which turned
+      // a flagged record into the word "Warning" sitting inside a "Queued" row.
+      final entry = ArrQueueEntry.fromQueueItem({
+        'status': 'warning',
+        'trackedDownloadState': 'downloading',
+      });
+
+      expect(entry?.pipeline, MediaPipeline.downloading);
+      expect(entry?.label, isNull);
+      expect(entry?.severity, ArrQueueSeverity.warning);
+    });
+
+    test('a service-reported error outranks a warning', () {
+      final entry = ArrQueueEntry.fromQueueItem({
+        'status': 'downloading',
+        'trackedDownloadState': 'downloading',
+        'trackedDownloadStatus': 'error',
+      });
+
+      expect(entry?.severity, ArrQueueSeverity.error);
+      expect(entry?.toneOverride, StatusTone.error);
+      expect(
+        mediaStatusFromQueue(
+          availability: MediaAvailability.missing,
+          monitored: true,
+          queueEntry: entry,
+        ).tone,
+        // Not downgraded to `warning` by `hasWarning`, which is what used to
+        // happen to every record the service had explicitly failed.
+        StatusTone.error,
+      );
     });
 
     test('progress is derived from size and sizeleft', () {
@@ -216,6 +329,31 @@ void main() {
       ], idsFor: (item) => [item['seriesId'] as int]);
 
       expect(snapshot.entryFor(1)?.progress, closeTo(0.5, 1e-9));
+    });
+
+    test('the detail line describes the state that won the headline', () {
+      // `_detail` was assigned from whichever record arrived first regardless of
+      // which one won, while `_label` was reset when the headline changed. So a
+      // row could headline one episode's state and print another episode's
+      // message underneath it.
+      final snapshot = ArrQueueSnapshot.fromQueueItems([
+        {
+          'seriesId': 1,
+          'status': 'downloading',
+          'trackedDownloadState': 'downloading',
+          'statusMessages': ['A note about the healthy episode'],
+        },
+        {
+          'seriesId': 1,
+          'status': 'completed',
+          'trackedDownloadState': 'importBlocked',
+          'statusMessages': ['Not an upgrade for the existing file'],
+        },
+      ], idsFor: (item) => [item['seriesId'] as int]);
+
+      final entry = snapshot.entryFor(1);
+      expect(entry?.pipeline, MediaPipeline.importBlocked);
+      expect(entry?.detail, 'Not an upgrade for the existing file');
     });
 
     test('a warning on any record propagates to the merged entry', () {

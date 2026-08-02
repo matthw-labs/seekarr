@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/features/import/data/manual_import_service.dart';
 import 'package:seekarr/features/import/domain/manual_import_models.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -295,5 +296,55 @@ void main() {
         expect((body['files'] as List).length, 2);
       },
     );
+  });
+
+  group('ManualImportService scan timeouts', () {
+    test(
+      'getManualImportItems asks for the slow-scan receive timeout',
+      () async {
+        final client = FakeApiClient();
+        client.getResponseData = const [];
+        final service = ManualImportService(
+          client: client,
+          service: ServiceKey.sonarr,
+        );
+
+        await service.getManualImportItems(folder: '/downloads/complete');
+
+        expect(client.lastGetPath, '/api/v3/manualimport');
+        // The default 15s ceiling fires long before Sonarr finishes walking the
+        // folder and probing each file, which surfaced as a bogus
+        // "couldn't reach Sonarr" error.
+        expect(client.lastGetReceiveTimeout, kSlowScanReceiveTimeout);
+      },
+    );
+
+    test('getFileSystem asks for the slow-scan receive timeout', () async {
+      final client = FakeApiClient();
+      client.getResponseData = const {'directories': [], 'files': []};
+      final service = ManualImportService(
+        client: client,
+        service: ServiceKey.radarr,
+      );
+
+      await service.getFileSystem('/mnt/media');
+
+      expect(client.lastGetPath, '/api/v3/filesystem');
+      expect(client.lastGetReceiveTimeout, kSlowScanReceiveTimeout);
+    });
+
+    test('getLibraryMatches asks for the slow-scan receive timeout', () async {
+      final client = FakeApiClient();
+      client.getResponseData = const [];
+      final service = ManualImportService(
+        client: client,
+        service: ServiceKey.sonarr,
+      );
+
+      await service.getLibraryMatches();
+
+      expect(client.lastGetPath, '/api/v3/series');
+      expect(client.lastGetReceiveTimeout, kSlowScanReceiveTimeout);
+    });
   });
 }

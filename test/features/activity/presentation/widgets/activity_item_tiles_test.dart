@@ -7,6 +7,8 @@ import 'package:seekarr/features/activity/presentation/activity_provider.dart';
 import 'package:seekarr/features/activity/presentation/activity_screen.dart';
 import 'package:seekarr/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
+import 'package:seekarr/core/status/media_status.dart';
+import 'package:seekarr/features/activity/domain/global_activity_status.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
 import '../../../../test_helpers/fake_services.dart';
@@ -47,10 +49,16 @@ void main() {
         find.textContaining('Movie.2024.2160p.WEB-DL-GROUP'),
         findsOneWidget,
       );
+      // The chip row still flags the warning, and the message the service
+      // supplied is now spelled out instead of being fetched and discarded.
       expect(find.text('Warning'), findsOneWidget);
-      expect(find.textContaining('Needs manual import'), findsNothing);
+      expect(find.textContaining('Needs manual import'), findsOneWidget);
       expect(find.text('torrent'), findsOneWidget);
-      expect(find.text('Downloading (83%)'), findsOneWidget);
+      // The label and the percentage come from StatusBadge now, so the
+      // percentage is tabular and no longer concatenated into a subtitle string
+      // that re-flowed on every tick.
+      expect(find.text('Downloading'), findsOneWidget);
+      expect(find.text('83%'), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
       expect(find.byType(InkWell), findsOneWidget);
     });
@@ -181,7 +189,10 @@ void main() {
       expect(find.text('Movie Title (2024)'), findsOneWidget);
       expect(find.text('Bad.Release'), findsOneWidget);
       expect(find.text('Rejected'), findsOneWidget);
-      expect(find.byIcon(Icons.block_rounded), findsOneWidget);
+      // A bare red block glyph became a labelled StatusBadge, so the state is
+      // words as well as colour and it reads identically to every other row.
+      expect(find.text('Blocked'), findsOneWidget);
+      expect(find.byIcon(Icons.error_rounded), findsOneWidget);
     });
 
     testWidgets('renders fallback title when sourceTitle missing', (
@@ -392,9 +403,13 @@ void main() {
                   title: 'Frieren: Beyond Journey\'s End',
                   subtitle:
                       'S01E03 · Killing Magic · Frieren.S01E03.1080p.WEB-DL-GROUP',
-                  status: 'Completed',
-                  progress: 1,
-                  warning: 'Import Warning: Unable to Import Automatically',
+                  status: MediaStatusInfo(
+                    availability: MediaAvailability.available,
+                    labelOverride: 'Completed',
+                    progress: 1,
+                    hasWarning: true,
+                    detail: 'Import Warning: Unable to Import Automatically',
+                  ),
                   raw: {
                     'title': 'Frieren.S01E03.1080p.WEB-DL-GROUP',
                     'series': {'title': 'Frieren: Beyond Journey\'s End'},
@@ -416,10 +431,13 @@ void main() {
         find.textContaining('Frieren.S01E03.1080p.WEB-DL-GROUP'),
         findsOneWidget,
       );
-      expect(find.text('Warning'), findsOneWidget);
+      // The bare "Warning" chip is gone: it announced that something was wrong
+      // while withholding the message the service had already supplied. The
+      // resolved status carries the tone, and the detail is now spelled out.
+      expect(find.text('Warning'), findsNothing);
       expect(
         find.textContaining('Unable to Import Automatically'),
-        findsNothing,
+        findsOneWidget,
       );
     });
 
@@ -431,7 +449,7 @@ void main() {
           overrides: [
             radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
           ],
-          child: const MaterialApp(
+          child: MaterialApp(
             home: Scaffold(
               body: GlobalActivityItemTile(
                 item: GlobalActivityItem(
@@ -440,7 +458,7 @@ void main() {
                   serviceType: ServiceType.movies,
                   title: 'Cool Movie',
                   subtitle: 'Radarr',
-                  status: 'Missing',
+                  status: resolveWantedStatus(const {}, isCutoff: false),
                   raw: {'id': 42, 'title': 'Cool Movie'},
                 ),
               ),
@@ -465,7 +483,10 @@ void main() {
                   serviceType: ServiceType.discover,
                   title: 'Shogun',
                   subtitle: 'sarah · Series',
-                  status: 'Requested',
+                  status: MediaStatusInfo(
+                    labelOverride: 'Requested',
+                    toneOverride: StatusTone.info,
+                  ),
                 ),
               ),
             ),

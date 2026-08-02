@@ -141,8 +141,17 @@ class MediaGrid<T> extends StatelessWidget {
         // Extract status for badge
         Widget? badge;
         final statusInfo = statusExtractor?.call(item);
+        final title = titleExtractor?.call(item);
         if (statusInfo != null) {
-          badge = StatusBadge(info: statusInfo, compact: true);
+          badge = StatusBadge(
+            info: statusInfo,
+            compact: true,
+            // With a title the cell publishes one node and drops the child
+            // subtree, so the badge's own node would be discarded anyway and
+            // the status rides on `semanticValue` instead. Without a title
+            // there is nothing to exclude, so the badge speaks for itself.
+            excludeFromSemantics: title != null,
+          );
         }
 
         return StaggeredEntrance(
@@ -150,8 +159,11 @@ class MediaGrid<T> extends StatelessWidget {
           wrapCount: columns * 4,
           child: PressableScale(
             onTap: onItemTap != null ? () => onItemTap!(item, heroTag) : null,
-            semanticLabel: titleExtractor?.call(item),
-            excludeChildSemantics: titleExtractor != null,
+            semanticLabel: title,
+            // Only alongside a label: a node carrying a value and no name
+            // announces "Downloading" with nothing to attach it to.
+            semanticValue: title == null ? null : statusInfo?.semanticLabel,
+            excludeChildSemantics: title != null,
             child: Hero(
               tag: heroTag,
               child: ContentCard(

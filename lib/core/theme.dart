@@ -40,6 +40,28 @@ class AppColors {
   static const Color nzbget = Color(0xFF0F9D58); // NZBGet green
   static const Color unraid = Color(0xFFFF8C2B); // Unraid orange
 
+  // === NAV SECTION ACCENTS ===
+  //
+  // One per canonical tab, so the floating nav bar's selected pill actually
+  // differs by section. The bar has always taken a per-destination accent and
+  // DESIGN.md has always described the pill as carrying "that destination's
+  // accent" — but every `NavTab` passed `primary`, so the mechanism existed and
+  // never showed a difference.
+  //
+  // These are **sections, not services**, and the hues are chosen accordingly:
+  //
+  // - Nothing here may borrow from the status vocabulary (`success`, `warning`,
+  //   `error`, `info`). Status is a closed set, and a green or amber pill in
+  //   permanent chrome would read as a health signal (The Closed Tone Rule).
+  // - Nothing here should be mistaken for a service's identity, so the set stays
+  //   in the cool, instrument-panel end of the palette rather than reaching for
+  //   the alarm hues.
+  // - Services keeps `primary`: it is the app's own colour and the home tab.
+  static const Color navServices = primary;
+  static const Color navActivity = Color(0xFF06B6D4); // cyan-500
+  static const Color navSearch = Color(0xFFA855F7); // purple-500
+  static const Color navSettings = Color(0xFF14B8A6); // teal-500
+
   // === PRIMARY (Seerr Indigo) ===
   static const Color primary = seerr;
   static const Color primaryDark = Color(0xFF4F46E5); // indigo-600

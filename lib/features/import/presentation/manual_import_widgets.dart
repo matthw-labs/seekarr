@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:seekarr/core/app_animation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -37,6 +39,9 @@ extension ManualImportServiceCopy on ServiceKey {
   }
 }
 
+/// The shared scaffold for the three import stations: ambient room tinted by
+/// the owning service, glass app bar with a two-line title, and an optional
+/// pinned bottom bar for the station's primary action.
 class ManualImportFrame extends StatelessWidget {
   final ServiceKey service;
   final String title;
@@ -57,6 +62,8 @@ class ManualImportFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AmbientScaffold(
       accent: service.accent,
       appBar: GlassAppBar(
@@ -70,17 +77,18 @@ class ManualImportFrame extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 18,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
-                letterSpacing: -0.36,
               ),
             ),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -100,53 +108,130 @@ class ManualImportFrame extends StatelessWidget {
   }
 }
 
-class ImportStepPills extends StatelessWidget {
-  final ServiceKey service;
-  final int activeStep;
+/// The names of the three import stations, in order.
+const manualImportStations = ['Locate', 'Review', 'Track'];
 
-  const ImportStepPills({
+/// A compact "where am I" strip for a multi-step flow.
+///
+/// One pill per station: the active one takes the service accent as a soft
+/// tint (the same selected-affordance vocabulary as the nav pill), finished
+/// ones get a small check, upcoming ones recede. Spoken as a single node —
+/// "Step 2 of 3: Review" — because three pills and two connectors are one fact.
+class ImportStationBar extends StatelessWidget {
+  final ServiceKey service;
+  final List<String> stations;
+  final int activeIndex;
+
+  const ImportStationBar({
     super.key,
     required this.service,
-    required this.activeStep,
+    required this.activeIndex,
+    this.stations = manualImportStations,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          _StepPill(
-            service: service,
-            step: 1,
-            activeStep: activeStep,
-            label: 'Select',
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final accent = service.accent;
+    final activeLabelColor = ServiceTheme.onTint(
+      accent,
+      surface: colorScheme.surface,
+      tintAlpha: 0.14,
+    );
+
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      label:
+          'Step ${activeIndex + 1} of ${stations.length}: '
+          '${stations[activeIndex]}',
+      // Compact chrome that must stay one line, so it follows the reading size
+      // only to 1.3× — the same clamp DESIGN.md pins on the floating nav bar,
+      // and for the same reason: three pills and two connectors cannot reflow.
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: TextScaleMetrics.singleLineChromeMaxScaleFactor,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.xs,
+            AppSpacing.lg,
+            AppSpacing.lg,
           ),
-          _StepConnector(done: activeStep > 1, accent: service.accent),
-          _StepPill(
-            service: service,
-            step: 2,
-            activeStep: activeStep,
-            label: 'Match',
+          child: Row(
+            children: [
+              for (var index = 0; index < stations.length; index++) ...[
+                if (index > 0)
+                  // Fixed, not Expanded: a flexible connector competes with the
+                  // pills for the same flex space, which squeezed "Locate" down
+                  // to "Lo…" at the default reading size.
+                  Container(
+                    width: AppSpacing.lg,
+                    height: 2,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: index <= activeIndex
+                          ? accent.withValues(alpha: 0.45)
+                          : colorScheme.outlineVariant,
+                      borderRadius: AppRadius.borderRadiusFull,
+                    ),
+                  ),
+                Flexible(
+                  // Loose: the pill takes its natural width and only gives way
+                  // when the row genuinely runs out of room.
+                  fit: FlexFit.loose,
+                  child: AnimatedContainer(
+                    duration: AppAnimation.durationSm,
+                    curve: AppAnimation.emphasizedCurve,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.xs + 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: index == activeIndex
+                          ? accent.withValues(alpha: 0.14)
+                          : Colors.transparent,
+                      borderRadius: AppRadius.borderRadiusPill,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (index < activeIndex) ...[
+                          Icon(Icons.check_rounded, size: 14, color: accent),
+                          const SizedBox(width: AppSpacing.xs),
+                        ],
+                        // Ellipsises past the clamp rather than clipping.
+                        Flexible(
+                          child: Text(
+                            stations[index],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: index == activeIndex
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: index == activeIndex
+                                  ? activeLabelColor
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
-          _StepConnector(done: activeStep > 2, accent: service.accent),
-          _StepPill(
-            service: service,
-            step: 3,
-            activeStep: activeStep,
-            label: 'Import',
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
+/// The current folder path as tappable segments.
 class ImportBreadcrumb extends StatelessWidget {
   final ServiceKey service;
   final String? path;
@@ -163,35 +248,33 @@ class ImportBreadcrumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final pathSegments = segments ?? _segmentsFor(path ?? '');
     final isRoot = path == '/' || pathSegments.isEmpty;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.xs,
-        AppSpacing.lg,
         AppSpacing.md,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
       ),
       child: Row(
         children: [
-          InkWell(
-            onTap: onSegmentTap == null ? null : () => onSegmentTap!('/'),
-            borderRadius: AppRadius.borderRadiusFull,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xs),
-              child: Icon(
-                Icons.home_rounded,
-                size: 16,
-                color: isRoot ? service.accent : colorScheme.onSurfaceVariant,
-              ),
+          IconButton(
+            tooltip: 'Root folder',
+            visualDensity: VisualDensity.compact,
+            onPressed: onSegmentTap == null ? null : () => onSegmentTap!('/'),
+            icon: Icon(
+              Icons.home_rounded,
+              size: 18,
+              color: isRoot ? service.accent : colorScheme.onSurfaceVariant,
             ),
           ),
           for (var index = 0; index < pathSegments.length; index++) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            ExcludeSemantics(
               child: Icon(
                 Icons.chevron_right_rounded,
                 size: 16,
@@ -203,22 +286,18 @@ class ImportBreadcrumb extends StatelessWidget {
                   ? null
                   : () => onSegmentTap!(_pathForSegment(path!, index)),
               style: TextButton.styleFrom(
-                minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                minimumSize: const Size(44, 44),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                 foregroundColor: index == pathSegments.length - 1
                     ? service.accent
                     : colorScheme.onSurfaceVariant,
-              ),
-              child: Text(
-                pathSegments[index],
-                style: TextStyle(
-                  fontSize: 12,
+                textStyle: theme.textTheme.labelMedium?.copyWith(
                   fontWeight: index == pathSegments.length - 1
                       ? FontWeight.w700
                       : FontWeight.w500,
                 ),
               ),
+              child: Text(pathSegments[index]),
             ),
           ],
         ],
@@ -227,6 +306,7 @@ class ImportBreadcrumb extends StatelessWidget {
   }
 }
 
+/// The station's single primary action, pinned above the home indicator.
 class ImportPrimaryButton extends StatelessWidget {
   final ServiceKey service;
   final IconData icon;
@@ -245,6 +325,9 @@ class ImportPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final onAccent = ServiceTheme.foregroundOn(service.accent);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -252,82 +335,24 @@ class ImportPrimaryButton extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.sm,
       ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 46,
-        child: FilledButton.icon(
-          onPressed: loading ? null : onPressed,
-          icon: loading
-              ? SizedBox.square(
-                  dimension: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                )
-              : Icon(icon, size: 18),
-          label: Text(label),
-          style: FilledButton.styleFrom(
-            backgroundColor: service.accent,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: Theme.of(
-              context,
-            ).colorScheme.surfaceContainerHighest,
-            disabledForegroundColor: Theme.of(
-              context,
-            ).colorScheme.onSurfaceVariant,
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-            shape: const StadiumBorder(),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class ImportMessage extends StatelessWidget {
-  final IconData icon;
-  final String message;
-  final String? detail;
-
-  const ImportMessage({
-    super.key,
-    required this.icon,
-    required this.message,
-    this.detail,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 36, color: colorScheme.onSurfaceVariant),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-            if (detail != null) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                detail!,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
+      child: FilledButton.icon(
+        onPressed: loading ? null : onPressed,
+        icon: loading
+            ? SizedBox.square(
+                dimension: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
                   color: colorScheme.onSurfaceVariant,
                 ),
-              ),
-            ],
-          ],
+              )
+            : Icon(icon, size: 18),
+        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        style: FilledButton.styleFrom(
+          backgroundColor: service.accent,
+          foregroundColor: onAccent,
+          disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+          disabledForegroundColor: colorScheme.onSurfaceVariant,
+          minimumSize: const Size.fromHeight(48),
         ),
       ),
     );
@@ -345,99 +370,6 @@ String formatImportBytes(int size) {
   }
   final precision = unit <= 1 ? 0 : 1;
   return '${value.toStringAsFixed(precision)} ${units[unit]}';
-}
-
-Color importStatusColor(String status) {
-  return switch (status) {
-    'queued' => AppColors.warning,
-    'started' => AppColors.info,
-    'completed' => AppColors.success,
-    'failed' || 'aborted' || 'cancelled' || 'orphaned' => AppColors.error,
-    _ => AppColors.info,
-  };
-}
-
-class _StepPill extends StatelessWidget {
-  final ServiceKey service;
-  final int step;
-  final int activeStep;
-  final String label;
-
-  const _StepPill({
-    required this.service,
-    required this.step,
-    required this.activeStep,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final done = activeStep > step;
-    final active = activeStep == step;
-    final circleColor = done || active
-        ? service.accent
-        : colorScheme.surfaceContainerHigh;
-    final borderColor = done || active ? service.accent : colorScheme.outline;
-    final labelColor = done
-        ? service.accent
-        : active
-        ? colorScheme.onSurface
-        : colorScheme.onSurfaceVariant;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: circleColor,
-            borderRadius: AppRadius.borderRadiusFull,
-            border: Border.all(color: borderColor),
-          ),
-          child: done
-              ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-              : Text(
-                  '$step',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: active ? Colors.white : colorScheme.onSurfaceVariant,
-                  ),
-                ),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: labelColor,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StepConnector extends StatelessWidget {
-  final bool done;
-  final Color accent;
-
-  const _StepConnector({required this.done, required this.accent});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        height: 2,
-        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-        color: done ? accent : Theme.of(context).colorScheme.outlineVariant,
-      ),
-    );
-  }
 }
 
 List<String> _segmentsFor(String path) {

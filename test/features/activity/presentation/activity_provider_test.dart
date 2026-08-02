@@ -8,14 +8,25 @@ import 'package:seekarr/features/activity/presentation/widgets/wanted_tab.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
+import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
+import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/music/data/lidarr_service.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/fake_services.dart';
+import '../../../test_helpers/settings_scope.dart';
 
 void main() {
+  late SettingsScope scope;
+
+  setUp(() async {
+    // The feed distinguishes "not configured" from "did not answer", so it reads
+    // settings — which throw unless overridden.
+    scope = await settingsScope(configured: activityServiceKeys);
+  });
+
   ProviderContainer createContainer({
     SeerrService? seerrService,
     RadarrService? radarrService,
@@ -25,6 +36,10 @@ void main() {
   }) {
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
+        secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
+        initialSettingsProvider.overrideWith((ref) => scope.settings),
+        initialOnboardingCompletedProvider.overrideWith((ref) => true),
         if (seerrService != null)
           seerrServiceProvider.overrideWith((ref) => seerrService),
         if (requests != null)
@@ -157,7 +172,8 @@ void main() {
         ),
       );
 
-      final items = await container.read(globalActivityFeedProvider.future);
+      final feed = await container.read(globalActivityFeedProvider.future);
+      final items = feed.items;
 
       expect(items.map((item) => item.title), [
         'Furiosa',
@@ -188,7 +204,8 @@ void main() {
         ),
       );
 
-      final items = await container.read(globalQueueItemsProvider.future);
+      final feed = await container.read(globalQueueItemsProvider.future);
+      final items = feed.items;
 
       expect(items, hasLength(1));
       expect(items.single.service, ServiceKey.sonarr);
@@ -196,6 +213,62 @@ void main() {
       expect(
         items.single.subtitle,
         contains('House.of.the.Dragon.S02E03.1080p.WEB-DL-GROUP'),
+      );
+
+      // The surviving services still render — but the failure is carried, not
+      // swallowed, so the screen can say the list is incomplete instead of
+      // implying Radarr had nothing.
+      expect(feed.isPartial, isTrue);
+      expect(feed.allConfiguredFailed, isFalse);
+      expect(
+        feed.failures.map((result) => result.service),
+        contains(ServiceKey.radarr),
+      );
+      expect(feed.firstError, isNotNull);
+    });
+
+    test(
+      'reports every configured service failing as a failure, not empty',
+      () async {
+        final container = createContainer(
+          radarrService: _ThrowingQueueRadarrService(),
+          sonarrService: _ThrowingQueueSonarrService(),
+          lidarrService: _ThrowingQueueLidarrService(),
+        );
+
+        final feed = await container.read(globalQueueItemsProvider.future);
+
+        // Nothing was reached, so "no items" means "we have no idea" — the case
+        // that used to render as "Nothing downloading right now".
+        expect(feed.items, isEmpty);
+        expect(feed.allConfiguredFailed, isTrue);
+        expect(feed.hasConfiguredService, isTrue);
+        expect(feed.firstError, isNotNull);
+      },
+    );
+
+    test('an unconfigured service is not reported as a failure', () async {
+      scope = await settingsScope(configured: const [ServiceKey.sonarr]);
+      final container = createContainer(
+        sonarrService: _ActivitySonarrService(
+          queue: const [
+            {
+              'title': 'House.of.the.Dragon.S02E03',
+              'status': 'downloading',
+              'series': {'title': 'House of the Dragon'},
+            },
+          ],
+        ),
+      );
+
+      final feed = await container.read(globalQueueItemsProvider.future);
+
+      expect(feed.items, hasLength(1));
+      expect(feed.failures, isEmpty);
+      expect(feed.isPartial, isFalse);
+      expect(
+        feed.unconfigured.map((result) => result.service),
+        containsAll(const [ServiceKey.radarr, ServiceKey.lidarr]),
       );
     });
 
@@ -212,7 +285,8 @@ void main() {
         ),
       );
 
-      final items = await container.read(globalHistoryItemsProvider.future);
+      final feed = await container.read(globalHistoryItemsProvider.future);
+      final items = feed.items;
 
       expect(items, hasLength(1));
       expect(items.single.title, 'Imported.Release');
@@ -231,7 +305,8 @@ void main() {
         ),
       );
 
-      final items = await container.read(globalWantedItemsProvider.future);
+      final feed = await container.read(globalWantedItemsProvider.future);
+      final items = feed.items;
 
       expect(items.map((item) => item.kind), [
         GlobalActivityKind.missing,
@@ -315,4 +390,18 @@ class _ThrowingQueueRadarrService extends FakeRadarrService {
   Future<List<dynamic>> getQueue({
     Map<String, dynamic>? queryParameters,
   }) async => throw Exception('Radarr down');
+}
+
+class _ThrowingQueueSonarrService extends FakeSonarrService {
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async => throw Exception('Sonarr down');
+}
+
+class _ThrowingQueueLidarrService extends FakeLidarrService {
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async => throw Exception('Lidarr down');
 }

@@ -6,12 +6,24 @@ import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/service_theme.dart';
 import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/widgets/widgets.dart';
+import 'package:seekarr/features/import/domain/manual_import_display.dart';
 import 'package:seekarr/features/import/domain/manual_import_models.dart';
+import 'package:seekarr/features/import/domain/manual_import_status.dart';
 import 'package:seekarr/features/import/presentation/manual_import_provider.dart';
+import 'package:seekarr/features/import/presentation/manual_import_review_rows.dart';
 import 'package:seekarr/features/import/presentation/manual_import_widgets.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
+/// Station 3 — Track: the running `ManualImport` command as an instrument
+/// panel.
+///
+/// The \*arr command is aggregate — the services never report per-file
+/// results — so this screen deliberately renders one command status as truth
+/// and points at Activity → History for the per-file verdicts, instead of
+/// painting a green check on every row the moment the command completes.
 class ManualImportProgressScreen extends ConsumerStatefulWidget {
   final ServiceKey service;
 
@@ -50,10 +62,11 @@ class _ManualImportProgressScreenState
 
     return ManualImportFrame(
       service: widget.service,
-      title: 'Import Results',
+      title: 'Import Progress',
       subtitle:
-          '${widget.service.title} · ${state.submittedItems.length} files',
-      bottomBar: _ProgressButtons(
+          '${widget.service.title} · ${state.submittedItems.length} '
+          '${state.submittedItems.length == 1 ? 'file' : 'files'} submitted',
+      bottomBar: _TrackButtons(
         service: widget.service,
         command: command,
         onDone: () => context.go('/activity'),
@@ -61,21 +74,28 @@ class _ManualImportProgressScreenState
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          ImportStepPills(service: widget.service, activeStep: 3),
+          ImportStationBar(service: widget.service, activeIndex: 2),
           if (command == null)
-            const ImportMessage(
+            AppEmptyState(
               icon: Icons.downloading_rounded,
-              message: 'Import has not started',
-              detail: 'Go back and confirm selected files to begin.',
+              title: 'Import has not started',
+              message: 'Go back and confirm selected files to begin.',
+              accentColor: widget.service.accent,
             )
           else ...[
-            _CommandStatusCard(
+            _CommandCard(
               service: widget.service,
               command: command,
               fileCount: state.submittedItems.length,
             ),
+            if (command.isCompleted) const _HistoryNote(),
             for (final item in state.submittedItems)
-              _ProgressFileRow(item: item, command: command),
+              _SubmittedFileRow(
+                service: widget.service,
+                item: item,
+                command: command,
+              ),
+            const SizedBox(height: AppSpacing.xl),
           ],
         ],
       ),
@@ -83,12 +103,13 @@ class _ManualImportProgressScreenState
   }
 }
 
-class _CommandStatusCard extends StatelessWidget {
+/// The command as one signature instrument: status, timing, file count.
+class _CommandCard extends StatelessWidget {
   final ServiceKey service;
   final ManualImportCommandStatus command;
   final int fileCount;
 
-  const _CommandStatusCard({
+  const _CommandCard({
     required this.service,
     required this.command,
     required this.fileCount,
@@ -96,185 +117,288 @@ class _CommandStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final statusColor = importStatusColor(command.status);
-    final borderColor = command.isCompleted || command.isFailure
-        ? statusColor.withValues(alpha: 0.35)
-        : colorScheme.outlineVariant;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final info = manualImportCommandStatus(command);
+    final tone = statusToneColor(colorScheme, info.tone);
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         0,
         AppSpacing.lg,
-        AppSpacing.md,
+        AppSpacing.lg,
       ),
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusLg,
-        border: Border.all(color: borderColor),
+      child: AppCard.elevated(
+        accentColor: service.accent,
+        child: Semantics(
+          container: true,
+          liveRegion: true,
+          label:
+              'Manual import ${info.label}, $fileCount '
+              '${fileCount == 1 ? 'file' : 'files'}',
+          explicitChildNodes: true,
+          child: ExcludeSemantics(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Manual import',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    StatusBadge(info: info),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _Metric(
+                        label: 'Started',
+                        value: _timeValue(command.started),
+                      ),
+                    ),
+                    Expanded(
+                      child: _Metric(
+                        label: 'Duration',
+                        value: command.duration ?? 'Running',
+                      ),
+                    ),
+                    Expanded(
+                      child: _Metric(label: 'Files', value: '$fileCount'),
+                    ),
+                  ],
+                ),
+                if (command.message?.isNotEmpty == true) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    command.message!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                if (command.exception?.isNotEmpty == true) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: tone.withValues(alpha: 0.1),
+                      borderRadius: AppRadius.borderRadiusSm,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          size: 16,
+                          color: tone,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            command.exception!,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+}
+
+/// One eyebrow-labelled instrument value.
+class _Metric extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _Metric({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: AppTheme.eyebrow(theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Where the real per-file verdicts live once the command finishes.
+class _HistoryNote extends StatelessWidget {
+  const _HistoryNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      child: Row(
         children: [
-          Row(
-            children: [
-              const Text(
-                'ManualImport',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              _StatusChip(label: command.status, color: statusColor),
-            ],
+          Icon(
+            Icons.info_outline_rounded,
+            size: 14,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: _Metric(
-                  label: 'STARTED',
-                  value: _timeValue(command.started),
-                ),
-              ),
-              Expanded(
-                child: _Metric(
-                  label: 'DURATION',
-                  value: command.duration ?? 'Running',
-                ),
-              ),
-              Expanded(
-                child: _Metric(label: 'FILES', value: '$fileCount'),
-              ),
-            ],
-          ),
-          if (command.message?.isNotEmpty == true) ...[
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              command.message!,
-              style: TextStyle(
-                fontSize: 12,
-                color: colorScheme.onSurfaceVariant,
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              'Per-file results appear in Activity → History.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-          ],
-          if (command.exception?.isNotEmpty == true) ...[
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.1),
-                borderRadius: AppRadius.borderRadiusSm,
-              ),
-              child: Text(
-                command.exception!,
-                style: const TextStyle(fontSize: 11, color: AppColors.error),
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _ProgressFileRow extends StatelessWidget {
+class _SubmittedFileRow extends StatelessWidget {
+  final ServiceKey service;
   final ManualImportItem item;
   final ManualImportCommandStatus command;
 
-  const _ProgressFileRow({required this.item, required this.command});
+  const _SubmittedFileRow({
+    required this.service,
+    required this.item,
+    required this.command,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final state = _ProgressItemState.fromCommand(command);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final info = manualImportCommandStatus(command);
+    final tone = statusToneColor(colorScheme, info.tone);
+    final identity = manualImportIdentityFor(service, item);
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         0,
         AppSpacing.lg,
         AppSpacing.sm,
       ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(
-          color: state.isFailure
-              ? AppColors.error.withValues(alpha: 0.35)
-              : colorScheme.outlineVariant,
+      child: AppCard.filled(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: state.color.withValues(alpha: 0.12),
-              borderRadius: AppRadius.borderRadiusSm,
+        child: Row(
+          children: [
+            ExcludeSemantics(
+              child: Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: tone.withValues(alpha: 0.14),
+                  borderRadius: AppRadius.borderRadiusSm,
+                ),
+                child: command.isActive
+                    ? SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: tone,
+                        ),
+                      )
+                    : Icon(
+                        command.isFailure
+                            ? Icons.close_rounded
+                            : Icons.check_rounded,
+                        size: 18,
+                        color: tone,
+                      ),
+              ),
             ),
-            child: state.isActive
-                ? SizedBox.square(
-                    dimension: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: state.color,
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Same three-line contract as the Review rows: matched
+                  // identity, then the raw file on its own, then the facts.
+                  Text(
+                    [
+                      item.mediaTitle,
+                      if (identity.code != null) identity.code!,
+                      if (identity.title != null) identity.title!,
+                    ].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                  )
-                : Icon(state.icon, size: 16, color: state.color),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
                   ),
-                ),
-                Text(
-                  '${item.mediaTitle} → ${item.qualityLabel}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: colorScheme.onSurfaceVariant,
+                  FilenameText(
+                    filename: item.fileName,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                Text(
-                  formatImportBytes(item.size),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: colorScheme.onSurfaceVariant,
+                  Text(
+                    '${item.qualityLabel} · ${formatImportBytes(item.size)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _ProgressButtons extends StatelessWidget {
+class _TrackButtons extends StatelessWidget {
   final ServiceKey service;
   final ManualImportCommandStatus? command;
   final VoidCallback onDone;
 
-  const _ProgressButtons({
+  const _TrackButtons({
     required this.service,
     required this.command,
     required this.onDone,
@@ -282,11 +406,13 @@ class _ProgressButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final showRetry = command?.isFailure == true;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.sm,
+        AppSpacing.xs,
         AppSpacing.lg,
         AppSpacing.sm,
       ),
@@ -294,14 +420,16 @@ class _ProgressButtons extends StatelessWidget {
         children: [
           if (showRetry) ...[
             Expanded(
-              child: FilledButton.tonalIcon(
+              child: OutlinedButton.icon(
                 onPressed: () => context.pop(),
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Retry Failed'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.error.withValues(alpha: 0.12),
-                  foregroundColor: AppColors.error,
-                  shape: const StadiumBorder(),
+                label: const Text('Back to review'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colorScheme.error,
+                  side: BorderSide(
+                    color: colorScheme.error.withValues(alpha: 0.5),
+                  ),
+                  minimumSize: const Size.fromHeight(48),
                 ),
               ),
             ),
@@ -314,117 +442,13 @@ class _ProgressButtons extends StatelessWidget {
               label: const Text('Done'),
               style: FilledButton.styleFrom(
                 backgroundColor: service.accent,
-                foregroundColor: Colors.white,
-                shape: const StadiumBorder(),
+                foregroundColor: ServiceTheme.foregroundOn(service.accent),
+                minimumSize: const Size.fromHeight(48),
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ProgressItemState {
-  final IconData icon;
-  final Color color;
-  final bool isActive;
-  final bool isFailure;
-
-  const _ProgressItemState({
-    required this.icon,
-    required this.color,
-    this.isActive = false,
-    this.isFailure = false,
-  });
-
-  factory _ProgressItemState.fromCommand(ManualImportCommandStatus command) {
-    if (command.isFailure) {
-      return const _ProgressItemState(
-        icon: Icons.close_rounded,
-        color: AppColors.error,
-        isFailure: true,
-      );
-    }
-
-    if (command.isCompleted) {
-      return const _ProgressItemState(
-        icon: Icons.check_rounded,
-        color: AppColors.success,
-      );
-    }
-
-    return const _ProgressItemState(
-      icon: Icons.schedule_rounded,
-      color: AppColors.info,
-      isActive: true,
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _StatusChip({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: AppRadius.borderRadiusFull,
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _Metric({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.45,
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
-        ),
-      ],
     );
   }
 }

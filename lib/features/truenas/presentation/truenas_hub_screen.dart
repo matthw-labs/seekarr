@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
@@ -165,7 +166,9 @@ class _HubGrid extends ConsumerWidget {
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: AppSpacing.md,
             crossAxisSpacing: AppSpacing.md,
-            childAspectRatio: 1.35,
+            // Grows the cells taller with the reading size; a fixed ratio
+            // clipped the tile labels at accessibility text sizes.
+            childAspectRatio: TextScaleMetrics.aspectRatio(context, base: 1.35),
             children: [
               for (var i = 0; i < _sections.length; i++)
                 StaggeredEntrance(

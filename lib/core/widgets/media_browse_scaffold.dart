@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
+import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/utils/arr_activity_display.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
@@ -521,7 +523,7 @@ class _MediaBrowseFilterChip extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: selected ? Colors.white : color,
+              color: selected ? ServiceTheme.foregroundOn(color) : color,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -551,6 +553,12 @@ class _BrowsePosterTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    // The status dot is painted inside the excluded subtree, so it has to be
+    // spoken here or it is lost entirely.
+    final spokenValue = joinDisplayParts([
+      subtitle,
+      status?.semanticLabel,
+    ], separator: ', ');
 
     return SizedBox(
       width: 96,
@@ -561,7 +569,7 @@ class _BrowsePosterTile extends StatelessWidget {
         container: true,
         excludeSemantics: true,
         label: title,
-        value: subtitle.isEmpty ? null : subtitle,
+        value: spokenValue.isEmpty ? null : spokenValue,
         onTap: onTap,
         child: InkWell(
           onTap: onTap,
@@ -587,7 +595,14 @@ class _BrowsePosterTile extends StatelessWidget {
                       Positioned(
                         left: 6,
                         bottom: 6,
-                        child: StatusBadge(info: status!, iconOnly: true),
+                        // Redundant against the parent's `excludeSemantics`,
+                        // but it keeps the invariant local: the tile speaks the
+                        // status, the dot does not.
+                        child: StatusBadge(
+                          info: status!,
+                          iconOnly: true,
+                          excludeFromSemantics: true,
+                        ),
                       ),
                   ],
                 ),

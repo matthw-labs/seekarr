@@ -66,9 +66,8 @@ class _DockgeDashboard extends ConsumerWidget {
             accent: AppColors.dockge,
           ),
           const SizedBox(height: 4),
-          SectionHeader(
+          SectionHeader.action(
             title: 'Stacks',
-            showChevron: false,
             trailing: TextButton.icon(
               onPressed: () => context.push(ServiceRoutes.dockgeNewStack),
               icon: const Icon(Icons.add_rounded, size: 18),

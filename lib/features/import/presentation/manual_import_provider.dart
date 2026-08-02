@@ -2,8 +2,34 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/features/import/data/manual_import_service.dart';
+import 'package:seekarr/features/import/domain/manual_import_display.dart';
 import 'package:seekarr/features/import/domain/manual_import_models.dart';
+import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
+
+/// Preferences key for the folder a service last scanned.
+///
+/// The rescue scene almost always returns to the same completed-downloads
+/// folder, so Locate offers it back as a one-tap shortcut.
+String manualImportLastFolderKey(ServiceKey service) =>
+    'manual_import.last_folder.${service.name}';
+
+/// The folder this service last scanned, or null when there is none yet.
+final manualImportLastFolderProvider = Provider.family<String?, ServiceKey>((
+  ref,
+  service,
+) {
+  // Startup overrides the prefs provider; tests that don't override it get the
+  // unimplemented throw, which for a convenience shortcut should mean "no
+  // shortcut", not a crash.
+  try {
+    return ref
+        .watch(sharedPreferencesProvider)
+        .getString(manualImportLastFolderKey(service));
+  } catch (_) {
+    return null;
+  }
+});
 
 const Object _noValue = Object();
 
@@ -11,10 +37,18 @@ String mapImportError(Object error, ServiceKey service) {
   if (error is DioException) {
     final title = service.title;
     final status = error.response?.statusCode;
+    // A receive timeout means the connection succeeded and $title simply took
+    // too long to answer — telling the user to check the URL sends them after
+    // the wrong problem.
+    if (error.type == DioExceptionType.receiveTimeout) {
+      return '$title took too long to answer. Scanning a large folder, or one '
+          'on a slow or spun-down drive, can outlast the request — try a '
+          'narrower subfolder, or check $title → Activity → Queue in case the '
+          'scan is still running.';
+    }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.sendTimeout ||
-        error.type == DioExceptionType.receiveTimeout) {
+        error.type == DioExceptionType.sendTimeout) {
       return "Couldn't reach $title. Check the URL and that the service is running.";
     }
     if (status == 500) {
@@ -105,8 +139,28 @@ class ManualImportFlowState {
   final String? selectedFolder;
   final List<ManualImportItem> items;
   final Set<String> selectedPaths;
-  final Set<String> bulkFixPaths;
+
+  /// Unmatched files the user has ticked to assign **together**.
+  ///
+  /// Separate from [selectedPaths] because they answer different questions:
+  /// that one is "import these", this one is "these share an identity". The
+  /// distinction is what stopped bulk assignment from being a blunt
+  /// instrument — one series applied to every unmatched file in the folder
+  /// happily matched playlists and other shows' episodes to it.
+  final Set<String> fixSelectionPaths;
+
   final List<ManualImportItem> submittedItems;
+
+  /// Paths already handed to a `ManualImport` command in this session.
+  ///
+  /// The flow used to keep the selection intact after submitting, so leaving
+  /// Track and pressing Import again re-posted the same files. While the first
+  /// command was still running that queued a duplicate import; once it had
+  /// finished, the files had been moved into the library and the service
+  /// answered with a `FileNotFoundException` for a path it had itself consumed.
+  /// Recording what was submitted is what makes the second press impossible.
+  final Set<String> submittedPaths;
+
   final List<ManualImportQualityOption> qualityOptions;
   final List<ManualImportLanguageOption> languageOptions;
   final ManualImportCommandStatus? command;
@@ -125,8 +179,9 @@ class ManualImportFlowState {
     this.selectedFolder,
     this.items = const [],
     this.selectedPaths = const {},
-    this.bulkFixPaths = const {},
+    this.fixSelectionPaths = const {},
     this.submittedItems = const [],
+    this.submittedPaths = const {},
     this.qualityOptions = const [],
     this.languageOptions = const [],
     this.command,
@@ -141,23 +196,120 @@ class ManualImportFlowState {
       .where((item) => selectedPaths.contains(item.path))
       .toList(growable: false);
 
-  List<ManualImportItem> get bulkFixItems => items
-      .where((item) => bulkFixPaths.contains(item.path))
-      .toList(growable: false);
-
   List<ManualImportItem> get selectableItems =>
       items.where((item) => item.isSelectable).toList(growable: false);
 
+  /// Paths that must not be submitted again.
+  ///
+  /// A batch is spent while its command is running and once it has completed —
+  /// the files are being, or have been, moved into the library. A **failed**
+  /// command releases them: the file may well still be on disk, and retrying
+  /// after fixing the cause is exactly what the user should be able to do.
+  Set<String> get blockedPaths {
+    final command = this.command;
+    if (command == null || command.isFailure) return const {};
+    return submittedPaths;
+  }
+
+  /// Files handed to the current command, still shown so the list stays honest
+  /// about where they went.
+  List<ManualImportItem> get inFlightItems {
+    final blocked = blockedPaths;
+    if (blocked.isEmpty) return const [];
+    return items
+        .where((item) => blocked.contains(item.path))
+        .toList(growable: false);
+  }
+
+  /// Fully matched files — the only ones the import checkbox can include.
+  List<ManualImportItem> get readyItems {
+    final service = this.service;
+    if (service == null) return const [];
+    final blocked = blockedPaths;
+    return items
+        .where(
+          (item) =>
+              item.isReadyForImportFor(service) && !blocked.contains(item.path),
+        )
+        .toList(growable: false);
+  }
+
+  /// Files that need an identity before they can be imported.
+  ///
+  /// Only files the service could actually import: a Sonarr scan of a real
+  /// downloads folder also returns playlists, artwork and music, and counting
+  /// those as "needs attention" makes the number unactionable — 26 items to fix
+  /// when only a handful are episodes. Those land in [otherItems] instead.
+  List<ManualImportItem> get attentionItems {
+    final service = this.service;
+    if (service == null) return const [];
+    final blocked = blockedPaths;
+    return items
+        .where(
+          (item) =>
+              item.isSelectable &&
+              !item.isReadyForImportFor(service) &&
+              !blocked.contains(item.path) &&
+              manualImportIsSupportedFile(service, item),
+        )
+        .toList(growable: false);
+  }
+
+  /// Files of a kind this service does not import — kept visible, and still
+  /// fixable, but out of the way.
+  List<ManualImportItem> get otherItems {
+    final service = this.service;
+    if (service == null) return const [];
+    final blocked = blockedPaths;
+    return items
+        .where(
+          (item) =>
+              item.isSelectable &&
+              !item.isReadyForImportFor(service) &&
+              !blocked.contains(item.path) &&
+              !manualImportIsSupportedFile(service, item),
+        )
+        .toList(growable: false);
+  }
+
+  /// The unmatched files ticked for a shared assignment.
+  List<ManualImportItem> get fixSelectionItems => items
+      .where((item) => fixSelectionPaths.contains(item.path))
+      .toList(growable: false);
+
+  /// Files the service already holds.
+  ///
+  /// The scan asks for them deliberately (`filterExistingFiles: false`), because
+  /// with the service's default filter on, an already-imported file is simply
+  /// absent — and "did I already take this one?" then has no answer anywhere in
+  /// the app. They are listed inline with everything else, and a user who wants
+  /// one taken again can tick it; see [ManualImportItem.isReimportableFor].
+  List<ManualImportItem> get importedItems {
+    final blocked = blockedPaths;
+    return items
+        .where((item) => item.isAlreadyImported && !blocked.contains(item.path))
+        .toList(growable: false);
+  }
+
+  /// Already-imported files the user has ticked to send over again.
+  List<ManualImportItem> get selectedReimportItems => selectedItems
+      .where((item) => item.isAlreadyImported)
+      .toList(growable: false);
+
   bool get hasSelectedItems => selectedPaths.isNotEmpty;
 
-  bool get allSelectableSelected =>
-      selectableItems.isNotEmpty &&
-      selectableItems.every((item) => selectedPaths.contains(item.path));
+  bool get allReadySelected =>
+      readyItems.isNotEmpty &&
+      readyItems.every((item) => selectedPaths.contains(item.path));
 
   bool get canImportSelected =>
       service != null &&
       selectedItems.isNotEmpty &&
-      selectedItems.every((item) => item.isReadyForImportFor(service!)) &&
+      selectedItems.every(
+        (item) =>
+            item.isSubmittableFor(service!) &&
+            !blockedPaths.contains(item.path),
+      ) &&
       !isSubmitting;
 
   ManualImportFlowState copyWith({
@@ -169,8 +321,9 @@ class ManualImportFlowState {
     Object? selectedFolder = _noValue,
     List<ManualImportItem>? items,
     Set<String>? selectedPaths,
-    Set<String>? bulkFixPaths,
+    Set<String>? fixSelectionPaths,
     List<ManualImportItem>? submittedItems,
+    Set<String>? submittedPaths,
     List<ManualImportQualityOption>? qualityOptions,
     List<ManualImportLanguageOption>? languageOptions,
     Object? command = _noValue,
@@ -199,8 +352,9 @@ class ManualImportFlowState {
           : selectedFolder as String?,
       items: items ?? this.items,
       selectedPaths: selectedPaths ?? this.selectedPaths,
-      bulkFixPaths: bulkFixPaths ?? this.bulkFixPaths,
+      fixSelectionPaths: fixSelectionPaths ?? this.fixSelectionPaths,
       submittedItems: submittedItems ?? this.submittedItems,
+      submittedPaths: submittedPaths ?? this.submittedPaths,
       qualityOptions: qualityOptions ?? this.qualityOptions,
       languageOptions: languageOptions ?? this.languageOptions,
       command: identical(command, _noValue)
@@ -223,8 +377,10 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     ServiceKey service, {
     int? targetId,
     bool force = false,
+    String? initialPath,
   }) async {
     if (!force &&
+        initialPath == null &&
         state.service == service &&
         state.targetId == targetId &&
         state.rootFolders.isNotEmpty) {
@@ -240,7 +396,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     try {
       final api = ref.read(manualImportServiceProvider(service));
       final rootFolders = await api.getRootFolders();
-      const defaultPath = '/';
+      final defaultPath = initialPath ?? '/';
       state = state.copyWith(
         rootFolders: rootFolders,
         isLoadingBrowse: false,
@@ -282,8 +438,26 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   }
 
   Future<void> loadSelectedFolderItems() async {
-    await _refreshSelectedFolderItems(clearItems: true);
+    final items = await _refreshSelectedFolderItems(clearItems: true);
+    if (items.isNotEmpty || state.error == null) _persistLastFolder();
     await _applyTargetPreselection();
+  }
+
+  /// Remembers the scanned folder so Locate can offer it back next time.
+  void _persistLastFolder() {
+    final service = state.service;
+    final folder = state.selectedFolder;
+    if (service == null || folder == null || folder.isEmpty || folder == '/') {
+      return;
+    }
+    // Best-effort convenience: tests run without a prefs override, and a
+    // missing shortcut must never fail a scan that succeeded.
+    try {
+      ref
+          .read(sharedPreferencesProvider)
+          .setString(manualImportLastFolderKey(service), folder);
+      ref.invalidate(manualImportLastFolderProvider(service));
+    } catch (_) {}
   }
 
   /// When the flow was launched from a specific movie/series/artist
@@ -345,40 +519,70 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   Future<List<ManualImportItem>> _refreshSelectedFolderItems({
     bool preserveSelection = false,
     bool clearItems = false,
+    bool preserveCommand = false,
   }) async {
     final service = state.service;
     final folder = state.selectedFolder;
     if (service == null || folder == null || folder.isEmpty) return const [];
 
     final previousSelected = state.selectedPaths;
-    final previousBulk = state.bulkFixPaths;
+    // A fresh scan of a folder starts a new session and drops any command; a
+    // refresh *of the same* scan must keep it, or the files it is importing
+    // would come back selectable mid-flight.
+    final Object? commandArg = preserveCommand ? _noValue : null;
+    final blocked = preserveCommand ? state.blockedPaths : const <String>{};
 
     state = state.copyWith(
       isLoadingItems: true,
       items: clearItems ? const [] : null,
       selectedPaths: preserveSelection ? null : const {},
-      bulkFixPaths: preserveSelection ? null : const {},
-      command: null,
+      fixSelectionPaths: const {},
+      command: commandArg,
+      submittedPaths: preserveCommand ? null : const {},
       error: null,
     );
 
     try {
       final api = ref.read(manualImportServiceProvider(service));
-      final items = await api.getManualImportItems(folder: folder);
-      final selectablePaths = items
-          .where((item) => item.isSelectable)
+      final items = await api.getManualImportItems(
+        folder: folder,
+        // Always: the files the service already holds are part of the review,
+        // not noise. Left filtered, an already-imported file simply vanishes
+        // from the scan — which is how "is this one already in the library?"
+        // came to have no answer, and how a folder that looked half-empty was
+        // actually reporting a successful earlier import.
+        filterExistingFiles: false,
+      );
+      // Only files that are actually importable are preselected. Selecting the
+      // unmatched ones too is how the old flow ended up with a confirm button
+      // that one bad file could hold hostage — and an already-imported file is
+      // never preselected either, because sending one again is a decision the
+      // user makes, not a default.
+      final readyPaths = items
+          .where(
+            (item) =>
+                item.isReadyForImportFor(service) &&
+                !blocked.contains(item.path),
+          )
           .map((item) => item.path)
           .toSet();
+      // A preserved selection may legitimately hold a ticked re-import, so the
+      // surviving set is everything submittable rather than everything ready.
       final selectedPaths = preserveSelection
-          ? previousSelected.intersection(selectablePaths)
-          : selectablePaths;
-      final bulkFixPaths = preserveSelection
-          ? previousBulk.intersection(selectedPaths)
-          : const <String>{};
+          ? previousSelected.intersection(
+              items
+                  .where(
+                    (item) =>
+                        item.isSubmittableFor(service) &&
+                        !blocked.contains(item.path),
+                  )
+                  .map((item) => item.path)
+                  .toSet(),
+            )
+          : readyPaths;
       state = state.copyWith(
         items: items,
         selectedPaths: selectedPaths,
-        bulkFixPaths: bulkFixPaths,
         isLoadingItems: false,
       );
       return items;
@@ -392,42 +596,88 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   }
 
   void toggleItem(ManualImportItem item, bool selected) {
-    if (!item.isSelectable) return;
+    final service = state.service;
+    // A matched file, or an already-imported one the user is deliberately
+    // sending again. An unmatched file gets here through the fix flow, which
+    // selects it once it becomes valid. A file already handed to a command in
+    // this session is never selectable again.
+    if (service == null ||
+        !item.isSubmittableFor(service) ||
+        state.blockedPaths.contains(item.path)) {
+      return;
+    }
     final next = {...state.selectedPaths};
-    final nextBulk = {...state.bulkFixPaths};
     if (selected) {
       next.add(item.path);
     } else {
       next.remove(item.path);
-      nextBulk.remove(item.path);
     }
-    state = state.copyWith(selectedPaths: next, bulkFixPaths: nextBulk);
+    state = state.copyWith(selectedPaths: next);
   }
 
-  void toggleAllSelectable() {
-    if (state.allSelectableSelected) {
-      state = state.copyWith(selectedPaths: const {}, bulkFixPaths: const {});
+  void toggleAllReady() {
+    if (state.allReadySelected) {
+      state = state.copyWith(selectedPaths: const {});
       return;
     }
 
     state = state.copyWith(
-      selectedPaths: state.selectableItems.map((item) => item.path).toSet(),
+      selectedPaths: state.readyItems.map((item) => item.path).toSet(),
     );
   }
 
-  void toggleBulkFixItem(ManualImportItem item, bool selected) {
-    if (!state.selectedPaths.contains(item.path)) return;
-    final next = {...state.bulkFixPaths};
+  /// Replaces the selection with exactly [items].
+  ///
+  /// The payoff of the filter: narrow to one series, take those and nothing
+  /// else. Without it a filtered view still imports whatever was selected off
+  /// screen, which is the one thing a user who filtered did not ask for.
+  void selectOnly(List<ManualImportItem> items) {
+    final service = state.service;
+    if (service == null) return;
+    state = state.copyWith(
+      selectedPaths: items
+          .where((item) => item.isReadyForImportFor(service))
+          .map((item) => item.path)
+          .toSet(),
+    );
+  }
+
+  /// Selects or clears a whole group of ready files at once.
+  ///
+  /// The gesture the grouped list exists for: one tap to take every episode of
+  /// one series, rather than forty taps down a flat list of four hundred.
+  void setGroupSelected(List<ManualImportItem> group, bool selected) {
+    final service = state.service;
+    if (service == null) return;
+    final paths = group
+        .where((item) => item.isReadyForImportFor(service))
+        .map((item) => item.path)
+        .toSet();
+    if (paths.isEmpty) return;
+
+    final next = {...state.selectedPaths};
+    if (selected) {
+      next.addAll(paths);
+    } else {
+      next.removeAll(paths);
+    }
+    state = state.copyWith(selectedPaths: next);
+  }
+
+  /// Ticks an unmatched file into the shared-assignment selection.
+  void toggleFixSelection(ManualImportItem item, bool selected) {
+    final next = {...state.fixSelectionPaths};
     if (selected) {
       next.add(item.path);
     } else {
       next.remove(item.path);
     }
-    state = state.copyWith(bulkFixPaths: next);
+    state = state.copyWith(fixSelectionPaths: next);
   }
 
-  void clearBulkFixSelection() {
-    state = state.copyWith(bulkFixPaths: const {});
+  void clearFixSelection() {
+    if (state.fixSelectionPaths.isEmpty) return;
+    state = state.copyWith(fixSelectionPaths: const {});
   }
 
   Future<List<ManualImportLookupResult>> lookup(String term) async {
@@ -572,7 +822,10 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       ],
       // Auto-select the now-ready items so "Confirm import" picks them up.
       selectedPaths: {...state.selectedPaths, ...updatedByPath.keys},
-      bulkFixPaths: const {},
+      // They are no longer unmatched, so the shared-assignment tick is spent.
+      fixSelectionPaths: state.fixSelectionPaths.difference(
+        updatedByPath.keys.toSet(),
+      ),
       error: null,
     );
     final refreshed = state.items
@@ -606,21 +859,41 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
         .getTracks(albumId: albumId);
   }
 
+  /// Posts the selected files as one `ManualImport` command.
+  ///
+  /// Returns the existing command, without posting, when there is nothing new
+  /// to send — so navigating back into Track is always safe and pressing the
+  /// button twice can never queue the same files twice.
   Future<ManualImportCommandStatus?> confirmImport() async {
     final service = state.service;
-    if (service == null || !state.canImportSelected) return null;
+    if (service == null) return null;
 
-    final files = state.selectedItems;
+    // Everything already handed over: this is a navigation, not a submission.
+    final files = state.selectedItems
+        .where((item) => !state.blockedPaths.contains(item.path))
+        .toList(growable: false);
+    if (files.isEmpty) return state.command;
+    if (!state.canImportSelected) return null;
+
     state = state.copyWith(isSubmitting: true, error: null);
     try {
       final api = ref.read(manualImportServiceProvider(service));
       final command = await api.startManualImport(
         files,
         importMode: state.importMode,
+        // Only when the batch genuinely contains a file the service already
+        // holds: this flag lets Lidarr overwrite what is in the library, and it
+        // has no business being on for an ordinary import.
+        replaceExistingFiles: files.any((item) => item.isAlreadyImported),
       );
+      final submitted = files.map((item) => item.path).toSet();
       state = state.copyWith(
         command: command,
         submittedItems: files,
+        // The batch is spent: drop it from the selection and record it, so the
+        // Review screen behind Track offers no way to send it again.
+        submittedPaths: {...state.submittedPaths, ...submitted},
+        selectedPaths: state.selectedPaths.difference(submitted),
         isSubmitting: false,
       );
       return command;
@@ -631,6 +904,20 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       );
       return null;
     }
+  }
+
+  /// Re-reads the folder when the user comes back from Track.
+  ///
+  /// The service is the authority on what is still on disk: files it imported
+  /// are gone, files it failed on are still there. Keeping the command and the
+  /// submitted set through the refresh is what stops a still-present file from
+  /// quietly becoming selectable again while its import is in flight.
+  Future<void> refreshAfterImport() async {
+    if (state.command == null || state.isLoadingItems) return;
+    await _refreshSelectedFolderItems(
+      preserveSelection: true,
+      preserveCommand: true,
+    );
   }
 
   Future<void> pollCommand() async {

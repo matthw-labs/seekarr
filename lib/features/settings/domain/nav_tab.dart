@@ -15,28 +15,28 @@ enum NavTab {
     icon: Icons.view_list_outlined,
     selectedIcon: Icons.view_list_rounded,
     routePath: '/services',
-    accentColor: AppColors.primary,
+    accentColor: AppColors.navServices,
   ),
   activity(
     label: 'Activity',
     icon: Icons.monitor_heart_outlined,
     selectedIcon: Icons.monitor_heart_rounded,
     routePath: '/activity',
-    accentColor: AppColors.primary,
+    accentColor: AppColors.navActivity,
   ),
   search(
     label: 'Search',
     icon: Icons.search_outlined,
     selectedIcon: Icons.search_rounded,
     routePath: '/search',
-    accentColor: AppColors.primary,
+    accentColor: AppColors.navSearch,
   ),
   settings(
     label: 'Settings',
     icon: Icons.settings_outlined,
     selectedIcon: Icons.settings,
     routePath: '/settings',
-    accentColor: AppColors.primary,
+    accentColor: AppColors.navSettings,
   );
 
   const NavTab({

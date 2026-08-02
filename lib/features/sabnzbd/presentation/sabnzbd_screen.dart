@@ -88,13 +88,23 @@ class _SabnzbdDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final queueAsync = ref.watch(sabnzbdQueueProvider);
     final historyAsync = ref.watch(sabnzbdHistoryProvider);
+    final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.sabnzbd));
+    final isOffline = summaryAsync.maybeWhen(
+      data: (summary) => !summary.isOnline,
+      orElse: () => false,
+    );
+
+    if (isOffline) {
+      return ServiceOfflineState(
+        serviceName: ServiceKey.sabnzbd.title,
+        accent: AppColors.sabnzbd,
+        onRetry: () => _invalidateAll(ref),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(sabnzbdQueueProvider);
-        ref.invalidate(sabnzbdHistoryProvider);
-        ref.invalidate(serviceKpiProvider(ServiceKey.sabnzbd));
-        ref.invalidate(serviceSummaryProvider(ServiceKey.sabnzbd));
+        _invalidateAll(ref);
         await Future<void>.delayed(const Duration(milliseconds: 300));
       },
       child: ListView(
@@ -131,6 +141,13 @@ final _sabnzbdInvalidateAfterAction = <ProviderOrFamily>[
 ];
 
 /// Global controls: add an NZB by URL and pause/resume the whole queue.
+void _invalidateAll(WidgetRef ref) {
+  ref.invalidate(sabnzbdQueueProvider);
+  ref.invalidate(sabnzbdHistoryProvider);
+  ref.invalidate(serviceKpiProvider(ServiceKey.sabnzbd));
+  ref.invalidate(serviceSummaryProvider(ServiceKey.sabnzbd));
+}
+
 class _SabnzbdActionsBar extends ConsumerWidget {
   const _SabnzbdActionsBar({required this.queueAsync});
 

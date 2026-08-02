@@ -5,8 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/data/settings_service.dart';
+import 'package:seekarr/features/settings/domain/regions.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/settings/presentation/settings_region_screen.dart';
+import 'package:seekarr/features/settings/presentation/widgets/settings_choice_row.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 
@@ -18,28 +20,23 @@ void main() {
       await _pumpRegionScreen(tester);
 
       expect(find.text('Region'), findsOneWidget);
-      expect(find.textContaining('release dates'), findsOneWidget);
+      expect(find.textContaining('Release dates'), findsOneWidget);
 
-      expect(find.byType(RadioListTile<String>), findsWidgets);
-
-      await tester.scrollUntilVisible(find.text('Russia (RU)'), 500);
-      await tester.pumpAndSettle();
-
+      expect(find.byType(SettingsChoiceRow), findsWidgets);
       expect(find.text('Russia (RU)'), findsOneWidget);
     });
 
+    // No ensureSemantics()/dispose() ceremony in these: testWidgets already
+    // enables semantics and owns the handle. Doing it by hand here was the
+    // pattern the next author would copy, and it would fail under addTearDown —
+    // handle verification runs before tearDowns.
     testWidgets('selects US by default', (tester) async {
       await _pumpRegionScreen(tester);
-      final semantics = tester.ensureSemantics();
 
-      try {
-        expect(
-          tester.getSemantics(_regionTile('US')),
-          containsSemantics(hasCheckedState: true, isChecked: true),
-        );
-      } finally {
-        semantics.dispose();
-      }
+      expect(
+        tester.getSemantics(_regionTile('US')),
+        containsSemantics(hasCheckedState: true, isChecked: true),
+      );
     });
 
     testWidgets('normalizes configured regions to uppercase', (tester) async {
@@ -47,19 +44,11 @@ void main() {
         tester,
         settings: const SettingsModel(region: 'jp'),
       );
-      final semantics = tester.ensureSemantics();
 
-      try {
-        await tester.scrollUntilVisible(find.text('Japan (JP)'), 300);
-        await tester.pumpAndSettle();
-
-        expect(
-          tester.getSemantics(_regionTile('JP')),
-          containsSemantics(hasCheckedState: true, isChecked: true),
-        );
-      } finally {
-        semantics.dispose();
-      }
+      expect(
+        tester.getSemantics(_regionTile('JP')),
+        containsSemantics(hasCheckedState: true, isChecked: true),
+      );
     });
 
     testWidgets('renders region labels in the expected format', (tester) async {
@@ -68,30 +57,21 @@ void main() {
       expect(find.text('United States (US)'), findsOneWidget);
       expect(find.text('United Kingdom (GB)'), findsOneWidget);
 
-      await tester.scrollUntilVisible(find.text('Japan (JP)'), 300);
-      await tester.pumpAndSettle();
-
       expect(find.text('Japan (JP)'), findsOneWidget);
     });
 
     testWidgets('tapping a region updates settings state', (tester) async {
       final harness = await _pumpRegionScreen(tester);
-      final semantics = tester.ensureSemantics();
 
-      try {
-        await tester.scrollUntilVisible(find.text('Japan (JP)'), 300);
-        await tester.tap(find.text('Japan (JP)'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Japan (JP)'));
+      await tester.pumpAndSettle();
 
-        expect(harness.container.read(settingsProvider).region, 'JP');
+      expect(harness.container.read(settingsProvider).region, 'JP');
 
-        expect(
-          tester.getSemantics(_regionTile('JP')),
-          containsSemantics(hasCheckedState: true, isChecked: true),
-        );
-      } finally {
-        semantics.dispose();
-      }
+      expect(
+        tester.getSemantics(_regionTile('JP')),
+        containsSemantics(hasCheckedState: true, isChecked: true),
+      );
     });
   });
 }
@@ -113,6 +93,13 @@ Future<_SettingsHarness> _pumpRegionScreen(
 
   addTearDown(container.dispose);
 
+  // Thirty regions in a lazy ListView: a tall viewport keeps every row built,
+  // so the tests assert on content rather than on scroll position.
+  tester.view.physicalSize = const Size(1000, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
@@ -124,9 +111,11 @@ Future<_SettingsHarness> _pumpRegionScreen(
   return _SettingsHarness(container);
 }
 
-Finder _regionTile(String value) {
+Finder _regionTile(String code) {
+  final label = '${commonRegions[code]} ($code)';
   return find.byWidgetPredicate(
-    (widget) => widget is RadioListTile<String> && widget.value == value,
+    (widget) => widget is SettingsChoiceRow && widget.label == label,
+    skipOffstage: false,
   );
 }
 

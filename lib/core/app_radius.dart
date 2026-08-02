@@ -22,6 +22,16 @@ class AppRadius {
   /// 16dp - Large rounding for dialogs, sheets
   static const double lg = 16;
 
+  /// 20dp - The selected-affordance radius
+  ///
+  /// Deliberately off the 4/8/12/16/28 ladder, and the one exception to it: this
+  /// is the navigation bar's selection indicator, which DESIGN.md pins at 20dp as
+  /// the `nav-pill` component. It exists as a token because a second control —
+  /// the Activity segment pills — now shares that vocabulary, and "this one is
+  /// active" should look the same everywhere. Reach for it only for a selected
+  /// state, never as a general corner.
+  static const double pill = 20;
+
   /// 28dp - Extra large rounding for FAB
   static const double xl = 28;
 
@@ -41,6 +51,9 @@ class AppRadius {
 
   /// BorderRadius for large elements (dialogs, sheets)
   static final BorderRadius borderRadiusLg = BorderRadius.circular(lg);
+
+  /// BorderRadius for a selected affordance (nav indicator, segment pills)
+  static final BorderRadius borderRadiusPill = BorderRadius.circular(pill);
 
   /// BorderRadius for extra large elements (FAB)
   static final BorderRadius borderRadiusXl = BorderRadius.circular(xl);

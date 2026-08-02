@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import 'package:seekarr/core/network/connection_failure.dart';
+import 'package:seekarr/core/utils/url_utils.dart';
 import 'package:seekarr/features/nzbget/domain/models/nzbget_models.dart';
 
 /// Error thrown by [NzbgetClient]. Carries the [reason] so a caller verifying
@@ -28,7 +29,7 @@ class NzbgetException implements Exception, HasFailureReason {
 /// header, never in the URL.
 class NzbgetClient {
   NzbgetClient({required String url, this.username, this.password, Dio? dio})
-    : baseUrl = _normalizeBaseUrl(url) {
+    : baseUrl = UrlUtils.normalizeBaseUrl(url) {
     _dio =
         dio ??
         Dio(
@@ -45,16 +46,6 @@ class NzbgetClient {
   final String? password;
   late final Dio _dio;
   int _requestId = 0;
-
-  static String _normalizeBaseUrl(String url) {
-    var n = url.trim();
-    if (n.isEmpty) return '';
-    if (!n.startsWith('http://') && !n.startsWith('https://')) {
-      n = 'https://$n';
-    }
-    if (n.endsWith('/')) n = n.substring(0, n.length - 1);
-    return n;
-  }
 
   Map<String, String> get _authHeaders {
     final user = username?.trim() ?? '';

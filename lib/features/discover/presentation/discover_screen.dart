@@ -361,7 +361,8 @@ class _DiscoverSearchResults extends ConsumerWidget {
 
     return searchResults.when(
       loading: () => AppSkeleton.posterGrid(),
-      error: (error, _) => AppErrorState(error: error),
+      error: (error, _) =>
+          AppErrorState(error: error, serviceName: 'search results'),
       data: (results) {
         if (results == null || results.isEmpty) {
           return const AppEmptyState(

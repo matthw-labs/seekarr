@@ -33,10 +33,9 @@ void main() {
       expect(summary.service, ServiceKey.radarr);
       expect(summary.status, ServiceSummaryStatus.offline);
       expect(summary.host, isEmpty);
-      expect(summary.countLabel, 'Offline');
     });
 
-    test('returns online summary with version and item count', () async {
+    test('returns online summary with version', () async {
       final container = _container(
         settings: const SettingsModel(
           radarrUrl: 'http://radarr.local:7878',
@@ -53,7 +52,6 @@ void main() {
       expect(summary.status, ServiceSummaryStatus.online);
       expect(summary.host, 'radarr.local:7878');
       expect(summary.versionLabel, 'v5.4.6');
-      expect(summary.countLabel, '1 movie');
     });
 
     test('returns offline summary when status endpoint fails', () async {
@@ -72,10 +70,9 @@ void main() {
 
       expect(summary.status, ServiceSummaryStatus.offline);
       expect(summary.host, 'radarr.local:7878');
-      expect(summary.countLabel, 'Offline');
     });
 
-    test('keeps service online when only item count fails', () async {
+    test('stays online when the library call fails', () async {
       final container = _container(
         settings: const SettingsModel(
           radarrUrl: 'http://radarr.local:7878',
@@ -90,8 +87,11 @@ void main() {
       );
 
       expect(summary.status, ServiceSummaryStatus.online);
+      // Reachability is settled by the version probe alone. The summary no
+      // longer fetches a library count, so a failing library call cannot
+      // downgrade it — that whole fetch was removed when the status card that
+      // displayed the count gave way to the stack matrix's live signal.
       expect(summary.versionLabel, 'v5.4.6');
-      expect(summary.countLabel, 'Summary unavailable');
     });
   });
 
@@ -124,43 +124,25 @@ void main() {
       expect(summary.status, ServiceSummaryStatus.online);
       expect(summary.host, 'bazarr.local:6767');
       expect(summary.versionLabel, 'v1.4.5');
-      expect(summary.countLabel, '0 subtitles');
-    });
-
-    test('totals wanted badges across episodes and movies', () async {
-      final container = _container(
-        settings: const SettingsModel(
-          bazarrUrl: 'http://bazarr.local:6767',
-          bazarrApiKey: 'key',
-        ),
-        statusClient: _StatusClient({
-          'data': {'bazarr_version': '1.4.5'},
-        }),
-        bazarrService: FakeBazarrService()
-          ..badges = const BazarrBadges(
-            episodes: 12,
-            movies: 4,
-            providers: 3,
-            status: true,
-            sonarrSignalR: true,
-            radarrSignalR: true,
-            announcements: 0,
-          ),
-      );
-
-      final summary = await container.read(
-        serviceSummaryProvider(ServiceKey.bazarr).future,
-      );
-
-      expect(summary.countLabel, '16 subtitles');
     });
   });
 
   group('servicesQueueProvider', () {
+    // Both arrs configured: the provider now skips any source the user has not
+    // set up, so an unconfigured service contributes nothing rather than a
+    // failed fetch.
+    const _bothArrs = SettingsModel(
+      radarrUrl: 'http://radarr.local:7878',
+      radarrApiKey: 'key',
+      sonarrUrl: 'http://sonarr.local:8989',
+      sonarrApiKey: 'key',
+    );
+
     test(
       'combines Radarr and Sonarr queue items with media-first hierarchy',
       () async {
         final container = _container(
+          settings: _bothArrs,
           radarrService: _QueueRadarrService([
             {
               'title': 'Furiosa.2024.2160p.WEB-DL-GROUP',
@@ -194,9 +176,15 @@ void main() {
 
         final items = await container.read(servicesQueueProvider.future);
 
-        expect(items, hasLength(3));
+        // Ordered by progress, closest to landing first, with the two items
+        // whose client reported no progress last and in source order.
+        expect(items.map((item) => item.title), [
+          'Furiosa',
+          'The Boys',
+          'Shogun',
+          'Slow Horses',
+        ]);
         expect(items[0].service, ServiceKey.radarr);
-        expect(items[0].title, 'Furiosa');
         expect(items[0].subtitle, contains('Furiosa.2024.2160p.WEB-DL-GROUP'));
         expect(items[0].progress, 0.75);
         expect(items[1].service, ServiceKey.sonarr);
@@ -206,13 +194,54 @@ void main() {
           contains('The.Boys.S04E07.1080p.WEB-DL-GROUP'),
         );
         expect(items[1].progress, 0.5);
-        expect(items[2].title, 'Shogun');
-        expect(items.map((item) => item.title), isNot(contains('Slow Horses')));
+        expect(items[2].progress, isNull);
+        expect(items[3].progress, isNull);
       },
     );
 
+    test('skips a source the user has not configured', () async {
+      final container = _container(
+        settings: const SettingsModel(
+          sonarrUrl: 'http://sonarr.local:8989',
+          sonarrApiKey: 'key',
+        ),
+        // Configured nowhere, so this must never be asked.
+        radarrService: _ThrowingRadarrService(),
+        sonarrService: _QueueSonarrService([
+          {'title': 'Shogun', 'size': 100, 'sizeleft': 0},
+        ]),
+      );
+
+      final items = await container.read(servicesQueueProvider.future);
+
+      expect(items.single.service, ServiceKey.sonarr);
+    });
+
+    test('caps the preview and keeps the closest to landing', () async {
+      final container = _container(
+        settings: _bothArrs,
+        radarrService: _QueueRadarrService([
+          for (var index = 0; index < 8; index++)
+            {
+              'title': 'Release $index',
+              'size': 100,
+              // Ascending progress, so the last ones added are the furthest
+              // along and must be the ones that survive the cap.
+              'sizeleft': 100 - (index * 10),
+            },
+        ]),
+      );
+
+      final items = await container.read(servicesQueueProvider.future);
+
+      expect(items, hasLength(servicesQueuePreviewLimit));
+      expect(items.first.title, 'Release 7');
+      expect(items.last.title, 'Release 3');
+    });
+
     test('keeps queue available when one service fails', () async {
       final container = _container(
+        settings: _bothArrs,
         radarrService: _ThrowingRadarrService(),
         sonarrService: _QueueSonarrService([
           {'title': 'Shogun', 'size': 100, 'sizeleft': 0},
@@ -413,6 +442,7 @@ class _StatusClient extends ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     CancelToken? cancelToken,
+    Duration? receiveTimeout,
   }) async {
     return Response(
       requestOptions: RequestOptions(path: path),
@@ -434,6 +464,7 @@ class _ThrowingStatusClient extends ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     CancelToken? cancelToken,
+    Duration? receiveTimeout,
   }) async {
     throw Exception('status failed');
   }

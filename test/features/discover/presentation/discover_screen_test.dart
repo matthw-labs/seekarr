@@ -110,7 +110,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Something went wrong'), findsOneWidget);
+      // The headline names what failed; the exception is demoted to a detail
+      // line under it rather than being the message itself.
+      expect(find.text("Couldn't load search results"), findsOneWidget);
       expect(find.textContaining('Network error'), findsOneWidget);
     });
 

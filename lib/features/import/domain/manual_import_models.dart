@@ -207,6 +207,16 @@ class ManualImportItem {
     return value.isEmpty ? 'FILE' : value.toUpperCase();
   }
 
+  /// The file's real name on disk, extension included.
+  ///
+  /// Always prefer this over [name] for anything the user reads as "the file".
+  /// [name] is whatever the service chose to put in its `name` field, and the
+  /// \*arrs put the basename **without** the extension there — so a UI line
+  /// built on [name] silently means "basename minus extension" for a real
+  /// service and "basename with extension" whenever the field is absent and the
+  /// [path] fallback kicks in. One label cannot mean two things.
+  String get fileName => path.isEmpty ? name : manualImportPathName(path);
+
   bool get isAlreadyImported {
     // Radarr/Sonarr use 0 for "no existing file" in manual import payloads.
     return (movieFileId ?? 0) > 0 || (episodeFileId ?? 0) > 0;
@@ -238,6 +248,25 @@ class ManualImportItem {
 
   bool isReadyForImportFor(ServiceKey service) {
     return isSelectable && !hasBlockingRequirementsFor(service);
+  }
+
+  /// Whether this file, already in the library, can be handed over again.
+  ///
+  /// The deliberate exception to [isSelectable]. Review lists imported files
+  /// inline — the answer to "did I already take this one?" — and a file the
+  /// service already holds is still a file the user may want it to take again:
+  /// a better rip of an episode that is already on disk is exactly the scene
+  /// manual import exists for. It still needs a complete identity, which is
+  /// what [hasBlockingRequirementsFor] checks; an imported file whose payload
+  /// carries no match cannot be sent anywhere.
+  bool isReimportableFor(ServiceKey service) {
+    return isAlreadyImported && !hasBlockingRequirementsFor(service);
+  }
+
+  /// Whether this file may enter the import selection at all — freshly matched
+  /// or deliberately sent again.
+  bool isSubmittableFor(ServiceKey service) {
+    return isReadyForImportFor(service) || isReimportableFor(service);
   }
 
   bool isMatchedFor(ServiceKey service) {

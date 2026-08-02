@@ -88,14 +88,23 @@ class _NzbgetDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final queueAsync = ref.watch(nzbgetQueueProvider);
     final historyAsync = ref.watch(nzbgetHistoryProvider);
+    final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.nzbget));
+    final isOffline = summaryAsync.maybeWhen(
+      data: (summary) => !summary.isOnline,
+      orElse: () => false,
+    );
+
+    if (isOffline) {
+      return ServiceOfflineState(
+        serviceName: ServiceKey.nzbget.title,
+        accent: AppColors.nzbget,
+        onRetry: () => _invalidateAll(ref),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(nzbgetStatusProvider);
-        ref.invalidate(nzbgetQueueProvider);
-        ref.invalidate(nzbgetHistoryProvider);
-        ref.invalidate(serviceKpiProvider(ServiceKey.nzbget));
-        ref.invalidate(serviceSummaryProvider(ServiceKey.nzbget));
+        _invalidateAll(ref);
         await Future<void>.delayed(const Duration(milliseconds: 300));
       },
       child: ListView(
@@ -133,6 +142,14 @@ final _nzbgetInvalidateAfterAction = <ProviderOrFamily>[
 ];
 
 /// Global controls: add an NZB by URL and pause/resume the whole queue.
+void _invalidateAll(WidgetRef ref) {
+  ref.invalidate(nzbgetStatusProvider);
+  ref.invalidate(nzbgetQueueProvider);
+  ref.invalidate(nzbgetHistoryProvider);
+  ref.invalidate(serviceKpiProvider(ServiceKey.nzbget));
+  ref.invalidate(serviceSummaryProvider(ServiceKey.nzbget));
+}
+
 class _NzbgetActionsBar extends ConsumerWidget {
   const _NzbgetActionsBar();
 

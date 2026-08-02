@@ -18,6 +18,49 @@ void main() {
       expect(find.text('Settings'), findsNothing);
     });
 
+    group('semantics', () {
+      // Unselected destinations render no text at all, so `label:` on the
+      // Semantics is the only thing naming them. This group is what stops that
+      // wiring being deleted as dead code.
+      testWidgets('each destination is a button naming its tab position', (
+        tester,
+      ) async {
+        await _pumpNavBar(tester, selectedIndex: 0);
+
+        expect(
+          tester.getSemantics(_navItem('Services')),
+          containsSemantics(
+            label: 'Services\nTab 1 of 4',
+            isButton: true,
+            hasTapAction: true,
+            hasSelectedState: true,
+            isSelected: true,
+          ),
+        );
+
+        // Parity with NavigationRail, which the shell uses above 840dp and which
+        // appends this itself — the same app was saying two different things
+        // about the same navigation.
+        expect(
+          tester.getSemantics(_navItem('Search')),
+          containsSemantics(label: 'Search\nTab 3 of 4', isButton: true),
+        );
+      });
+
+      testWidgets('an unselected destination still declares selected state', (
+        tester,
+      ) async {
+        await _pumpNavBar(tester, selectedIndex: 0);
+
+        // The case `selected: isSelected ? true : null` would silently break:
+        // without hasSelectedState the reader cannot say "not selected".
+        expect(
+          tester.getSemantics(_navItem('Activity')),
+          containsSemantics(hasSelectedState: true, isSelected: false),
+        );
+      });
+    });
+
     testWidgets('uses the destination accent color for the selected icon', (
       tester,
     ) async {
@@ -329,6 +372,11 @@ Future<void> _pumpNavBar(
     await tester.pumpAndSettle();
   }
 }
+
+/// The key sits on the `Semantics` itself, so `getSemantics` resolves that node
+/// rather than walking up past it to an ancestor.
+Finder _navItem(String label) =>
+    find.byKey(ValueKey('floating-nav-item-${label.toLowerCase()}'));
 
 void _setTestViewport(WidgetTester tester, Size size) {
   tester.view.physicalSize = size;

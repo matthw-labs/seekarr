@@ -39,22 +39,46 @@ enum MediaAvailability {
 ///
 /// Ordered loosely by lifecycle; [salience] — not the declaration order — is
 /// what decides which entry wins when several map to the same media item.
+///
+/// Three of these states exist because the pipeline's *problems* used not to be
+/// expressible. A stalled download arrived as `downloading` plus a warning flag,
+/// so the row read "Downloading" — the opposite of the truth — for the single
+/// most common reason a user opens Activity at all. An unreachable download
+/// client was flattened onto [paused] with a label riding alongside it, so the
+/// merge below could and did discard it. And `importBlocked`, which needs a
+/// manual import to clear, was indistinguishable from `importPending`, which
+/// clears itself in seconds.
 enum MediaPipeline {
   queued,
   downloading,
+  stalled,
   importPending,
+  importBlocked,
   importing,
   paused,
+  clientUnavailable,
   failed;
 
   /// How strongly this state should win when several queue entries collapse
   /// onto one media item (a series with three episodes in flight, say).
   ///
-  /// `failed` outranks everything because it needs the user's attention;
-  /// `downloading` outranks the waiting states because "something is
-  /// happening" is the more useful headline.
+  /// The ranking is **gravity** — how badly this state wants the user — not
+  /// lifecycle position. That distinction is the fix for a real bug: when
+  /// `clientUnavailable` was expressed as [paused], it inherited the *lowest*
+  /// salience in the enum, so a series with one episode blocked by a dead
+  /// download client and one merely queued reported "Queued" and dropped the
+  /// outage entirely. The most actionable fact on the screen lost to the least.
+  ///
+  /// Within the healthy states the original rule still holds: `downloading`
+  /// outranks the benign waiting states because "something is happening" is the
+  /// more useful headline. That is why `importPending` sits *below* it while
+  /// `importBlocked` sits above — one is a wait, the other is a request for
+  /// help.
   int get salience => switch (this) {
-    MediaPipeline.failed => 5,
+    MediaPipeline.failed => 8,
+    MediaPipeline.clientUnavailable => 7,
+    MediaPipeline.importBlocked => 6,
+    MediaPipeline.stalled => 5,
     MediaPipeline.downloading => 4,
     MediaPipeline.importing => 3,
     MediaPipeline.importPending => 2,
@@ -65,9 +89,12 @@ enum MediaPipeline {
   String get label => switch (this) {
     MediaPipeline.queued => 'Queued',
     MediaPipeline.downloading => 'Downloading',
+    MediaPipeline.stalled => 'Stalled',
     MediaPipeline.importPending => 'Import Pending',
+    MediaPipeline.importBlocked => 'Import Blocked',
     MediaPipeline.importing => 'Importing',
     MediaPipeline.paused => 'Paused',
+    MediaPipeline.clientUnavailable => 'Client Unavailable',
     MediaPipeline.failed => 'Failed',
   };
 }
@@ -103,6 +130,21 @@ class MediaStatusInfo {
   /// own (Seerr's "Available to Request", a download client's native state).
   final String? labelOverride;
 
+  /// Overrides the derived [tone] for states the two axes cannot express.
+  ///
+  /// The availability/pipeline pair describes a *thing* — what is on disk and
+  /// what is moving. Some rows instead describe an *event* that already
+  /// happened: a history record's `downloadFailed` or `movieFileDeleted` has no
+  /// current availability and no live pipeline, yet it very much has a severity.
+  /// Without this, mapping those onto whichever availability produced the right
+  /// colour meant lying about the item's state to get the tone right — and
+  /// picking the tone locally instead is exactly how a failed import came to
+  /// render in the success green.
+  ///
+  /// A warning still escalates over an override; an explicit
+  /// [StatusTone.error] is never downgraded.
+  final StatusTone? toneOverride;
+
   const MediaStatusInfo({
     this.availability = MediaAvailability.unknown,
     this.pipeline,
@@ -111,6 +153,7 @@ class MediaStatusInfo {
     this.hasWarning = false,
     this.detail,
     this.labelOverride,
+    this.toneOverride,
   });
 
   const MediaStatusInfo.unknown() : this();
@@ -120,6 +163,15 @@ class MediaStatusInfo {
       pipeline == MediaPipeline.downloading ||
       pipeline == MediaPipeline.importing;
 
+  /// True when this item's [progress] is worth drawing and reading out.
+  ///
+  /// Wider than [isActive] by exactly one state: a stalled transfer is not
+  /// moving, but "Stalled at 43%" is materially more useful than "Stalled" —
+  /// the frozen figure is how the user judges whether to wait or to blocklist
+  /// and search again. Everything [isActive] excludes stays excluded: a queued
+  /// item carries a progress value that is deliberately not drawn.
+  bool get showsProgress => isActive || pipeline == MediaPipeline.stalled;
+
   /// True when the item is in the pipeline at all — the guard that keeps a
   /// queued item from ever rendering as `Missing`.
   bool get isInPipeline => pipeline != null;
@@ -127,6 +179,34 @@ class MediaStatusInfo {
   bool get isAvailable =>
       availability == MediaAvailability.available ||
       availability == MediaAvailability.upgradable;
+
+  /// Download progress as whole percent, but only while it is actually being
+  /// shown.
+  ///
+  /// Lives here rather than in the badge so the printed percentage and the
+  /// spoken one cannot drift: a queued item carries a [progress] value that is
+  /// deliberately not drawn, and it must not be read out either.
+  int? get progressPercent {
+    final value = progress;
+    if (value == null || !showsProgress) return null;
+    return (value * 100).round();
+  }
+
+  /// The status as one spoken phrase, for assistive technology.
+  ///
+  /// [label] alone drops the two things a badge shows without ever writing them
+  /// down: the percentage drawn as a progress ring, and the warning carried by
+  /// the tone colour — [hasWarning] is what replaced the old "… (Warning)" text
+  /// suffix, so since then nothing spells it out. A sighted user reads both off
+  /// the badge; a screen reader has to be told.
+  String get semanticLabel {
+    final percent = progressPercent;
+    return [
+      label,
+      if (percent != null) '$percent percent',
+      if (hasWarning) 'warning',
+    ].join(', ');
+  }
 
   /// The pipeline wins over availability: an item with nothing on disk that is
   /// being downloaded reads "Downloading", not "Missing".
@@ -148,7 +228,7 @@ class MediaStatusInfo {
   }
 
   StatusTone get tone {
-    final base = _baseTone;
+    final base = toneOverride ?? _baseTone;
     // A warning must never downgrade an error, but it should always surface on
     // an otherwise calm tone — this is what replaced the old "… (Warning)"
     // text suffix.
@@ -163,6 +243,16 @@ class MediaStatusInfo {
         MediaPipeline.queued ||
         MediaPipeline.importPending ||
         MediaPipeline.paused => StatusTone.warning,
+        // Stuck, and waiting on the user rather than on the network. Not
+        // `error`: nothing is lost yet, and reserving red for definite loss is
+        // what keeps red meaning something (the same reasoning that keeps the
+        // Wanted bucket off red — if everything is an emergency, nothing is).
+        MediaPipeline.stalled ||
+        MediaPipeline.importBlocked => StatusTone.warning,
+        // The download client is unreachable, so nothing in the queue can
+        // progress at all. That is infrastructure being down, not an item
+        // waiting its turn.
+        MediaPipeline.clientUnavailable ||
         MediaPipeline.failed => StatusTone.error,
       };
     }
@@ -189,6 +279,7 @@ class MediaStatusInfo {
     bool? hasWarning,
     String? detail,
     String? labelOverride,
+    StatusTone? toneOverride,
   }) {
     return MediaStatusInfo(
       availability: availability ?? this.availability,
@@ -198,6 +289,7 @@ class MediaStatusInfo {
       hasWarning: hasWarning ?? this.hasWarning,
       detail: detail ?? this.detail,
       labelOverride: labelOverride ?? this.labelOverride,
+      toneOverride: toneOverride ?? this.toneOverride,
     );
   }
 
@@ -210,7 +302,8 @@ class MediaStatusInfo {
         other.unmonitored == unmonitored &&
         other.hasWarning == hasWarning &&
         other.detail == detail &&
-        other.labelOverride == labelOverride;
+        other.labelOverride == labelOverride &&
+        other.toneOverride == toneOverride;
   }
 
   @override
@@ -222,6 +315,7 @@ class MediaStatusInfo {
     hasWarning,
     detail,
     labelOverride,
+    toneOverride,
   );
 
   @override

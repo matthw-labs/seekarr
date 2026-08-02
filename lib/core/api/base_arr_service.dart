@@ -289,4 +289,34 @@ mixin ArrActivityMixin {
       data: {'guid': guid, 'indexerId': indexerId},
     );
   }
+
+  /// Removes a record from the download queue.
+  ///
+  /// The activity surfaces were read-only until now: this mixin exposed five
+  /// getters and no mutation, so a user who found a stalled download in Seekarr
+  /// had to open the service's own web UI to do anything about it.
+  ///
+  /// [removeFromClient] also deletes the download from the connected client
+  /// (qBittorrent, SABnzbd…) rather than only from the \*arr queue.
+  /// [blocklist] additionally records the release so the same one is not grabbed
+  /// again — which, combined with a fresh search, is how a retry is expressed in
+  /// the \*arr API. There is no dedicated "retry" endpoint.
+  Future<void> removeFromQueue(
+    int id, {
+    bool removeFromClient = true,
+    bool blocklist = false,
+  }) async {
+    await client.delete(
+      '/api/${config.apiVersion}/queue/$id',
+      queryParameters: {
+        'removeFromClient': removeFromClient,
+        'blocklist': blocklist,
+      },
+    );
+  }
+
+  /// Removes a release from the blocklist, allowing it to be grabbed again.
+  Future<void> deleteBlocklistItem(int id) async {
+    await client.delete('/api/${config.apiVersion}/blocklist/$id');
+  }
 }

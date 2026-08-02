@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/text_scale.dart';
+import 'package:seekarr/core/widgets/selection_pills.dart';
 
 enum ActivitySegment {
   queue('Queue'),
@@ -21,9 +22,28 @@ enum WantedSegment {
   const WantedSegment(this.label);
 }
 
-const _headerHeight = 56.0;
-
+/// The per-service Activity segment selector, pinned to the top of its scroll
+/// view.
+///
+/// Now a thin sliver wrapper over [SelectionPills]. It used to be a
+/// `SegmentedButton`, which meant the feature expressed one taxonomy through
+/// three different controls — this, a second `SegmentedButton` on the global
+/// screen, and a hand-rolled chip row beneath that one. Queue/History/Blocklist
+/// is the same choice wherever it appears, so it now looks the same too.
+///
+/// The header's extent is **derived from the reading size** rather than constant.
+/// Both `minExtent` and `maxExtent` used to be a flat `56.0` wrapped around a
+/// control made of text, so at an accessibility reading size the label outgrew
+/// the box and Flutter painted its overflow stripe across the selector — the
+/// exact failure The Grown Box Rule exists to prevent, on a pinned header the
+/// user cannot scroll away from.
 class ActivitySegmentSelector<T extends Enum> extends StatelessWidget {
+  /// Height at the default reading size: a 48pt pill plus its 8pt bottom gap.
+  static const double _baseHeight = 56.0;
+
+  /// The part of that height which scales — one `labelMedium` line.
+  static const double _labelHeight = 16.0;
+
   final List<T> segments;
   final T selected;
   final ValueChanged<T> onChanged;
@@ -42,6 +62,13 @@ class ActivitySegmentSelector<T extends Enum> extends StatelessWidget {
     return SliverPersistentHeader(
       pinned: true,
       delegate: _ActivitySegmentHeaderDelegate<T>(
+        // Resolved here, where there is a context: `minExtent` and `maxExtent` are
+        // plain getters on the delegate and cannot read one themselves.
+        extent: TextScaleMetrics.boxHeight(
+          context,
+          base: _baseHeight,
+          textHeight: _labelHeight,
+        ),
         segments: segments,
         selected: selected,
         onChanged: onChanged,
@@ -53,12 +80,14 @@ class ActivitySegmentSelector<T extends Enum> extends StatelessWidget {
 
 class _ActivitySegmentHeaderDelegate<T extends Enum>
     extends SliverPersistentHeaderDelegate {
+  final double extent;
   final List<T> segments;
   final T selected;
   final ValueChanged<T> onChanged;
   final String Function(T) labelBuilder;
 
   const _ActivitySegmentHeaderDelegate({
+    required this.extent,
     required this.segments,
     required this.selected,
     required this.onChanged,
@@ -66,10 +95,10 @@ class _ActivitySegmentHeaderDelegate<T extends Enum>
   });
 
   @override
-  double get minExtent => _headerHeight;
+  double get minExtent => extent;
 
   @override
-  double get maxExtent => _headerHeight;
+  double get maxExtent => extent;
 
   @override
   Widget build(
@@ -77,41 +106,23 @@ class _ActivitySegmentHeaderDelegate<T extends Enum>
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Material(
-      color: colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.xs,
-        ),
-        child: Center(
-          child: SegmentedButton<T>(
-            showSelectedIcon: false,
-            segments: segments
-                .map(
-                  (segment) => ButtonSegment<T>(
-                    value: segment,
-                    label: Text(labelBuilder(segment)),
-                  ),
-                )
-                .toList(growable: false),
-            selected: {selected},
-            onSelectionChanged: (selection) {
-              if (selection.isNotEmpty) {
-                onChanged(selection.first);
-              }
-            },
-          ),
-        ),
+      // Opaque on purpose: this header is pinned over scrolling content, so
+      // without a surface of its own the rows would read through it.
+      color: Theme.of(context).colorScheme.surface,
+      child: SelectionPills<T>(
+        values: segments,
+        selected: selected,
+        labelBuilder: labelBuilder,
+        onSelected: onChanged,
       ),
     );
   }
 
   @override
   bool shouldRebuild(covariant _ActivitySegmentHeaderDelegate<T> oldDelegate) {
-    return selected != oldDelegate.selected ||
+    return extent != oldDelegate.extent ||
+        selected != oldDelegate.selected ||
         segments != oldDelegate.segments ||
         labelBuilder != oldDelegate.labelBuilder ||
         onChanged != oldDelegate.onChanged;

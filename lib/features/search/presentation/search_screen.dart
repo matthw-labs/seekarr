@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
+import 'package:seekarr/core/service_theme.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
@@ -20,6 +21,7 @@ import 'package:seekarr/core/widgets/search_bar_header.dart';
 import 'package:seekarr/features/search/domain/global_search_result.dart';
 import 'package:seekarr/features/search/presentation/global_search_provider.dart';
 import 'package:seekarr/features/search/presentation/recent_searches_provider.dart';
+import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
 class SearchScreen extends ConsumerWidget {
@@ -183,7 +185,11 @@ class _FilterChip extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: selected ? Colors.white : effectiveColor,
+              // Foreground picked from the fill's luminance: white on the
+              // Radarr amber measures 2.15:1, well below AA.
+              color: selected
+                  ? ServiceTheme.foregroundOn(effectiveColor)
+                  : effectiveColor,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -490,6 +496,13 @@ class _NoResultsState extends StatelessWidget {
   }
 }
 
+/// "Radarr", "Radarr and Sonarr", "Seerr, Radarr and Sonarr".
+String _serviceList(List<ServiceKey> services) {
+  final titles = services.map((s) => s.title).toList(growable: false);
+  if (titles.length == 1) return titles.single;
+  return '${titles.sublist(0, titles.length - 1).join(', ')} and ${titles.last}';
+}
+
 class _SearchEmptyState extends ConsumerWidget {
   const _SearchEmptyState();
 
@@ -497,19 +510,30 @@ class _SearchEmptyState extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final recents = ref.watch(recentSearchesProvider);
+    final settings = ref.watch(currentSettingsProvider);
+
+    // Name the services that will actually be queried. The copy used to list
+    // "Seerr, Radarr, Sonarr, Lidarr, and Bazarr" unconditionally, so a user with
+    // only Radarr connected was promised four searches that could not happen.
+    final searchable = ServiceKey.values
+        .where((s) => s.isSearchable && settings.isServiceConfigured(s))
+        .toList(growable: false);
+    final hasAny = searchable.isNotEmpty;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         const SizedBox(height: AppSpacing.xl),
         Icon(
-          Icons.search_rounded,
+          hasAny ? Icons.search_rounded : Icons.link_off_rounded,
           size: 48,
           color: colorScheme.onSurfaceVariant,
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Search across every service',
+          hasAny
+              ? 'Search across every service'
+              : 'No searchable service connected',
           textAlign: TextAlign.center,
           style: Theme.of(
             context,
@@ -517,12 +541,26 @@ class _SearchEmptyState extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Enter a title, show, or artist to query Seerr, Radarr, Sonarr, Lidarr, and Bazarr.',
+          hasAny
+              ? 'Enter a title, show, or artist to query '
+                    '${_serviceList(searchable)}.'
+              : 'Connect Seerr, Radarr, Sonarr, Lidarr or Bazarr in Settings to '
+                    'search your libraries from here.',
           textAlign: TextAlign.center,
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
         ),
+        if (!hasAny) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Center(
+            child: FilledButton.icon(
+              onPressed: () => context.push('/settings'),
+              icon: const Icon(Icons.settings_rounded, size: 18),
+              label: const Text('Open Settings'),
+            ),
+          ),
+        ],
         if (recents.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.xxl),
           Row(

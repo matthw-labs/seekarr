@@ -12,17 +12,32 @@ import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
 import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
+import 'package:seekarr/core/widgets/status_badge.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/settings/data/donation_service.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
+import 'package:seekarr/features/settings/data/service_verification.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:seekarr/features/settings/domain/connection_presentation.dart';
 import 'package:seekarr/features/settings/domain/regions.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/settings/presentation/widgets/donation_sheet.dart';
+import 'package:seekarr/features/settings/presentation/widgets/service_connection_row.dart';
 
+/// The settings index.
+///
+/// Connections lead, and they lead *by exception*: with thirteen services, a
+/// list of the healthy ones is an inventory nobody reads, so the summary states
+/// the count and only failing services get a row of their own. Everything else
+/// on this screen is a preference.
 class SettingsHomeScreen extends ConsumerWidget {
   const SettingsHomeScreen({super.key});
+
+  /// The most failing services to name on this screen before deferring to the
+  /// connections list. Past a handful the cause is usually one thing — the VPN
+  /// is down, the host is asleep — and a wall of red rows says it no better.
+  static const int _maxPromotedFailures = 3;
 
   static final Uri _githubUri = Uri.parse(
     'https://github.com/matthw-labs/seekarr',
@@ -35,37 +50,24 @@ class SettingsHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
-    final bottomPadding = FloatingNavBarMetrics.getScrollViewBottomPadding(
-      context,
-    );
-    final content = [
-      ..._buildGeneralSection(context, settings),
-      const SizedBox(height: AppSpacing.lg),
-      ..._buildServicesSection(context, ref, settings),
-      const SizedBox(height: AppSpacing.lg),
-      ..._buildAboutSection(context),
-      const SizedBox(height: AppSpacing.lg),
-      ..._buildDangerZoneSection(context, ref),
-    ];
 
     return AmbientScaffold(
       appBar: const GlassAppBar(title: Text('Settings')),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                bottomPadding,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: content,
-              ),
-            ),
-          ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+        ),
+        children: [
+          const _ConnectionsBlock(),
+          const SizedBox(height: AppSpacing.xl),
+          ..._buildGeneralSection(context, settings),
+          const SizedBox(height: AppSpacing.xl),
+          ..._buildAboutSection(context),
+          const SizedBox(height: AppSpacing.xl),
+          ..._buildDangerZoneSection(context, ref),
         ],
       ),
     );
@@ -75,10 +77,8 @@ class SettingsHomeScreen extends ConsumerWidget {
     BuildContext context,
     SettingsModel settings,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return [
-      const _SettingsSectionLabel('General'),
+      const SettingsSectionLabel('General'),
       const SizedBox(height: AppSpacing.sm),
       SettingsGroupCard(
         children: [
@@ -87,132 +87,43 @@ class SettingsHomeScreen extends ConsumerWidget {
             title: 'Region',
             subtitle: _formatRegionLabel(settings.region),
             accentColor: AppColors.success,
+            semanticHint: 'opens the region picker',
             onTap: () => context.push('/settings/region'),
           ),
           SettingsCard.grouped(
             leading: const Icon(Icons.palette_rounded),
             title: 'Appearance',
             subtitle: settings.themeMode.label,
+            semanticHint: 'opens the appearance picker',
             onTap: () => context.push('/settings/appearance'),
           ),
-          SettingsCard.grouped(
-            leading: const Icon(Icons.apps_rounded),
-            title: 'Dashboard',
-            subtitle: 'All services',
-            accentColor: colorScheme.primary,
-            onTap: () => context.push('/settings/services'),
-          ),
         ],
       ),
     ];
-  }
-
-  List<Widget> _buildServicesSection(
-    BuildContext context,
-    WidgetRef ref,
-    SettingsModel settings,
-  ) {
-    final configured = ServiceKey.values
-        .where((s) => settings.isServiceConfigured(s))
-        .toList();
-
-    if (configured.isEmpty) return [];
-
-    return [
-      const _SettingsSectionLabel('Services'),
-      const SizedBox(height: AppSpacing.sm),
-      SettingsGroupCard(
-        children: [
-          for (final service in configured)
-            SettingsCard.grouped(
-              leading: Icon(service.icon),
-              title: service.title,
-              subtitle: _getServiceSubtitle(settings, service),
-              accentColor: service.accent,
-              subtitleLeading: _buildConnectionIndicator(
-                context,
-                ref,
-                settings,
-                service,
-              ),
-              onTap: () =>
-                  context.push('/settings/service/${service.routeParam}'),
-            ),
-        ],
-      ),
-    ];
-  }
-
-  Widget? _buildConnectionIndicator(
-    BuildContext context,
-    WidgetRef ref,
-    SettingsModel settings,
-    ServiceKey service,
-  ) {
-    // No indicator when the service isn't configured yet.
-    if (settings.urlFor(service).isEmpty) {
-      return null;
-    }
-
-    final colorScheme = Theme.of(context).colorScheme;
-    final asyncStatus = ref.watch(serviceConnectionProvider(service));
-    const checkingIndicator = SizedBox(
-      width: 14,
-      height: 14,
-      child: CircularProgressIndicator(strokeWidth: 2),
-    );
-    final disconnectedIndicator = Icon(
-      Icons.cloud_off_rounded,
-      size: 16,
-      color: colorScheme.error,
-    );
-
-    return asyncStatus.when(
-      loading: () => checkingIndicator,
-      error: (_, __) => disconnectedIndicator,
-      data: (status) {
-        switch (status) {
-          case ServiceConnectionStatus.connected:
-            return Icon(
-              Icons.cloud_done_rounded,
-              size: 16,
-              color: service.accent,
-            );
-          case ServiceConnectionStatus.disconnected:
-            return disconnectedIndicator;
-          case ServiceConnectionStatus.checking:
-            return checkingIndicator;
-          case ServiceConnectionStatus.notConfigured:
-            return null;
-        }
-      },
-    );
   }
 
   List<Widget> _buildAboutSection(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return [
-      const _SettingsSectionLabel('About'),
+      const SettingsSectionLabel('About'),
       const SizedBox(height: AppSpacing.sm),
       SettingsGroupCard(
         children: [
           SettingsCard.grouped(
-            leading: const Icon(Icons.share_rounded),
-            title: 'Share App',
-            accentColor: AppColors.success,
-            onTap: () => SnackBarHelper.info(context, 'Coming soon!'),
-          ),
-          SettingsCard.grouped(
             leading: const Icon(Icons.code_rounded),
             title: 'GitHub',
+            subtitle: 'Source, issues and releases',
             accentColor: colorScheme.onSurfaceVariant,
+            semanticHint: 'opens the repository in your browser',
             onTap: () => _openGitHub(context),
           ),
           SettingsCard.grouped(
             leading: const Icon(Icons.feedback_rounded),
             title: 'Send Feedback',
+            subtitle: 'Email the developer',
             accentColor: AppColors.warning,
+            semanticHint: 'opens your email composer',
             onTap: () => _sendFeedback(context),
           ),
           SettingsCard.grouped(
@@ -231,7 +142,7 @@ class SettingsHomeScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return [
-      const _SettingsSectionLabel('Danger Zone'),
+      const SettingsSectionLabel('Danger Zone'),
       const SizedBox(height: AppSpacing.sm),
       SettingsGroupCard(
         children: [
@@ -268,11 +179,6 @@ class SettingsHomeScreen extends ConsumerWidget {
       if (!context.mounted) return;
       SnackBarHelper.error(context, "Couldn't reset app data. ($e)");
     }
-  }
-
-  String _getServiceSubtitle(SettingsModel settings, ServiceKey service) {
-    final url = settings.urlFor(service);
-    return url.isEmpty ? 'Not configured' : service.extractHost(url) ?? url;
   }
 
   String _formatRegionLabel(String region) {
@@ -332,23 +238,121 @@ class SettingsHomeScreen extends ConsumerWidget {
   }
 }
 
-class _SettingsSectionLabel extends StatelessWidget {
-  final String title;
+/// The connections summary and, under it, the services that need attention.
+class _ConnectionsBlock extends ConsumerWidget {
+  const _ConnectionsBlock();
 
-  const _SettingsSectionLabel(this.title);
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final settings = ref.watch(currentSettingsProvider);
+    final configured = ServiceKey.values
+        .where(settings.isServiceConfigured)
+        .toList(growable: false);
+
+    var checking = 0;
+    final failing = <ServiceKey>[];
+    for (final service in configured) {
+      final async = ref.watch(serviceDiagnosisProvider(service));
+      if (async.isLoading) {
+        checking++;
+        continue;
+      }
+      final diagnosis = async.asData?.value;
+      final presentation = describeConnection(
+        service,
+        status: diagnosis?.status ?? ServiceConnectionStatus.disconnected,
+        reason: diagnosis?.reason,
+      );
+      if (presentation.needsAttention) failing.add(service);
+    }
+
+    final summary = _summarize(
+      total: configured.length,
+      checking: checking,
+      failing: failing.length,
+    );
+    final tone = failing.isNotEmpty
+        ? StatusTone.error
+        : (configured.isEmpty ? StatusTone.neutral : StatusTone.success);
+    final promoted = failing.take(SettingsHomeScreen._maxPromotedFailures);
+    final remaining = failing.length - promoted.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SettingsSectionLabel('Connections'),
+        const SizedBox(height: AppSpacing.sm),
+        SettingsGroupCard(
+          children: [
+            SettingsCard.grouped(
+              leading: const Icon(Icons.hub_rounded),
+              // Not "Services": that is the name of another tab, and the two
+              // being confusable is the thing this screen is untangling.
+              title: 'All connections',
+              subtitle: summary,
+              // The tile carries the verdict: green when the stack is whole,
+              // red when it is not. It is the one thing worth seeing before
+              // reading anything.
+              accentColor: statusToneColor(colorScheme, tone),
+              semanticHint: 'opens the connections list',
+              onTap: () => context.push('/settings/connections'),
+            ),
+            for (final service in promoted)
+              ServiceConnectionRow(
+                service: service,
+                onTap: () =>
+                    context.push('/settings/service/${service.routeParam}'),
+              ),
+            if (remaining > 0)
+              SettingsCard.grouped(
+                leading: const Icon(Icons.more_horiz_rounded),
+                title: remaining == 1
+                    ? '1 more service needs attention'
+                    : '$remaining more services need attention',
+                accentColor: colorScheme.error,
+                semanticHint: 'opens the connections list',
+                onTap: () => context.push('/settings/connections'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _summarize({
+    required int total,
+    required int checking,
+    required int failing,
+  }) {
+    if (total == 0) return 'No services set up yet';
+    if (failing > 0) return '$failing of $total need attention';
+    if (checking > 0) return 'Checking $checking of $total…';
+    return total == 1 ? '1 service connected' : 'All $total connected';
+  }
+}
+
+/// The overline above a group of settings rows.
+class SettingsSectionLabel extends StatelessWidget {
+  const SettingsSectionLabel(this.title, {super.key});
+
+  final String title;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-      child: Text(
-        title.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: colorScheme.onSurfaceVariant,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.7,
-          fontSize: 11,
+    return Semantics(
+      container: true,
+      header: true,
+      // The un-uppercased title: '.toUpperCase()' is typography, and VoiceOver
+      // spells out all-caps tokens it does not recognise.
+      label: title,
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+        child: Text(
+          title.toUpperCase(),
+          style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
         ),
       ),
     );
