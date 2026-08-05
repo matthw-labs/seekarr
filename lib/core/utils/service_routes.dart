@@ -15,6 +15,47 @@ class ServiceRoutes {
   static const sabnzbd = '$services/sabnzbd';
   static const nzbget = '$services/nzbget';
   static const unraid = '$services/unraid';
+  static const jellyfin = '$services/jellyfin';
+  static const plex = '$services/plex';
+
+  // ── Stream sections ───────────────────────────────────────────────────────
+  //
+  // Both media servers share one route shape because both APIs are uniform in
+  // the way the arrs are not: a Jellyfin `BaseItemDto` and a Plex `Metadata`
+  // describe a movie, a series, a season and an episode with the same fields, so
+  // **one** recursive item route covers the whole tree where Radarr, Sonarr and
+  // Lidarr each needed their own screen.
+  static const jellyfinLibraries = '$jellyfin/library';
+  static const jellyfinItemBase = '$jellyfin/item';
+  static const plexLibraries = '$plex/library';
+  static const plexItemBase = '$plex/item';
+
+  /// One library's browse route, e.g. `/services/jellyfin/library/f137a2dd`.
+  ///
+  /// The id travels as a path segment and the display name as a query parameter,
+  /// following [seerrGenre]: a deep link has to resolve from the path alone, but
+  /// a caller that already knows the name can spare the destination a fetch
+  /// before its first frame.
+  static String jellyfinLibrary(String id, {String? title}) =>
+      _streamLibrary(jellyfinLibraries, id, title);
+  static String plexLibrary(String id, {String? title}) =>
+      _streamLibrary(plexLibraries, id, title);
+
+  static String _streamLibrary(String base, String id, String? title) {
+    final route = '$base/$id';
+    final name = title?.trim() ?? '';
+    return name.isEmpty ? route : _withQuery(route, {'title': name});
+  }
+
+  /// One item at any depth of the tree — film, show, season or episode.
+  ///
+  /// Jellyfin ids are GUIDs and a Plex `ratingKey` is documented as an opaque
+  /// string that only *often* looks numeric, so neither can go through
+  /// `RouteUtils.safeIntParam`. Both are single path segments containing no `/`,
+  /// which is why this stays a path route rather than taking
+  /// [truenasDataset]'s query-parameter escape hatch.
+  static String jellyfinItem(String id) => '$jellyfinItemBase/$id';
+  static String plexItem(String id) => '$plexItemBase/$id';
 
   // ── TrueNAS sections ──────────────────────────────────────────────────────
   static const truenasDashboard = '$truenas/dashboard';

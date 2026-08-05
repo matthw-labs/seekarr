@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 
 /// A toggleable option (checkbox) shown inside [showAppConfirmDialog].
 class AppConfirmOption {
@@ -80,9 +81,14 @@ Future<AppConfirmResult> showAppConfirmDialog({
               Expanded(
                 child: Text(
                   title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  // An `AlertDialog` title sits *above* the scrollable content,
+                  // so an unbounded one grows the dialog until the buttons
+                  // leave the viewport — there is no scroll to reach them by.
+                  // Callers still cap the interpolated title; this is the floor
+                  // under them.
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleLarge!.weight(FontWeight.w700),
                 ),
               ),
             ],
@@ -102,11 +108,13 @@ Future<AppConfirmResult> showAppConfirmDialog({
                         setState(() => values[opt.key] = v ?? false),
                     title: Text(
                       opt.label,
+                      // Restructured onto the role ListTile would have given
+                      // this title anyway: a bare TextStyle has no fontSize to
+                      // hang `wght` on, so the bold never reached the face.
                       style: opt.danger && (values[opt.key] ?? false)
-                          ? TextStyle(
-                              color: errorColor,
-                              fontWeight: FontWeight.bold,
-                            )
+                          ? theme.textTheme.bodyLarge!
+                                .weight(FontWeight.bold)
+                                .copyWith(color: errorColor)
                           : null,
                     ),
                     subtitle: opt.subtitle == null
@@ -141,10 +149,11 @@ Future<AppConfirmResult> showAppConfirmDialog({
                       Expanded(
                         child: Text(
                           dangerNote,
-                          style: TextStyle(
-                            color: errorColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          // Same restructure: `bodyMedium` is the dialog's own
+                          // content role, which this note is an emphasis of.
+                          style: theme.textTheme.bodyMedium!
+                              .weight(FontWeight.bold)
+                              .copyWith(color: errorColor),
                         ),
                       ),
                     ],

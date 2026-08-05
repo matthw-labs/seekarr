@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/text_scale.dart';
+import 'package:seekarr/core/theme.dart';
 
 /// A reusable section header with title and optional "See All" action.
 ///
@@ -108,15 +109,17 @@ class SectionHeader extends StatelessWidget {
           children: [
             Text(
               title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: theme.textTheme.titleLarge!.weight(FontWeight.bold),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 2),
               Text(
                 subtitle!,
-                style: theme.textTheme.bodySmall?.copyWith(
+                // Tabular: callers use the subtitle for live progress counts
+                // ("3 of 12 selected", "2 of 9 being re-imported") that change
+                // under the user's finger, and proportional digits make the
+                // whole line shuffle sideways on every tap.
+                style: theme.textTheme.bodySmall!.tabular.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),

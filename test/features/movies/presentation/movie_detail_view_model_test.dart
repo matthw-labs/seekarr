@@ -50,7 +50,9 @@ void main() {
 
         expect(vm.title, 'Test Movie');
         expect(vm.year, '2023');
-        expect(vm.runtimeStr, '120 min');
+        // One runtime voice across every detail page: hours and minutes, never
+        // Radarr's raw `120 min`.
+        expect(vm.runtimeStr, '2h');
         expect(vm.studio, 'Paramount');
       });
 
@@ -83,7 +85,7 @@ void main() {
           apiKey: 'test-key',
         );
 
-        expect(vm.metadataItems, ['2023', '120 min']);
+        expect(vm.metadataItems, ['2023', '2h']);
       });
 
       test('excludes zero year', () {
@@ -93,7 +95,7 @@ void main() {
           apiKey: 'test-key',
         );
 
-        expect(vm.metadataItems, ['120 min']);
+        expect(vm.metadataItems, ['2h']);
       });
     });
 

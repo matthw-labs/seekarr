@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 
 /// A reusable tag/chip widget for displaying metadata labels.
 ///
@@ -37,10 +38,9 @@ class TagChip extends StatelessWidget {
           ],
           Text(
             text,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: effectiveColor,
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!
+                .weight(FontWeight.w600)
+                .copyWith(color: effectiveColor),
           ),
         ],
       ),
@@ -70,10 +70,9 @@ class GenreChip extends StatelessWidget {
       ),
       child: Text(
         genre,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: colorScheme.onSurfaceVariant,
-          fontWeight: FontWeight.w500,
-        ),
+        style: Theme.of(context).textTheme.labelSmall!
+            .weight(FontWeight.w500)
+            .copyWith(color: colorScheme.onSurfaceVariant),
       ),
     );
   }

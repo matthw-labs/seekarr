@@ -1,0 +1,69 @@
+{
+  "Items": [
+    {
+      "Name": "Woe's Hollow",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "c7e1a5b93f2d40687b4c8e2a6d0f1937",
+      "Etag": "1a2b3c4d5e6f70819a2b3c4d5e6f7081",
+      "DateCreated": "2026-01-24T06:00:11.1234567Z",
+      "CanDelete": true,
+      "CanDownload": true,
+      "Container": "mkv",
+      "PremiereDate": "2025-01-24T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "IndexNumber": 4,
+      "ParentIndexNumber": 2,
+      "RunTimeTicks": 27000000000,
+      "PlayAccess": "Full",
+      "IsFolder": false,
+      "Type": "Episode",
+      "Overview": "The team takes an outdoor retreat.",
+      "SeriesName": "Severance",
+      "SeriesId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+      "SeasonId": "6d2a8c4e0b1f39578a3c7e1b5d9f0246",
+      "SeasonName": "Season 2",
+      "SeriesPrimaryImageTag": "77aa11bb22cc33dd44ee55ff66009988",
+      "PrimaryImageAspectRatio": 1.7777777777777777,
+      "MediaType": "Video",
+      "ImageTags": {},
+      "BackdropImageTags": [],
+      "UserData": {
+        "PlayedPercentage": 40.0,
+        "PlayCount": 0,
+        "IsFavorite": false,
+        "Played": false,
+        "Key": "0f4b8d2a6c1e39574a8b2c6d0e4f8192-2-4"
+      },
+      "LocationType": "FileSystem"
+    },
+    {
+      "Name": "Arrival",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "3ca7ff1e0d9b4e2f8a6c5b4d3e2f1a09",
+      "DateCreated": "2026-03-02T18:44:09.1234567Z",
+      "CanDelete": true,
+      "CanDownload": true,
+      "Container": "mkv",
+      "ProductionYear": 2016,
+      "RunTimeTicks": 72000000000,
+      "PlayAccess": "Full",
+      "IsFolder": false,
+      "Type": "Movie",
+      "PrimaryImageAspectRatio": 0.6666666666666666,
+      "MediaType": "Video",
+      "ImageTags": {
+        "Primary": "1f2e3d4c5b6a70819283a4b5c6d7e8f9"
+      },
+      "UserData": {
+        "PlaybackPositionTicks": 18000000000,
+        "PlayCount": 0,
+        "IsFavorite": false,
+        "Played": false,
+        "Key": "329865"
+      },
+      "LocationType": "FileSystem"
+    }
+  ],
+  "TotalRecordCount": 2,
+  "StartIndex": 0
+}

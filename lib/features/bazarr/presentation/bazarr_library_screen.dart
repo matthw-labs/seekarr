@@ -63,7 +63,7 @@ class _BazarrLibraryScreenState extends ConsumerState<BazarrLibraryScreen>
           unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
           labelStyle: Theme.of(
             context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ).textTheme.titleSmall!.weight(FontWeight.w800),
           tabs: const [
             Tab(text: 'Series'),
             Tab(text: 'Movies'),
@@ -342,7 +342,7 @@ class _BazarrLibraryRow extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   entry.kind == _BazarrLibraryTabKind.series ? '📺' : '🎬',
-                  style: const TextStyle(fontSize: 16),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -352,9 +352,9 @@ class _BazarrLibraryRow extends StatelessWidget {
                   children: [
                     Text(
                       entry.title,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleSmall!.weight(FontWeight.w700),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

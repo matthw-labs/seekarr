@@ -13,6 +13,7 @@ import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/app_skeleton.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
+import 'package:seekarr/core/widgets/media_poster_card.dart';
 import 'package:seekarr/core/widgets/pressable_scale.dart';
 import 'package:seekarr/core/widgets/section_header.dart';
 import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
@@ -304,6 +305,11 @@ class _PosterSection<T> extends StatelessWidget {
           SizedBox(
             // 138pt poster + gap + title/subtitle: grows with the reading size
             // so the labels are not clipped at accessibility text sizes.
+            //
+            // Untouched by the type ramp. Both tile lines are `labelSmall` and
+            // both are single lines, and the root's `DefaultTextHeightBehavior`
+            // keeps the leading off a block's first ascent and last descent — so
+            // a one-line `labelSmall` still measures the 13.0pt it always did.
             height: TextScaleMetrics.boxHeight(
               context,
               base: 176,
@@ -314,9 +320,9 @@ class _PosterSection<T> extends StatelessWidget {
             // 1.6x by design, but a `Text` reads the ambient scaler, so at 2x
             // the tile was sized for 1.6 and painted at 2 — nine pixels of
             // overflow stripe. The matrix band has always done this; the rail
-            // got away without it only because its subtitle carried a
-            // hard-coded `fontSize: 10` that made the labels small enough to
-            // fit by accident.
+            // originally got away without it only because its subtitle carried
+            // a hard-coded `fontSize: 10` — since removed — that made the
+            // labels small enough to fit by accident.
             child: MediaQuery(
               data: MediaQuery.of(
                 context,
@@ -558,10 +564,9 @@ class _ServicePosterTile extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.weight(FontWeight.w600)
+                  .copyWith(color: colorScheme.onSurface),
             ),
             if (subtitle.isNotEmpty)
               Text(
@@ -601,7 +606,11 @@ class _HeroContentCard extends StatelessWidget {
       return card;
     }
 
-    return Hero(tag: heroTag!, child: card);
+    return Hero(
+      tag: heroTag!,
+      transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
+      child: card,
+    );
   }
 }
 
@@ -708,12 +717,13 @@ class _PendingCountBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       child: Text(
         '$count PENDING',
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: onTint,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
+        // A badge, not an eyebrow: it is trailing chrome carrying a live figure,
+        // so it stays on the label ramp with the ramp's own tracking and takes
+        // `.tabular` because the count changes under the user.
+        style: theme.textTheme.labelSmall
+            ?.weight(FontWeight.w800)
+            .tabular
+            .copyWith(color: onTint),
       ),
     );
   }
@@ -789,8 +799,8 @@ class _PendingRequestRow extends ConsumerWidget {
                             title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
+                            style: theme.textTheme.bodyMedium?.weight(
+                              FontWeight.w600,
                             ),
                           ),
                           Text(
@@ -811,10 +821,9 @@ class _PendingRequestRow extends ConsumerWidget {
                             // that needs its own audible translation is a label
                             // that was too short.
                             'Pending approval',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: onTint,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: theme.textTheme.labelSmall
+                                ?.weight(FontWeight.w700)
+                                .copyWith(color: onTint),
                           ),
                         ],
                       ),
@@ -991,11 +1000,10 @@ class _DownloadRow extends StatelessWidget {
         if (percent != null)
           Text(
             '$percent%',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: accent,
-              fontWeight: FontWeight.w800,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+            style: Theme.of(context).textTheme.labelSmall
+                ?.weight(FontWeight.w800)
+                .tabular
+                .copyWith(color: accent),
           ),
       ],
     );
@@ -1095,7 +1103,7 @@ class _CompactListRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(
                     context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ).textTheme.bodyMedium?.weight(FontWeight.w600),
                 ),
                 Text(
                   subtitle,
@@ -1173,11 +1181,11 @@ class _SmallStatusPill extends StatelessWidget {
         label.toUpperCase(),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: onTint,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
-        ),
+        // Uppercase, but one of these appears per row, so it is not an eyebrow —
+        // it is a status pill and keeps the label ramp's derived tracking.
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.weight(FontWeight.w800).copyWith(color: onTint),
       ),
     );
   }
@@ -1197,10 +1205,9 @@ class _SectionAction extends StatelessWidget {
       // that stranded it on its own line would read as a second control.
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-        color: color,
-        fontWeight: FontWeight.w700,
-      ),
+      style: Theme.of(
+        context,
+      ).textTheme.labelMedium?.weight(FontWeight.w700).copyWith(color: color),
     );
   }
 }

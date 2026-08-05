@@ -7,6 +7,7 @@ import 'package:seekarr/core/network/connection_failure.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/features/settings/data/service_verification.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/settings/presentation/settings_connections_screen.dart';
 
@@ -31,11 +32,14 @@ void main() {
       // Both configured services are in Media, so one domain group plus the
       // single "add" group.
       expect(find.byType(SettingsGroupCard), findsNWidgets(2));
-      expect(find.byType(SettingsCard), findsNWidgets(13));
-      expect(find.text('2 of 13'), findsOneWidget);
+      // Derived from the registry rather than written down: these were literal
+      // 13/11 and rotted when the Stream domain landed.
+      final total = ServiceKey.values.length;
+      expect(find.byType(SettingsCard), findsNWidgets(total));
+      expect(find.text('2 of $total'), findsOneWidget);
       expect(find.text('seerr.local'), findsOneWidget);
       expect(find.text('radarr.local:7878'), findsOneWidget);
-      expect(find.text('Not set up'), findsNWidgets(11));
+      expect(find.text('Not set up'), findsNWidgets(total - 2));
     });
 
     testWidgets('groups connected services by domain', (tester) async {

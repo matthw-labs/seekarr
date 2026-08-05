@@ -10,6 +10,7 @@ import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
 import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/arr_activity_display.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
@@ -18,6 +19,7 @@ import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/core/widgets/media_grid.dart';
+import 'package:seekarr/core/widgets/media_poster_card.dart';
 import 'package:seekarr/core/widgets/search_bar_header.dart';
 import 'package:seekarr/core/widgets/status_badge.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
@@ -292,7 +294,7 @@ class _MediaBrowseScaffoldState<T>
                 section.label,
                 style: Theme.of(
                   context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ).textTheme.titleLarge!.weight(FontWeight.w700),
               ),
               const SizedBox(height: AppSpacing.md),
               LayoutBuilder(
@@ -508,13 +510,17 @@ class _MediaBrowseFilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
+      // `AppRadius.pill`, not a twice-repeated literal 20. The season selector in
+      // `media_child_list.dart` was deliberately unified onto this chip's
+      // vocabulary, so the two were pixel-identical by coincidence rather than by
+      // construction — a change to the token would have silently split them.
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.borderRadiusPill,
         child: Container(
           decoration: BoxDecoration(
             color: selected ? color : color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: AppRadius.borderRadiusPill,
           ),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
@@ -522,10 +528,11 @@ class _MediaBrowseFilterChip extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: selected ? ServiceTheme.foregroundOn(color) : color,
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!
+                .weight(FontWeight.w700)
+                .copyWith(
+                  color: selected ? ServiceTheme.foregroundOn(color) : color,
+                ),
           ),
         ),
       ),
@@ -585,6 +592,8 @@ class _BrowsePosterTile extends StatelessWidget {
                     Positioned.fill(
                       child: Hero(
                         tag: heroTag,
+                        transitionOnUserGestures:
+                            MediaPosterCard.flightOnUserGestures,
                         child: ContentCard(
                           imageUrl: imageSource.url,
                           httpHeaders: imageSource.headers,
@@ -612,19 +621,19 @@ class _BrowsePosterTile extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!
+                    .weight(FontWeight.w600)
+                    .copyWith(color: colorScheme.onSurface),
               ),
               if (subtitle.isNotEmpty)
                 Text(
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  // Was fontSize 10, below the 11pt floor; the subtitle keeps
+                  // its dimmer tone to stay a step under the title.
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
-                    fontSize: 10,
                   ),
                 ),
             ],

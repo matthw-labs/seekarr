@@ -6,33 +6,53 @@ import 'package:seekarr/features/music/data/lidarr_service.dart';
 import 'package:seekarr/features/music/domain/models/lidarr_album.dart';
 import 'package:seekarr/features/music/domain/models/lidarr_track.dart';
 import 'package:seekarr/features/music/presentation/widgets/music_albums_list.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';
 
 void main() {
   group('MusicAlbumsList', () {
-    testWidgets('shows empty state when no albums are provided', (
+    testWidgets('renders the empty state in the Lidarr accent with no albums', (
       tester,
     ) async {
       await _pumpAlbumsList(tester, albums: const []);
 
-      expect(find.text('No albums found.'), findsOneWidget);
+      expect(find.text('No albums yet'), findsOneWidget);
+      expect(
+        tester.widget<AppEmptyState>(find.byType(AppEmptyState)).accentColor,
+        ServiceKey.lidarr.accent,
+      );
+      // The bare `Text('No albums found.')` this replaced.
+      expect(find.text('No albums found.'), findsNothing);
     });
 
-    testWidgets('renders album metadata and search actions', (tester) async {
+    testWidgets('an album row carries decidable facts and a spoken status', (
+      tester,
+    ) async {
       await _pumpAlbumsList(tester, albums: [_album()]);
 
       expect(find.text('OK Computer'), findsOneWidget);
-      expect(find.text('1997'), findsOneWidget);
-      expect(find.text('12 / 12 tracks'), findsOneWidget);
-      expect(find.byIcon(Icons.bookmark_rounded), findsOneWidget);
+      // Year, the manifest gap and — because the album is complete — no status
+      // word, all on one metadata line.
+      expect(find.text('1997 • 12 of 12 tracks'), findsOneWidget);
       expect(find.byType(MediaSearchPopupMenu), findsOneWidget);
       expect(find.byType(StatusBadge), findsOneWidget);
-      expect(find.byType(ExpansionTile), findsOneWidget);
+      // The `ExpansionTile` this replaced — the third `container -> children`
+      // implementation in the codebase.
+      expect(find.byType(ExpansionTile), findsNothing);
+
+      expect(
+        tester.getSemantics(find.byType(MediaChildTile)),
+        containsSemantics(
+          label: 'OK Computer, 1997, 12 of 12 tracks',
+          value: 'Available',
+          isButton: true,
+        ),
+      );
     });
 
-    testWidgets('renders availability badges for album completion states', (
+    testWidgets('an incomplete album says so in words, not only in colour', (
       tester,
     ) async {
       await _pumpAlbumsList(
@@ -44,14 +64,15 @@ void main() {
         ],
       );
 
-      expect(find.byType(ExpansionTile), findsNWidgets(3));
-      expect(find.byType(StatusBadge), findsNWidgets(3));
-      expect(find.text('12 / 12 tracks'), findsOneWidget);
-      expect(find.text('6 / 12 tracks'), findsOneWidget);
-      expect(find.text('0 / 12 tracks'), findsOneWidget);
+      expect(find.byType(MediaChildTile), findsNWidgets(3));
+      expect(find.text('1997 • 6 of 12 tracks • Partial'), findsOneWidget);
+      expect(find.text('1997 • 0 of 12 tracks • Missing'), findsOneWidget);
+      expect(find.text('1997 • 12 of 12 tracks'), findsOneWidget);
     });
 
-    testWidgets('loads and sorts tracks when album expands', (tester) async {
+    testWidgets('tapping an album opens a sheet of sorted tracks', (
+      tester,
+    ) async {
       final lidarrService = _FakeLidarrService(
         tracksByAlbum: {
           10: [
@@ -72,6 +93,7 @@ void main() {
               mediumNumber: 1,
               trackNumber: '2',
               title: 'Paranoid Android',
+              hasFile: false,
             ),
           ],
         },
@@ -83,9 +105,7 @@ void main() {
         lidarrService: lidarrService,
       );
 
-      await tester.tap(find.text('OK Computer'));
-      await tester.pump();
-      await tester.pumpAndSettle();
+      await _openAlbum(tester);
 
       expect(lidarrService.loadedAlbumIds, [10]);
       expect(find.text('Paranoid Android'), findsOneWidget);
@@ -100,9 +120,15 @@ void main() {
         tester.getTopLeft(find.text('No Surprises')).dy,
         lessThan(tester.getTopLeft(find.text('Lucky')).dy),
       );
+
+      // A track without a file used to be a 7pt circle in `colorScheme.primary`
+      // with no words anywhere near it.
+      expect(find.textContaining('Missing'), findsOneWidget);
     });
 
-    testWidgets('shows retry state when loading tracks fails', (tester) async {
+    testWidgets('a failed track fetch offers a retry inside the sheet', (
+      tester,
+    ) async {
       final lidarrService = _FakeLidarrService(throwForAlbumIds: {10});
 
       await _pumpAlbumsList(
@@ -111,30 +137,73 @@ void main() {
         lidarrService: lidarrService,
       );
 
-      await tester.tap(find.text('OK Computer'));
-      await tester.pump();
-      await tester.pumpAndSettle();
+      await _openAlbum(tester);
 
-      expect(find.text('Failed to load tracks'), findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text("Couldn't load Lidarr"), findsOneWidget);
+      expect(find.text('Try again'), findsOneWidget);
     });
 
-    testWidgets('shows no tracks message when album has no tracks', (
-      tester,
-    ) async {
+    testWidgets('an album with no tracks gets an empty state', (tester) async {
       await _pumpAlbumsList(
         tester,
         albums: [_album()],
         lidarrService: _FakeLidarrService(tracksByAlbum: {10: const []}),
       );
 
-      await tester.tap(find.text('OK Computer'));
-      await tester.pump();
-      await tester.pumpAndSettle();
+      await _openAlbum(tester);
 
-      expect(find.text('No tracks found.'), findsOneWidget);
+      expect(find.text('No tracks'), findsOneWidget);
+      expect(find.text('No tracks found.'), findsNothing);
     });
+
+    testWidgets('builds only a bounded number of rows for a long discography', (
+      tester,
+    ) async {
+      await _pumpAlbumsList(
+        tester,
+        albums: [
+          for (var index = 0; index < 250; index++)
+            _album(id: index, title: 'Album $index'),
+        ],
+      );
+
+      final built = find.byType(MediaChildTile).evaluate().length;
+      expect(built, greaterThan(0));
+      expect(built, lessThan(40));
+    });
+
+    // `MediaChildTile.stacked` is the one row shape that pairs a *fixed* leading
+    // box (38x54 of artwork, correctly ungrown — it holds no text) with text that
+    // does grow, plus a progress bar under it. That combination is where a grown
+    // box painted at a different scale shows up as an overflow stripe, so it is
+    // checked directly rather than inferred from the numbered row's coverage.
+    for (final scale in <double>[1.0, 1.3, 2.0, 3.0]) {
+      testWidgets('an album row survives a ${scale}x reading size', (
+        tester,
+      ) async {
+        await _pumpAlbumsListAtScale(
+          tester,
+          scale,
+          albums: [
+            _album(title: 'A Rather Long Album Title That Will Not Fit'),
+            _album(id: 11, title: 'Half Album', fileCount: 6, trackCount: 12),
+          ],
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(MediaChildTile), findsNWidgets(2));
+      });
+    }
   });
+}
+
+/// Taps the album row and lets the sheet route settle plus the track fetch
+/// resolve. Deliberately not `pumpAndSettle`: the loading state is a shimmer,
+/// whose sweep repeats indefinitely.
+Future<void> _openAlbum(WidgetTester tester) async {
+  await tester.tap(find.text('OK Computer'));
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 1));
 }
 
 Future<void> _pumpAlbumsList(
@@ -145,18 +214,61 @@ Future<void> _pumpAlbumsList(
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
-        body: MusicAlbumsList(
-          albums: albums,
-          lidarrService: lidarrService ?? _FakeLidarrService(),
-          baseUrl: 'http://localhost:8686',
-          apiKey: 'key',
-          onSearchAlbum: (_) {},
-          onInteractiveSearchAlbum: (_) {},
-          searchingAlbums: const {},
+        body: CustomScrollView(
+          slivers: [
+            MusicAlbumsList(
+              albums: albums,
+              lidarrService: lidarrService ?? _FakeLidarrService(),
+              baseUrl: 'http://localhost:8686',
+              apiKey: 'key',
+              onSearchAlbum: (_) {},
+              onInteractiveSearchAlbum: (_) {},
+              searchingAlbums: const {},
+            ),
+          ],
         ),
       ),
     ),
   );
+  await tester.pump();
+}
+
+Future<void> _pumpAlbumsListAtScale(
+  WidgetTester tester,
+  double scale, {
+  required List<LidarrAlbum> albums,
+}) async {
+  tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(scale)),
+          child: Scaffold(
+            body: CustomScrollView(
+              slivers: [
+                MusicAlbumsList(
+                  albums: albums,
+                  lidarrService: _FakeLidarrService(),
+                  baseUrl: 'http://localhost:8686',
+                  apiKey: 'key',
+                  onSearchAlbum: (_) {},
+                  onInteractiveSearchAlbum: (_) {},
+                  searchingAlbums: const {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
 }
 
 LidarrAlbum _album({

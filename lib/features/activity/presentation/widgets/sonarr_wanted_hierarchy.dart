@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/media_search_popup_menu.dart';
 import 'package:seekarr/features/activity/presentation/activity_screen.dart';
@@ -112,7 +113,7 @@ class _SeriesExpansionTile extends StatelessWidget {
           leading: Icon(Icons.tv_rounded, color: colorScheme.tertiary),
           title: Text(
             seriesTitle,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: textTheme.titleMedium?.weight(FontWeight.w700),
           ),
           subtitle: Text(
             '$totalEpisodes episode${totalEpisodes == 1 ? '' : 's'}',
@@ -175,15 +176,14 @@ class _SeasonExpansionTile extends StatelessWidget {
         backgroundColor: colorScheme.tertiaryContainer,
         child: Text(
           '$seasonNumber',
-          style: textTheme.labelSmall?.copyWith(
-            color: colorScheme.onTertiaryContainer,
-            fontWeight: FontWeight.w700,
-          ),
+          style: textTheme.labelSmall
+              ?.weight(FontWeight.w700)
+              .copyWith(color: colorScheme.onTertiaryContainer),
         ),
       ),
       title: Text(
         'Season $seasonNumber',
-        style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+        style: textTheme.bodyLarge?.weight(FontWeight.w600),
       ),
       subtitle: Text(
         '${seasonEpisodes.length} episode${seasonEpisodes.length == 1 ? '' : 's'}',
@@ -238,10 +238,7 @@ class _EpisodeListTile extends StatelessWidget {
         left: AppSpacing.xxxl,
         right: AppSpacing.lg,
       ),
-      title: Text(
-        title,
-        style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-      ),
+      title: Text(title, style: textTheme.bodyMedium?.weight(FontWeight.w600)),
       subtitle: Text(
         subtitle,
         style: textTheme.bodySmall?.copyWith(

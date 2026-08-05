@@ -80,23 +80,18 @@ class TorrentTile extends StatelessWidget {
                             torrent.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall!.weight(FontWeight.w600),
                           ),
                           const SizedBox(height: 1),
                           Text(
                             '${torrent.sizeFormatted}${torrent.etaFormatted.isNotEmpty ? ' • ${torrent.etaFormatted}' : ''}',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                  fontSize: 10,
-                                ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall!
+                                .tabular
+                                .copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -157,11 +152,8 @@ class TorrentTile extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                     Text(
                       torrent.progressFormatted,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                        fontSize: 10,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.tabular
+                          .copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -188,12 +180,9 @@ class TorrentTile extends StatelessWidget {
         state.label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: foreground,
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
-        ),
+        style: Theme.of(context).textTheme.labelSmall!
+            .weight(FontWeight.w800)
+            .copyWith(color: foreground),
       ),
     );
   }
@@ -267,11 +256,9 @@ class _SpeedLabel extends StatelessWidget {
             speed,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontSize: 10,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall!.tabular.copyWith(color: color),
           ),
         ),
       ],

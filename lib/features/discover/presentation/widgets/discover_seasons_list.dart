@@ -1,290 +1,137 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
+import 'package:seekarr/features/discover/domain/seerr_status.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
-class DiscoverSeasonsList extends StatefulWidget {
+/// Seerr's seasons and the selected season's episodes.
+///
+/// **This builds slivers** — hand it to `MediaDetailSlot.lazy(sliver: ...)`. It
+/// is the same [MediaChildGroupSliver] Sonarr's seasons use, which is the point:
+/// this file and `series_seasons_list.dart` each carried their own `_SeasonPill`
+/// and their own selected-season panel, near-duplicates that had already drifted
+/// (one showed a check glyph inside the pill, the other did not).
+///
+/// Episode rows deliberately carry **no status**. Seerr models availability per
+/// season, not per episode, so a per-episode badge here would be invented data;
+/// the air date is what the row is for, and the season badge above states
+/// availability in words.
+class DiscoverSeasonsList extends StatelessWidget {
   final List<TvSeason> seasons;
-  final Map<String, dynamic>? mediaInfo;
+
+  /// Resolved per-season status, keyed by season number.
+  ///
+  /// Build it with `seerrSeasonStatuses(mediaInfo, seasons)` from
+  /// `features/discover/domain/seerr_status.dart`. This widget used to take
+  /// Seerr's raw `mediaInfo` map and mine `mediaInfo['seasons']` for
+  /// availability inside `build`.
+  final Map<int, MediaStatusInfo> seasonStatuses;
 
   const DiscoverSeasonsList({
     super.key,
     required this.seasons,
-    required this.mediaInfo,
+    required this.seasonStatuses,
   });
 
   @override
-  State<DiscoverSeasonsList> createState() => _DiscoverSeasonsListState();
-}
-
-class _DiscoverSeasonsListState extends State<DiscoverSeasonsList> {
-  int? _selectedSeasonNumber;
-
-  @override
   Widget build(BuildContext context) {
-    final orderedSeasons = [...widget.seasons]..sort(_compareSeasons);
-    final availabilityBySeason = _availabilityBySeason(widget.mediaInfo);
-    final selectedSeason = _selectedSeason(orderedSeasons);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        MediaDetailSectionHeader(
-          title: 'Seasons',
-          accent: ServiceKey.seerr.accent,
-        ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (var index = 0; index < orderedSeasons.length; index++) ...[
-                _SeasonPill(
-                  season: orderedSeasons[index],
-                  availability:
-                      availabilityBySeason[orderedSeasons[index].seasonNumber],
-                  selected:
-                      orderedSeasons[index].seasonNumber ==
-                      selectedSeason.seasonNumber,
-                  onSelected: () => setState(
-                    () => _selectedSeasonNumber =
-                        orderedSeasons[index].seasonNumber,
-                  ),
-                ),
-                if (index < orderedSeasons.length - 1)
-                  const SizedBox(width: AppSpacing.xs),
-              ],
-            ],
+    final accent = ServiceKey.seerr.accent;
+    final ordered = List<TvSeason>.of(seasons)..sort(_compareSeasons);
+    final episodesBySeason = <int, List<TvEpisodeSummary>>{
+      for (final season in ordered)
+        season.seasonNumber: List<TvEpisodeSummary>.of(season.episodes)
+          ..sort(
+            (a, b) => (a.episodeNumber ?? 0).compareTo(b.episodeNumber ?? 0),
           ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _SelectedSeasonEpisodes(season: selectedSeason),
-      ],
+    };
+    final countsBySeason = <int, int>{
+      for (final season in ordered) season.seasonNumber: season.episodeCount,
+    };
+
+    return MediaChildGroupSliver(
+      accent: accent,
+      pickerTitle: 'Seasons',
+      pickerLabel: 'All ${ordered.length} seasons',
+      groups: ordered
+          .map(
+            (season) => MediaChildGroup(
+              id: season.seasonNumber,
+              shortLabel: _shortLabel(season),
+              label: _label(season),
+              // `seerrSeasonStatuses` covers every season it is handed, so this
+              // fallback is Dart's nullable-lookup tax and not a second opinion
+              // about what an untracked season is — it reads the domain layer's
+              // own answer rather than restating it.
+              status:
+                  seasonStatuses[season.seasonNumber] ??
+                  seerrUntrackedSeasonStatus,
+              summary: season.episodeCount > 0
+                  ? '${season.episodeCount} episodes'
+                  : null,
+            ),
+          )
+          .toList(growable: false),
+      emptyState: AppEmptyState.compact(
+        icon: Icons.tv_off_rounded,
+        title: 'No seasons listed',
+        message: 'Seerr has no season details for this title.',
+        accentColor: accent,
+      ),
+      childOverride: (context, group) {
+        if ((episodesBySeason[group.id] ?? const []).isNotEmpty) return null;
+
+        final listed = countsBySeason[group.id] ?? 0;
+        return AppEmptyState.compact(
+          icon: Icons.event_note_outlined,
+          title: listed > 0 ? '$listed episodes listed' : 'No episodes listed',
+          message: 'Seerr has no per-episode details for ${group.label}.',
+          accentColor: accent,
+        );
+      },
+      childCount: (group) => (episodesBySeason[group.id] ?? const []).length,
+      childBuilder: (context, group, index) =>
+          _episodeRow(episodesBySeason[group.id]![index]),
     );
   }
 
-  TvSeason _selectedSeason(List<TvSeason> orderedSeasons) {
-    final selectedNumber = _selectedSeasonNumber;
-    if (selectedNumber != null) {
-      for (final season in orderedSeasons) {
-        if (season.seasonNumber == selectedNumber) {
-          return season;
-        }
-      }
-    }
-
-    return orderedSeasons.first;
-  }
-
-  Map<int, SeerrMediaAvailability> _availabilityBySeason(
-    Map<String, dynamic>? currentMediaInfo,
-  ) {
-    final seasonsData = currentMediaInfo?['seasons'];
-    if (seasonsData is! List) {
-      return const {};
-    }
-
-    final results = <int, SeerrMediaAvailability>{};
-
-    for (final item in seasonsData) {
-      if (item is! Map) {
-        continue;
-      }
-
-      final seasonNumber = _asInt(item['seasonNumber']);
-      if (seasonNumber == null) {
-        continue;
-      }
-
-      results[seasonNumber] = SeerrMediaAvailability.fromCode(item['status']);
-    }
-
-    return results;
-  }
-}
-
-class _SelectedSeasonEpisodes extends StatelessWidget {
-  final TvSeason season;
-
-  const _SelectedSeasonEpisodes({required this.season});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final episodes = [...season.episodes]
-      ..sort((a, b) => (a.episodeNumber ?? 0).compareTo(b.episodeNumber ?? 0));
-
-    if (episodes.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainer,
-          borderRadius: AppRadius.borderRadiusSm,
-          border: Border.all(color: colorScheme.outlineVariant),
-        ),
-        child: Text(
-          season.episodeCount > 0
-              ? '${season.episodeCount} episodes listed for this season.'
-              : 'No episode details available for this season.',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        for (var index = 0; index < episodes.length; index++) ...[
-          _EpisodeRow(episode: episodes[index]),
-          if (index < episodes.length - 1)
-            const SizedBox(height: AppSpacing.xs),
-        ],
-      ],
-    );
-  }
-}
-
-class _EpisodeRow extends StatelessWidget {
-  final TvEpisodeSummary episode;
-
-  const _EpisodeRow({required this.episode});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+  static Widget _episodeRow(TvEpisodeSummary episode) {
     final episodeNumber = episode.episodeNumber;
-    final title = episode.name?.isNotEmpty == true
-        ? episode.name!
+    final title = episode.name?.trim().isNotEmpty == true
+        ? episode.name!.trim()
         : 'Episode ${episodeNumber ?? '?'}';
+    final airDate = formatMediumDateOrNull(episode.airDate);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusSm,
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 30,
-            child: Text(
-              episodeNumber?.toString().padLeft(2, '0') ?? '--',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          if (episode.airDate?.isNotEmpty == true)
-            Text(
-              episode.airDate!.split('T').first,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-        ],
-      ),
+    return MediaChildTile.numbered(
+      ordinal: episodeNumber == null
+          ? '--'
+          : 'E${episodeNumber.toString().padLeft(2, '0')}',
+      ordinalLabel: episodeNumber == null
+          ? ''
+          : 'Episode ${episode.episodeNumber}',
+      title: title,
+      facts: <String>[if (airDate != null) airDate],
     );
   }
-}
 
-class _SeasonPill extends StatelessWidget {
-  final TvSeason season;
-  final SeerrMediaAvailability? availability;
-  final bool selected;
-  final VoidCallback onSelected;
-
-  const _SeasonPill({
-    required this.season,
-    required this.availability,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final displayName = season.seasonNumber == 0
+  static String _label(TvSeason season) {
+    final name = season.name.trim();
+    if (name.isNotEmpty) return name;
+    return season.seasonNumber == 0
         ? 'Specials'
         : 'Season ${season.seasonNumber}';
-
-    return ChoiceChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(displayName),
-          if (availability == SeerrMediaAvailability.available) ...[
-            const SizedBox(width: AppSpacing.xs),
-            Icon(
-              Icons.check_circle_rounded,
-              size: 14,
-              color: colorScheme.primary,
-            ),
-          ] else if (availability ==
-              SeerrMediaAvailability.partiallyAvailable) ...[
-            const SizedBox(width: AppSpacing.xs),
-            Icon(Icons.adjust_rounded, size: 14, color: colorScheme.tertiary),
-          ],
-        ],
-      ),
-      selected: selected,
-      onSelected: (_) => onSelected(),
-      visualDensity: VisualDensity.compact,
-      labelStyle: theme.textTheme.labelMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-        color: selected ? colorScheme.onSecondaryContainer : null,
-      ),
-    );
-  }
-}
-
-int _compareSeasons(TvSeason left, TvSeason right) {
-  if (left.seasonNumber == 0 && right.seasonNumber != 0) {
-    return 1;
   }
 
-  if (left.seasonNumber != 0 && right.seasonNumber == 0) {
-    return -1;
+  static String _shortLabel(TvSeason season) =>
+      season.seasonNumber == 0 ? 'Sp' : 'S${season.seasonNumber}';
+
+  /// Ascending by season number, with specials last — an appendix, not season
+  /// zero.
+  static int _compareSeasons(TvSeason left, TvSeason right) {
+    final leftSpecials = left.seasonNumber == 0;
+    final rightSpecials = right.seasonNumber == 0;
+    if (leftSpecials != rightSpecials) return leftSpecials ? 1 : -1;
+    return left.seasonNumber.compareTo(right.seasonNumber);
   }
-
-  return left.seasonNumber.compareTo(right.seasonNumber);
-}
-
-int? _asInt(Object? value) {
-  if (value is int) {
-    return value;
-  }
-
-  if (value is num) {
-    return value.toInt();
-  }
-
-  if (value is String) {
-    return int.tryParse(value);
-  }
-
-  return null;
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/import/domain/manual_import_display.dart';
 import 'package:seekarr/features/import/domain/manual_import_models.dart';
@@ -845,17 +846,18 @@ class _LastImportBanner extends StatelessWidget {
                     : command.isFailure
                     ? 'Last import failed · $files'
                     : 'Imported $files',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                // Carries the handed-off file count, which climbs while the
+                // command runs.
+                style: theme.textTheme.bodySmall!
+                    .weight(FontWeight.w600)
+                    .tabular,
               ),
             ),
             Text(
               'View progress',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w700,
-              ),
+              style: theme.textTheme.labelMedium!
+                  .weight(FontWeight.w700)
+                  .copyWith(color: theme.colorScheme.primary),
             ),
           ],
         ),
@@ -898,7 +900,8 @@ class _FilterStatus extends StatelessWidget {
           Expanded(
             child: Text(
               'Showing $visibleCount of $totalCount files',
-              style: theme.textTheme.bodySmall?.copyWith(
+              // Both counts move as facet chips are toggled.
+              style: theme.textTheme.bodySmall!.tabular.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -1006,8 +1009,8 @@ class _ScanningState extends StatelessWidget {
                       children: [
                         Text(
                           '${service.title} is scanning $folderName',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+                          style: theme.textTheme.titleSmall!.weight(
+                            FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.xs),
@@ -1074,9 +1077,7 @@ class _InlineError extends StatelessWidget {
               Expanded(
                 child: Text(
                   error,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodySmall!.weight(FontWeight.w600),
                 ),
               ),
             ],

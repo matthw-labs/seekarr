@@ -34,7 +34,7 @@ ios/Runner.xcworkspace/xcuserdata/
 macos/Runner/Configs/LocalSigning.xcconfig
 ios/Flutter/LocalSigning.xcconfig
 
-# Environment files 
+# Environment files
 .env
 .env.local
 .env.*.local
@@ -44,10 +44,10 @@ ios/Flutter/LocalSigning.xcconfig
 *.key
 secrets/
 
-# Live captures from tool/capture_status_fixtures.dart. Redacted, but not
-# committed: they are the user's own instance data. The glob is deliberately
-# wide so Syncthing conflict copies (queue.captured.sync-conflict-*.json)
-# are caught too.
+# Live captures written by tool/capture_status_fixtures.dart. Redacted, but
+# still the maintainer's own instance data, so they stay local. The glob is
+# deliberately wide so file-sync conflict copies
+# (queue.captured.sync-conflict-*.json) are caught too.
 test/fixtures/**/*.captured*
 
 # Local planning and design notes.
@@ -56,13 +56,12 @@ PRODUCT.md
 DESIGN.md
 
 # Golden-test output. `matchesGoldenFile` writes the four
-# master/test/isolatedDiff/maskedDiff PNGs here on every failure; they are a
-# local debugging aid, never a repo artifact.
+# master/test/isolatedDiff/maskedDiff PNGs here on every failure: a local
+# debugging aid, never a repo artifact.
 test/failures/
 
 # Coverage reports (`flutter test --coverage`).
 coverage/
 
-# Syncthing conflict copies (the repo is inside a synced folder).
+# File-sync conflict copies (this checkout lives inside a synced folder).
 *sync-conflict-*
-

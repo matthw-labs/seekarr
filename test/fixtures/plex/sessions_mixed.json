@@ -1,0 +1,267 @@
+{
+  "MediaContainer": {
+    "size": 4,
+    "Metadata": [
+      {
+        "addedAt": 1735689600,
+        "duration": 9114000,
+        "guid": "plex://movie/5d776b59ad5437001f79c6f8",
+        "key": "/library/metadata/20418",
+        "librarySectionID": 1,
+        "librarySectionTitle": "Movies",
+        "ratingKey": "20418",
+        "sessionKey": "417",
+        "thumb": "/library/metadata/20418/thumb/1748102400",
+        "title": "Interstellar",
+        "type": "movie",
+        "updatedAt": 1748102400,
+        "viewOffset": 2278500,
+        "year": 2014,
+        "Media": [
+          {
+            "audioChannels": 6,
+            "audioCodec": "eac3",
+            "bitrate": 14320,
+            "container": "mkv",
+            "height": 2160,
+            "id": "88431",
+            "selected": true,
+            "videoCodec": "hevc",
+            "videoResolution": "4k",
+            "width": 3840,
+            "Part": [
+              {
+                "container": "mkv",
+                "decision": "directplay",
+                "file": "/mnt/tank/media/movies/Interstellar (2014)/Interstellar.2014.2160p.mkv",
+                "id": "91204",
+                "key": "/library/parts/91204/1735689600/file.mkv",
+                "size": 16321504422
+              }
+            ]
+          }
+        ],
+        "User": { "id": "1", "thumb": "https://plex.tv/users/2f1a/avatar?c=1", "title": "matt" },
+        "Player": {
+          "address": "192.168.1.42",
+          "device": "Apple TV",
+          "machineIdentifier": "4c9e1f0a2b3d4e5f6a7b8c9d",
+          "platform": "tvOS",
+          "product": "Infuse",
+          "state": "playing",
+          "title": "Living Room",
+          "local": true
+        },
+        "Session": { "id": "u7k2m9x4qp1zvb3n", "bandwidth": 4200, "location": "lan" }
+      },
+      {
+        "addedAt": 1712000000,
+        "duration": 9840000,
+        "guid": "plex://movie/5d7768255af944001f1f6a3f",
+        "key": "/library/metadata/20991",
+        "librarySectionID": 1,
+        "librarySectionTitle": "Movies",
+        "ratingKey": "20991",
+        "sessionKey": "418",
+        "thumb": "/library/metadata/20991/thumb/1748102401",
+        "title": "Blade Runner 2049",
+        "type": "movie",
+        "updatedAt": 1748102401,
+        "viewOffset": 640000,
+        "year": 2017,
+        "Media": [
+          {
+            "audioChannels": 8,
+            "audioCodec": "truehd",
+            "bitrate": 31000,
+            "container": "mkv",
+            "height": 2160,
+            "id": "88512",
+            "selected": true,
+            "videoCodec": "hevc",
+            "videoResolution": "4k",
+            "width": 3840,
+            "Part": [
+              {
+                "container": "mkv",
+                "decision": "transcode",
+                "file": "/mnt/tank/media/movies/Blade Runner 2049 (2017)/BR2049.2160p.mkv",
+                "id": "91288",
+                "key": "/library/parts/91288/1712000000/file.mkv",
+                "size": 42881504422
+              }
+            ]
+          }
+        ],
+        "User": { "id": "12", "thumb": "https://plex.tv/users/9f3c/avatar?c=1", "title": "ada" },
+        "Player": {
+          "address": "10.8.0.9",
+          "device": "iPhone",
+          "machineIdentifier": "7f6e5d4c3b2a1908f7e6d5c4",
+          "platform": "iOS",
+          "product": "Plex for iOS",
+          "state": "playing",
+          "title": "ada's iPhone",
+          "local": false
+        },
+        "Session": { "id": "q4w7e1r8t2y5u9i3", "bandwidth": 12000, "location": "wan" },
+        "TranscodeSession": {
+          "key": "/transcode/sessions/q4w7e1r8t2y5u9i3",
+          "throttled": true,
+          "complete": false,
+          "progress": 64.2,
+          "speed": 4.7,
+          "duration": 9840000,
+          "context": "streaming",
+          "sourceVideoCodec": "hevc",
+          "sourceAudioCodec": "truehd",
+          "videoDecision": "transcode",
+          "audioDecision": "transcode",
+          "subtitleDecision": "copy",
+          "protocol": "dash",
+          "container": "mp4",
+          "videoCodec": "h264",
+          "audioCodec": "aac",
+          "audioChannels": 2,
+          "transcodeHwRequested": true,
+          "transcodeHwEncoding": true
+        }
+      },
+      {
+        "addedAt": 1699000000,
+        "duration": 268000,
+        "grandparentRatingKey": "60100",
+        "grandparentThumb": "/library/metadata/60100/thumb/1700000000",
+        "grandparentTitle": "Radiohead",
+        "guid": "plex://track/5d07c3d2403c6402913f4a1c",
+        "index": 5,
+        "key": "/library/metadata/60312",
+        "librarySectionID": 3,
+        "librarySectionTitle": "Music",
+        "parentIndex": 1,
+        "parentRatingKey": "60201",
+        "parentThumb": "/library/metadata/60201/thumb/1700000000",
+        "parentTitle": "Kid A",
+        "ratingKey": "60312",
+        "sessionKey": "419",
+        "thumb": "/library/metadata/60201/thumb/1700000000",
+        "title": "Idioteque",
+        "type": "track",
+        "updatedAt": 1700000000,
+        "viewOffset": 64000,
+        "Media": [
+          {
+            "audioChannels": 2,
+            "audioCodec": "flac",
+            "bitrate": 15000,
+            "container": "flac",
+            "duration": 268000,
+            "id": "77120",
+            "selected": true,
+            "Part": [
+              {
+                "container": "flac",
+                "decision": "directplay",
+                "file": "/mnt/tank/media/music/Radiohead/Kid A/05 Idioteque.flac",
+                "id": "77320",
+                "key": "/library/parts/77320/1699000000/file.flac",
+                "size": 41220331
+              }
+            ]
+          }
+        ],
+        "User": { "id": "1", "thumb": "https://plex.tv/users/2f1a/avatar?c=1", "title": "matt" },
+        "Player": {
+          "address": "192.168.1.77",
+          "device": "macOS",
+          "machineIdentifier": "aa11bb22cc33dd44ee55ff66",
+          "platform": "macOS",
+          "product": "Plexamp",
+          "state": "playing",
+          "title": "Plexamp",
+          "local": true
+        }
+      },
+      {
+        "addedAt": 1706100000,
+        "duration": 3180000,
+        "grandparentRatingKey": "41000",
+        "grandparentThumb": "/library/metadata/41000/thumb/1718220000",
+        "grandparentTitle": "Severance",
+        "guid": "plex://episode/5f4a1e6c9d3e1b002d1f0a11",
+        "index": 4,
+        "key": "/library/metadata/41123",
+        "librarySectionID": 2,
+        "librarySectionTitle": "TV Shows",
+        "parentIndex": 1,
+        "parentRatingKey": "41001",
+        "parentThumb": "/library/metadata/41001/thumb/1718220000",
+        "parentTitle": "Season 1",
+        "ratingKey": "41123",
+        "sessionKey": "420",
+        "thumb": "/library/metadata/41123/thumb/1718220000",
+        "title": "The You You Are",
+        "type": "episode",
+        "updatedAt": 1718220000,
+        "viewOffset": 1245000,
+        "Media": [
+          {
+            "audioChannels": 8,
+            "audioCodec": "truehd",
+            "bitrate": 24500,
+            "container": "mkv",
+            "height": 2160,
+            "id": "992001",
+            "selected": true,
+            "videoCodec": "hevc",
+            "videoResolution": "4k",
+            "width": 3840,
+            "Part": [
+              {
+                "container": "mkv",
+                "decision": "copy",
+                "file": "/mnt/tank/media/tv/Severance/Season 01/Severance - S01E04.mkv",
+                "id": "1002314",
+                "key": "/library/parts/1002314/1706100000/file.mkv",
+                "size": 9741002311
+              }
+            ]
+          }
+        ],
+        "User": { "id": "14", "thumb": "https://plex.tv/users/71ab/avatar?c=1", "title": "grace" },
+        "Player": {
+          "address": "192.168.1.90",
+          "device": "Xbox Series X",
+          "machineIdentifier": "beef1234cafe5678d00d9012",
+          "platform": "Xbox",
+          "product": "Plex for Xbox",
+          "state": "paused",
+          "title": "Den",
+          "local": true
+        },
+        "Session": { "id": "z8x5c2v9b6n3m0k7", "bandwidth": 8000, "location": "lan" },
+        "TranscodeSession": {
+          "key": "/transcode/sessions/z8x5c2v9b6n3m0k7",
+          "throttled": false,
+          "complete": false,
+          "progress": 31.9,
+          "speed": 12.4,
+          "duration": 3180000,
+          "context": "streaming",
+          "sourceVideoCodec": "hevc",
+          "sourceAudioCodec": "truehd",
+          "videoDecision": "copy",
+          "audioDecision": "transcode",
+          "subtitleDecision": "copy",
+          "protocol": "http",
+          "container": "mkv",
+          "videoCodec": "hevc",
+          "audioCodec": "eac3",
+          "audioChannels": 6,
+          "transcodeHwRequested": false,
+          "transcodeHwEncoding": false
+        }
+      }
+    ]
+  }
+}

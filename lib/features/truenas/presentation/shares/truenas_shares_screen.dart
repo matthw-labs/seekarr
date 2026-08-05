@@ -492,9 +492,7 @@ class _ShareRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(

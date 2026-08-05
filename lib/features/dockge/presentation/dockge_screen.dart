@@ -152,9 +152,9 @@ class _StackTile extends ConsumerWidget {
                     children: [
                       Text(
                         stack.name,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium!.weight(FontWeight.w700),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

@@ -186,9 +186,7 @@ class _ProbeCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   result.probe.label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: theme.textTheme.labelLarge!.weight(FontWeight.w700),
                 ),
               ),
               IconButton(
@@ -217,10 +215,11 @@ class _ProbeCard extends StatelessWidget {
             child: SingleChildScrollView(
               child: SelectableText(
                 result.output,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontFamily: 'monospace',
-                  height: 1.35,
-                ),
+                // The JSON dump the user is asked to read (and paste) has to be
+                // aligned, so it goes through `.mono`; the literal 'monospace'
+                // family resolves to nothing on iOS/macOS. `bodySmall` keeps
+                // its 1.40 leading, which is what makes nested JSON legible.
+                style: theme.textTheme.bodySmall!.mono,
               ),
             ),
           ),

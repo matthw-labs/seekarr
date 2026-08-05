@@ -1,0 +1,92 @@
+{
+  "Items": [
+    {
+      "Name": "Arrival",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "3ca7ff1e0d9b4e2f8a6c5b4d3e2f1a09",
+      "Etag": "9f8e7d6c5b4a39281706f5e4d3c2b1a0",
+      "DateCreated": "2026-03-02T18:44:09.1234567Z",
+      "CanDelete": true,
+      "CanDownload": true,
+      "Container": "mkv",
+      "PremiereDate": "2016-11-11T00:00:00.0000000Z",
+      "ProductionYear": 2016,
+      "OfficialRating": "PG-13",
+      "CommunityRating": 7.9,
+      "RunTimeTicks": 72000000000,
+      "PlayAccess": "Full",
+      "IsFolder": false,
+      "Type": "Movie",
+      "Overview": "A linguist is recruited to communicate with visitors whose language has no arrow of time.",
+      "PrimaryImageAspectRatio": 0.6666666666666666,
+      "UserData": {
+        "PlaybackPositionTicks": 18000000000,
+        "PlayCount": 0,
+        "IsFavorite": false,
+        "Played": false,
+        "Key": "329865",
+        "ItemId": "3ca7ff1e0d9b4e2f8a6c5b4d3e2f1a09"
+      },
+      "MediaType": "Video",
+      "ImageTags": {
+        "Primary": "1f2e3d4c5b6a70819283a4b5c6d7e8f9"
+      },
+      "BackdropImageTags": ["9a8b7c6d5e4f30211f2e3d4c5b6a7089"],
+      "LocationType": "FileSystem"
+    },
+    {
+      "Name": "The Zone of Interest",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "5e1c9a7b3d2f48605c9a1e7b3d5f0824",
+      "Etag": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+      "DateCreated": "2026-04-19T09:31:52.7654321Z",
+      "CanDelete": true,
+      "CanDownload": true,
+      "Container": "mkv",
+      "PremiereDate": "2023-12-15T00:00:00.0000000Z",
+      "ProductionYear": 2023,
+      "OfficialRating": "PG-13",
+      "CommunityRating": 7.4,
+      "RunTimeTicks": 63000000000,
+      "PlayAccess": "Full",
+      "IsFolder": false,
+      "Type": "Movie",
+      "Overview": "The commandant of Auschwitz and his wife build a life beside the wall.",
+      "PrimaryImageAspectRatio": 0.6666666666666666,
+      "UserData": {
+        "PlaybackPositionTicks": 0,
+        "PlayCount": 2,
+        "IsFavorite": true,
+        "LastPlayedDate": "2026-07-11T22:05:31.0000000Z",
+        "Played": true,
+        "Key": "467244",
+        "ItemId": "5e1c9a7b3d2f48605c9a1e7b3d5f0824"
+      },
+      "MediaType": "Video",
+      "ImageTags": {
+        "Primary": "abcdef0123456789abcdef0123456789"
+      },
+      "BackdropImageTags": [],
+      "LocationType": "FileSystem"
+    },
+    {
+      "Name": "Unprobed Import",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "0b9d7f5a3c1e48627a4c8e0b2d6f9135",
+      "DateCreated": "2026-08-02T23:59:01.0000000Z",
+      "CanDelete": true,
+      "CanDownload": true,
+      "Container": "mkv",
+      "RunTimeTicks": 0,
+      "PlayAccess": "Full",
+      "IsFolder": false,
+      "Type": "Movie",
+      "MediaType": "Video",
+      "ImageTags": {},
+      "BackdropImageTags": [],
+      "LocationType": "FileSystem"
+    }
+  ],
+  "TotalRecordCount": 3,
+  "StartIndex": 0
+}

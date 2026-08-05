@@ -228,6 +228,14 @@ String _statusEndpointFor(ServiceKey service) {
     case ServiceKey.unraid:
       // Handled over GraphQL in _loadVersion; no REST endpoint.
       return '';
+    // Both media-server probes are deliberately the *unauthenticated* ones, so
+    // reachability separates cleanly from credentials: a 200 here with a 401
+    // elsewhere means "the box is up, the token is wrong", which is the single
+    // most common Stream misconfiguration and the one a generic timeout hides.
+    case ServiceKey.jellyfin:
+      return '/System/Info/Public';
+    case ServiceKey.plex:
+      return '/identity';
   }
 }
 
@@ -684,7 +692,12 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
       ServiceKey.prowlarr ||
       ServiceKey.sabnzbd ||
       ServiceKey.nzbget ||
-      ServiceKey.unraid => const <dynamic>[],
+      ServiceKey.unraid ||
+      // A media server has no acquisition queue at all. Its live work is
+      // outbound playback, which is a different record with different actions
+      // and does not belong in a queue row.
+      ServiceKey.jellyfin ||
+      ServiceKey.plex => const <dynamic>[],
     };
     return items
         .whereType<Map>()
@@ -735,7 +748,9 @@ String _queueTypeLabel(ServiceKey service) {
     ServiceKey.prowlarr ||
     ServiceKey.sabnzbd ||
     ServiceKey.nzbget ||
-    ServiceKey.unraid => service.title,
+    ServiceKey.unraid ||
+    ServiceKey.jellyfin ||
+    ServiceKey.plex => service.title,
   };
 }
 

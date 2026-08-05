@@ -28,6 +28,10 @@ RadarrMovie buildMovie({
   List<RatingSource> ratings = const [],
   List<dynamic> images = const [],
   bool? isAvailable,
+  // `RadarrMovie` has no `copyWith`, so a test that needs a profile had to
+  // hand-build the whole model; the action band only renders the profile path
+  // when this is set.
+  int? qualityProfileId,
 }) {
   return RadarrMovie(
     id: id,
@@ -48,6 +52,7 @@ RadarrMovie buildMovie({
     certification: certification,
     ratings: ratings,
     isAvailable: isAvailable,
+    qualityProfileId: qualityProfileId,
   );
 }
 

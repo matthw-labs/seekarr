@@ -73,7 +73,14 @@ class ServiceSignal {
 /// An active download is the system working, so it reads as activity rather than
 /// as a warning. Everything else a service flags is something you may need to
 /// act on.
-const Set<String> _activityLabels = {'Down'};
+/// An active playback session joins `Down` here for the same reason: bytes are
+/// moving because the stack is doing its job. Without membership there is no
+/// "active and fine" register at all — [_toneFor] reaches [StatusTone.info]
+/// *only* through this set, so an unflagged KPI is [StatusTone.neutral]
+/// (chromatically identical to an idle server) and anything else flagged falls
+/// through to [StatusTone.warning], which would paint "three people are
+/// watching" the same amber as "Prowlarr has failing indexers".
+const Set<String> _activityLabels = {'Down', 'Streams'};
 
 /// Labels whose flagged state is an outright fault rather than a backlog.
 ///
@@ -110,6 +117,12 @@ const Map<String, String> _matrixLabelOverrides = {
   'Up': 'outgoing',
   'Fails': 'failures',
   'Status': '',
+  // `Streams` is a fine column heading on a four-KPI peek and a poor phrase
+  // beside a figure: "2 streams" describes a plural noun the user never thinks
+  // in, where "2 streaming" states what the server is doing. It also stays
+  // correct at one — "1 streaming" needs no depluralisation, which is why the
+  // gerund is chosen over `stream`.
+  'Streams': 'streaming',
 };
 
 /// Labels that already read the same for one and for many.

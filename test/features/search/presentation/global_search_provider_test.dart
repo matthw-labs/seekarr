@@ -70,10 +70,32 @@ void main() {
       'The Boys',
       'Charli XCX',
     ]);
-    expect(groups.first.results.single.route, '/services/seerr/movie/101');
-    expect(groups[1].results.single.route, '/services/radarr/movie/10');
-    expect(groups[2].results.single.route, '/services/sonarr/series/20');
-    expect(groups[3].results.single.route, '/services/lidarr/artist/30');
+    // Each route carries its poster's shared-element tag, so the detail page it
+    // opens has a matching Hero destination to fly into.
+    final routes = groups
+        .expand((group) => group.results)
+        .map((item) => Uri.parse(item.route))
+        .toList(growable: false);
+    expect(routes.map((uri) => uri.path), [
+      '/services/seerr/movie/101',
+      '/services/radarr/movie/10',
+      '/services/sonarr/series/20',
+      '/services/lidarr/artist/30',
+    ]);
+    expect(routes.map((uri) => uri.queryParameters['heroTag']), [
+      'search_seerr_movie_101',
+      'search_radarr_movie_10',
+      'search_sonarr_series_20',
+      'search_lidarr_artist_30',
+    ]);
+    // The tag on the model and the tag in its route are the same string —
+    // a mismatch would silently produce a flightless navigation.
+    for (final result in groups.expand((group) => group.results)) {
+      expect(
+        Uri.parse(result.route).queryParameters['heroTag'],
+        result.heroTag,
+      );
+    }
   });
 
   test('preserves partial service failures', () async {

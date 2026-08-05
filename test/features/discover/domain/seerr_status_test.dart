@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seekarr/core/status/media_status.dart';
+import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
 import 'package:seekarr/features/discover/domain/seerr_status.dart';
 
 void main() {
@@ -121,6 +122,68 @@ void main() {
       expect(seerrDownloadEntry(const []), isNull);
       expect(seerrDownloadEntry('nonsense'), isNull);
       expect(seerrDownloadEntry(const ['not a map']), isNull);
+    });
+  });
+
+  group('seerrSeasonStatuses', () {
+    const seasons = [
+      TvSeason(id: 1, seasonNumber: 1, name: 'Season 1', episodeCount: 10),
+      TvSeason(id: 2, seasonNumber: 2, name: 'Season 2', episodeCount: 10),
+      TvSeason(id: 0, seasonNumber: 0, name: 'Specials', episodeCount: 2),
+    ];
+
+    test('maps Seerr codes onto the shared status vocabulary', () {
+      final statuses = seerrSeasonStatuses(const {
+        'seasons': [
+          {'seasonNumber': 1, 'status': 5},
+          {'seasonNumber': 2, 'status': 4},
+        ],
+      }, seasons);
+
+      expect(statuses[1]!.availability, MediaAvailability.available);
+      expect(statuses[1]!.label, 'Available');
+      expect(statuses[2]!.availability, MediaAvailability.partial);
+      // Seerr's own wording survives, the same way the page-level status keeps
+      // it.
+      expect(statuses[2]!.label, 'Partially Available');
+    });
+
+    test('a season Seerr has no record of is notTracked, not unknown', () {
+      final statuses = seerrSeasonStatuses(const {
+        'seasons': [
+          {'seasonNumber': 1, 'status': 5},
+        ],
+      }, seasons);
+
+      expect(statuses[0]!.availability, MediaAvailability.notTracked);
+      expect(statuses[0]!.label, 'Not Requested');
+      expect(statuses[2]!.availability, MediaAvailability.notTracked);
+    });
+
+    test('resolves a status for every season even with no mediaInfo', () {
+      final statuses = seerrSeasonStatuses(null, seasons);
+
+      expect(statuses.keys.toSet(), {0, 1, 2});
+      for (final status in statuses.values) {
+        expect(status.availability, MediaAvailability.notTracked);
+      }
+    });
+
+    test('survives a malformed seasons payload', () {
+      final statuses = seerrSeasonStatuses(const {
+        'seasons': [
+          'nonsense',
+          42,
+          {'status': 5},
+        ],
+      }, seasons);
+
+      expect(statuses.length, 3);
+      expect(statuses[1]!.availability, MediaAvailability.notTracked);
+    });
+
+    test('ignores a seasons key that is not a list', () {
+      expect(seerrSeasonStatuses(const {'seasons': 'nope'}, seasons).length, 3);
     });
   });
 }

@@ -384,9 +384,9 @@ class _QueueTile extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       slot.filename,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium!.weight(FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -394,11 +394,10 @@ class _QueueTile extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Text(
                     '${slot.percentage}%',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.sabnzbd,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!
+                        .weight(FontWeight.w700)
+                        .tabular
+                        .copyWith(color: AppColors.sabnzbd),
                   ),
                   _QueueItemMenu(slot: slot, paused: _paused),
                 ],
@@ -416,7 +415,8 @@ class _QueueTile extends ConsumerWidget {
               const SizedBox(height: 6),
               Text(
                 subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                // Carries the ETA and the remaining size, both counting down.
+                style: Theme.of(context).textTheme.bodySmall!.tabular.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
                 maxLines: 1,
@@ -504,9 +504,9 @@ class _HistoryTile extends StatelessWidget {
                   children: [
                     Text(
                       slot.name,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium!.weight(FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

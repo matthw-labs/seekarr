@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 
 /// A small, uppercase section label used to head a group of services that
 /// belong to the same [ServiceDomain]. Shared by the Home dashboard, Settings
@@ -42,11 +43,10 @@ class DomainSectionHeader extends StatelessWidget {
               child: ExcludeSemantics(
                 child: Text(
                   label.toUpperCase(),
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                  ),
+                  // One kicker per domain group, introducing the region below
+                  // it — the case `AppTheme.eyebrow` exists for, and the only
+                  // place tracking is authored rather than derived.
+                  style: AppTheme.eyebrow(theme.colorScheme.onSurfaceVariant),
                 ),
               ),
             ),
@@ -153,10 +153,9 @@ class _CollapsibleDomainSectionState extends State<CollapsibleDomainSection> {
                     child: ExcludeSemantics(
                       child: Text(
                         widget.label.toUpperCase(),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
+                        // Same single-kicker role as [DomainSection]'s header.
+                        style: AppTheme.eyebrow(
+                          theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),

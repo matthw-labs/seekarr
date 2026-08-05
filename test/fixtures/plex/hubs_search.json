@@ -1,0 +1,84 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "identifier": "com.plexapp.plugins.library",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "mediaTagVersion": 1748100000,
+    "Hub": [
+      {
+        "hubIdentifier": "movie",
+        "key": "/library/sections/1/search?type=1&query=inter",
+        "more": true,
+        "size": 2,
+        "title": "Movies",
+        "type": "movie",
+        "Metadata": [
+          {
+            "addedAt": 1735689600,
+            "art": "/library/metadata/20418/art/1748102400",
+            "duration": 9114000,
+            "guid": "plex://movie/5d776b59ad5437001f79c6f8",
+            "key": "/library/metadata/20418",
+            "librarySectionID": 1,
+            "librarySectionKey": "/library/sections/1",
+            "librarySectionTitle": "Movies",
+            "ratingKey": "20418",
+            "score": 0.92,
+            "source": "server://9c8b7a6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b/com.plexapp.plugins.library",
+            "summary": "A team of explorers travel through a wormhole in space.",
+            "thumb": "/library/metadata/20418/thumb/1748102400",
+            "title": "Interstellar",
+            "type": "movie",
+            "updatedAt": 1748102400,
+            "year": 2014
+          },
+          {
+            "addedAt": 1750000000,
+            "guid": "plex://movie/5e1618b4d3f7d0002d3f8b90",
+            "key": "/library/metadata/5e1618b4d3f7d0002d3f8b90",
+            "ratingKey": "5e1618b4d3f7d0002d3f8b90",
+            "score": 0.71,
+            "source": "provider://tv.plex.provider.discover",
+            "summary": "A Discover result Plex would like the user to rent.",
+            "thumb": "https://image.tmdb.org/t/p/original/interception.jpg",
+            "title": "Interception",
+            "type": "movie",
+            "updatedAt": 1750000000,
+            "year": 2021
+          }
+        ]
+      },
+      {
+        "hubIdentifier": "show",
+        "key": "/library/sections/2/search?type=2&query=inter",
+        "more": false,
+        "size": 1,
+        "title": "Shows",
+        "type": "show",
+        "Metadata": [
+          {
+            "addedAt": 1699000000,
+            "art": "/library/metadata/42000/art/1717000000",
+            "childCount": 1,
+            "guid": "plex://show/5d9c0862e264b7001fdb2b2c",
+            "key": "/library/metadata/42000/children",
+            "leafCount": 8,
+            "librarySectionID": 2,
+            "librarySectionKey": "/library/sections/2",
+            "librarySectionTitle": "TV Shows",
+            "ratingKey": "42000",
+            "score": 0.55,
+            "source": "server://9c8b7a6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b/com.plexapp.plugins.library",
+            "summary": "A cartographer walks the coast and finds it has moved.",
+            "thumb": "/library/metadata/42000/thumb/1717000000",
+            "title": "Tidelines: Interstitial",
+            "type": "show",
+            "updatedAt": 1717000000,
+            "viewedLeafCount": 2,
+            "year": 2023
+          }
+        ]
+      }
+    ]
+  }
+}

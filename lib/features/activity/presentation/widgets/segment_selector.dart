@@ -42,6 +42,13 @@ class ActivitySegmentSelector<T extends Enum> extends StatelessWidget {
   static const double _baseHeight = 56.0;
 
   /// The part of that height which scales — one `labelMedium` line.
+  ///
+  /// Unmoved by the type ramp, and checked rather than assumed: `SelectionPills`
+  /// labels its pills `labelMedium`, a label role, and the app root's
+  /// `DefaultTextHeightBehavior` keeps the new leading off a block's first
+  /// ascent and last descent — so one line still measures what it always did.
+  /// The pill is floored at its 48pt touch target anyway, which the label and
+  /// its `sm` padding sit well inside, so 56 still clears both.
   static const double _labelHeight = 16.0;
 
   final List<T> segments;

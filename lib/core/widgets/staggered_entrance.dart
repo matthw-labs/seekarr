@@ -27,6 +27,13 @@ class StaggeredEntrance extends StatefulWidget {
   /// Vertical travel distance of the slide-up, in logical pixels.
   final double offset;
 
+  /// Extra base delay added before the per-index stagger begins.
+  ///
+  /// Used by surfaces that mount during a page transition (the media detail
+  /// body) to hold the cascade until the route has settled, so the entrance
+  /// never competes with a Hero flight for attention.
+  final Duration delay;
+
   const StaggeredEntrance({
     super.key,
     required this.child,
@@ -34,6 +41,7 @@ class StaggeredEntrance extends StatefulWidget {
     this.step = const Duration(milliseconds: 45),
     this.wrapCount = 12,
     this.offset = 16,
+    this.delay = Duration.zero,
   });
 
   @override
@@ -60,7 +68,7 @@ class _StaggeredEntranceState extends State<StaggeredEntrance>
     final effectiveIndex = widget.wrapCount > 0
         ? widget.index % widget.wrapCount
         : widget.index;
-    final delay = widget.step * effectiveIndex;
+    final delay = widget.delay + widget.step * effectiveIndex;
     if (delay == Duration.zero) {
       _controller.forward();
     } else {

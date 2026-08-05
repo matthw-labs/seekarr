@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/arr_activity_display.dart';
 import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
@@ -318,9 +319,7 @@ class _SectionContent extends StatelessWidget {
           ),
           child: Text(
             section.title,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: theme.textTheme.titleMedium?.weight(FontWeight.w700),
           ),
         ),
         if (section.fields.isNotEmpty || section.messages.isNotEmpty)
@@ -362,10 +361,9 @@ class _SectionFieldContent extends StatelessWidget {
           // value or a section kicker, not on every row of a data dump.
           Text(
             field.label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
+            style: theme.textTheme.labelMedium
+                ?.weight(FontWeight.w600)
+                .copyWith(color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(field.value, style: theme.textTheme.bodyMedium),

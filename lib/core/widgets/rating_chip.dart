@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 
 class RatingChip extends StatelessWidget {
   final String value;
+
+  /// The scale [value] is measured on: `/10`, `/100` or `%`.
+  ///
+  /// Without it a row of pills reads as one comparable set of numbers when it is
+  /// nothing of the kind — Metacritic's 53 and IMDb's 8.4 are the same opinion.
+  /// Empty for a source whose scale this app does not know; see
+  /// `ratingDisplayFor`, which is where the scale is decided.
+  ///
+  /// Rendered inside the value run for the eye, and spoken as words — "out of
+  /// 100", "percent" — because a screen reader reading "53 slash 100" is worse
+  /// than the ambiguity this fixes.
+  final String denominator;
+
   final int votes;
   final String sourceName;
   final String sourceIcon;
-  final VoidCallback? onTap;
 
   /// Accent for the chip. Defaults to the app primary; detail screens pass their
   /// service accent so the ratings row matches the rest of the page.
@@ -16,75 +29,91 @@ class RatingChip extends StatelessWidget {
   const RatingChip({
     super.key,
     required this.value,
+    this.denominator = '',
     required this.votes,
     required this.sourceName,
     required this.sourceIcon,
-    this.onTap,
     this.accent,
   });
 
   @override
   Widget build(BuildContext context) {
     final formattedVotes = _formatVoteCount(votes);
+    final score = '$value$denominator';
     final displayText = formattedVotes.isEmpty
-        ? value
-        : '$value ($formattedVotes)';
+        ? score
+        : '$score ($formattedVotes)';
     final color = accent ?? Theme.of(context).colorScheme.primary;
 
+    // No `onTap`: the parameter existed, was never passed by any of the four
+    // construction sites, and was the only reason this metadata pill carried a
+    // hand-rolled `GestureDetector` and claimed a button role it never had. A
+    // rating is a fact, not an action — it keeps the full radius its `GenreChip`
+    // and `TagChip` neighbours use for exactly that reason.
     return Semantics(
-      button: onTap != null,
       container: true,
       excludeSemantics: true,
-      label: '$sourceName rating $value',
+      label: '$sourceName rating $value${_spokenScale(denominator)}',
       value: votes > 0 ? '$votes votes' : null,
-      onTap: onTap,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Tooltip(
-          message: sourceName,
-          preferBelow: true,
-          triggerMode: TooltipTriggerMode.tap,
-          // The pill itself stays compact; the constraint only enlarges the
-          // touch area to the 44pt minimum.
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Center(
-              widthFactor: 1,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: AppRadius.borderRadiusFull,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      sourceIcon,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      displayText,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
+      child: Tooltip(
+        message: sourceName,
+        preferBelow: true,
+        triggerMode: TooltipTriggerMode.tap,
+        // The pill itself stays compact; the constraint keeps the tooltip's own
+        // trigger area comfortable without growing the ratings row.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Center(
+            widthFactor: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: AppRadius.borderRadiusFull,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    sourceIcon,
+                    style: Theme.of(context).textTheme.labelSmall!
+                        .weight(FontWeight.bold)
+                        .copyWith(color: color),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    displayText,
+                    // Score plus vote count — digits that differ per card and
+                    // stack in a ratings row, so they get a shared advance.
+                    style: Theme.of(context).textTheme.labelSmall!
+                        .weight(FontWeight.w700)
+                        .tabular
+                        .copyWith(color: color),
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// The scale as words, for the ear.
+  ///
+  /// `/100` reads aloud as "53 slash 100" or "53 divided by 100" depending on
+  /// the reader — both worse than the ambiguity the denominator exists to fix.
+  /// Empty stays empty, so an unknown scale is not narrated into existence.
+  String _spokenScale(String denominator) {
+    if (denominator.isEmpty) return '';
+    if (denominator == '%') return ' percent';
+    if (denominator.startsWith('/')) {
+      return ' out of ${denominator.substring(1)}';
+    }
+    return ' $denominator';
   }
 
   /// Formats a vote count, or returns empty when there is nothing to report.

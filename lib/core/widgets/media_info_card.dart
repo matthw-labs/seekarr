@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 
 class MediaInfoCard extends StatelessWidget {
   final List<MediaInfoGroup> groups;
@@ -49,11 +50,12 @@ class MediaFactsList extends StatelessWidget {
               label: fact.label,
               child: Text(
                 fact.value,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                  height: 1.3,
-                ),
+                // Facts are runtimes, sizes, bitrates and years as often as
+                // words, and they stack in a two-column grid.
+                style: theme.textTheme.bodySmall!
+                    .weight(FontWeight.w600)
+                    .tabular
+                    .copyWith(color: colorScheme.onSurface, height: 1.3),
               ),
             ),
           )
@@ -137,21 +139,20 @@ class _InfoGridCell extends StatelessWidget {
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.6,
-          ),
+          // One label per grid cell, repeated down the card: a plain dense
+          // metadata label, not a region kicker, so it keeps the role's own
+          // derived tracking rather than an authored overline.
+          style: theme.textTheme.labelSmall!
+              .weight(FontWeight.w700)
+              .copyWith(color: colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 2),
         DefaultTextStyle.merge(
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-            height: 1.3,
-          ),
+          style: theme.textTheme.bodySmall!
+              .weight(FontWeight.w600)
+              .copyWith(color: colorScheme.onSurface, height: 1.3),
           child: child,
         ),
       ],

@@ -56,6 +56,96 @@ void main() {
       expect(find.textContaining('7.6'), findsOneWidget);
     });
 
+    testWidgets('each pill states its own scale, not a bare number', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RatingChipsRow(
+              ratings: const [
+                RatingSource(name: 'IMDb', value: 6.9, votes: 0, icon: 'IMDb'),
+                RatingSource(
+                  name: 'Metacritic',
+                  value: 53,
+                  votes: 0,
+                  icon: 'Metacritic',
+                ),
+                RatingSource(
+                  name: 'Rotten Tomatoes',
+                  value: 57,
+                  votes: 0,
+                  icon: 'Rotten Tomatoes',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Three sources, three scales, stated. The row used to render `6.9`,
+      // `53.0` and `57.0` — which reads as one comparable set of numbers.
+      expect(find.text('6.9/10'), findsOneWidget);
+      expect(find.text('53/100'), findsOneWidget);
+      expect(find.text('57%'), findsOneWidget);
+      expect(find.textContaining('53.0'), findsNothing);
+      expect(find.textContaining('57.0'), findsNothing);
+    });
+
+    testWidgets('speaks the scale as words rather than a slash', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RatingChipsRow(
+              ratings: const [
+                RatingSource(
+                  name: 'Metacritic',
+                  value: 53,
+                  votes: 0,
+                  icon: 'Metacritic',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // "53 slash 100" is worse than the ambiguity the denominator fixes.
+      expect(
+        tester.getSemantics(find.byType(RatingChip)),
+        containsSemantics(label: 'Metacritic rating 53 out of 100'),
+      );
+    });
+
+    testWidgets('a percentage source speaks "percent"', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RatingChipsRow(
+              ratings: const [
+                RatingSource(
+                  name: 'Rotten Tomatoes',
+                  value: 57,
+                  votes: 1200,
+                  icon: 'Rotten Tomatoes',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        tester.getSemantics(find.byType(RatingChip)),
+        containsSemantics(
+          label: 'Rotten Tomatoes rating 57 percent',
+          value: '1200 votes',
+        ),
+      );
+    });
+
     testWidgets('renders ratings in a wrap when non-empty', (tester) async {
       await tester.pumpWidget(
         MaterialApp(

@@ -182,11 +182,10 @@ class _TopologyCategory extends StatelessWidget {
           children: [
             Text(
               category.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurfaceVariant,
-                letterSpacing: 0.5,
-              ),
+              // A single uppercase kicker introducing each topology region, so
+              // it goes through the one authored-tracking style rather than a
+              // hand-written letterSpacing.
+              style: AppTheme.eyebrow(theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: AppSpacing.xs),
             for (final vdev in vdevs) ...[
@@ -194,9 +193,7 @@ class _TopologyCategory extends StatelessWidget {
                 children: [
                   Text(
                     vdev.type,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   _StatusDot(status: vdev.status),

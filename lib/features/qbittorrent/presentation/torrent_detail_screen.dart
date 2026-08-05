@@ -341,7 +341,7 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               value.isEmpty ? '—' : value,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.bodySmall!.tabular,
             ),
           ),
         ],
@@ -496,9 +496,9 @@ class _FileRow extends ConsumerWidget {
       ),
       trailing: Text(
         '${file.sizeFormatted} • ${file.progressFormatted}',
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+        style: Theme.of(context).textTheme.labelSmall!.tabular.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
@@ -586,9 +586,7 @@ class _TrackerRow extends StatelessWidget {
         tracker.url,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
+        style: Theme.of(context).textTheme.bodySmall!.tabular,
       ),
       subtitle: Row(
         children: [
@@ -604,9 +602,9 @@ class _TrackerRow extends StatelessWidget {
       ),
       trailing: Text(
         'Peers: ${tracker.numPeers}',
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+        style: Theme.of(context).textTheme.labelSmall!.tabular.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
@@ -644,11 +642,9 @@ class _SectionLabel extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Text(
       label,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: colorScheme.onSurfaceVariant,
-        letterSpacing: 0.4,
-        fontWeight: FontWeight.w700,
-      ),
+      style: Theme.of(context).textTheme.labelSmall!
+          .weight(FontWeight.w700)
+          .copyWith(color: colorScheme.onSurfaceVariant),
     );
   }
 }

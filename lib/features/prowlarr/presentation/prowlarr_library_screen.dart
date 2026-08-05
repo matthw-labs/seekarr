@@ -249,12 +249,13 @@ class _FilterChip extends StatelessWidget {
             ),
             child: Text(
               label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: selected
-                    ? AppColors.prowlarr
-                    : colorScheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!
+                  .weight(FontWeight.w700)
+                  .copyWith(
+                    color: selected
+                        ? AppColors.prowlarr
+                        : colorScheme.onSurfaceVariant,
+                  ),
             ),
           ),
         ),

@@ -1,0 +1,123 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "Metadata": [
+      {
+        "addedAt": 1706100000,
+        "art": "/library/metadata/41123/art/1718220000",
+        "contentRating": "TV-MA",
+        "duration": 3180000,
+        "grandparentArt": "/library/metadata/41000/art/1718220000",
+        "grandparentGuid": "plex://show/5d9c081b170e910020f16a4f",
+        "grandparentKey": "/library/metadata/41000",
+        "grandparentRatingKey": "41000",
+        "grandparentThumb": "/library/metadata/41000/thumb/1718220000",
+        "grandparentTitle": "Severance",
+        "guid": "plex://episode/5f4a1e6c9d3e1b002d1f0a11",
+        "index": 4,
+        "key": "/library/metadata/41123",
+        "librarySectionID": 2,
+        "librarySectionKey": "/library/sections/2",
+        "librarySectionTitle": "TV Shows",
+        "originallyAvailableAt": "2022-02-25",
+        "parentIndex": 1,
+        "parentKey": "/library/metadata/41001",
+        "parentRatingKey": "41001",
+        "parentThumb": "/library/metadata/41001/thumb/1718220000",
+        "parentTitle": "Season 1",
+        "ratingKey": "41123",
+        "sessionKey": "812",
+        "summary": "Mark and his team uncover an unsettling detail about their floor.",
+        "thumb": "/library/metadata/41123/thumb/1718220000",
+        "title": "The You You Are",
+        "type": "episode",
+        "updatedAt": 1718220000,
+        "viewOffset": 1245000,
+        "year": 2022,
+        "Media": [
+          {
+            "audioChannels": 8,
+            "audioCodec": "truehd",
+            "bitrate": 24500,
+            "container": "mkv",
+            "duration": 3180000,
+            "height": 2160,
+            "id": "992001",
+            "selected": true,
+            "videoCodec": "hevc",
+            "videoFrameRate": "24p",
+            "videoProfile": "main 10",
+            "videoResolution": "4k",
+            "width": 3840,
+            "Part": [
+              {
+                "container": "mkv",
+                "duration": 3180000,
+                "file": "/mnt/tank/media/tv/Severance/Season 01/Severance - S01E04.mkv",
+                "id": "1002314",
+                "key": "/library/parts/1002314/1706100000/file.mkv",
+                "size": 9741002311,
+                "decision": "transcode",
+                "videoProfile": "main 10"
+              }
+            ]
+          }
+        ],
+        "User": {
+          "id": "1",
+          "thumb": "https://plex.tv/users/2f1a0b9c8d7e6f5a/avatar?c=1735689600",
+          "title": "matt"
+        },
+        "Player": {
+          "address": "10.8.0.6",
+          "device": "Windows",
+          "machineIdentifier": "1a2b3c4d5e6f7a8b9c0d1e2f",
+          "model": "bundled",
+          "platform": "Chrome",
+          "platformVersion": "126.0",
+          "product": "Plex Web",
+          "profile": "Web",
+          "state": "playing",
+          "title": "Chrome",
+          "version": "4.131.1",
+          "local": false,
+          "relayed": false,
+          "secure": true,
+          "userID": 1
+        },
+        "Session": {
+          "id": "sxk1p2yfk3qz8b7n",
+          "bandwidth": 12000,
+          "location": "wan"
+        },
+        "TranscodeSession": {
+          "key": "/transcode/sessions/sxk1p2yfk3qz8b7n",
+          "throttled": false,
+          "complete": false,
+          "progress": 12.5,
+          "size": -22,
+          "speed": 0.8,
+          "error": false,
+          "duration": 3180000,
+          "remaining": 2100,
+          "context": "streaming",
+          "sourceVideoCodec": "hevc",
+          "sourceAudioCodec": "truehd",
+          "videoDecision": "transcode",
+          "audioDecision": "transcode",
+          "subtitleDecision": "burn",
+          "protocol": "dash",
+          "container": "mp4",
+          "videoCodec": "h264",
+          "audioCodec": "aac",
+          "audioChannels": 2,
+          "transcodeHwRequested": true,
+          "transcodeHwEncoding": false,
+          "timeStamp": 1718220100.5,
+          "maxOffsetAvailable": 1300.5,
+          "minOffsetAvailable": 0
+        }
+      }
+    ]
+  }
+}

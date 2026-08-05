@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/api/base_arr_service.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/app_empty_state.dart';
 import 'package:seekarr/core/widgets/app_error_state.dart';
 import 'package:seekarr/core/widgets/app_skeleton.dart';
@@ -55,12 +56,19 @@ Future<void> runWantedAutoSearch(
     }
 
     if (!context.mounted) return;
-    SnackBarHelper.success(context, 'Search started');
+    // "<Service> is searching <what>" — the one shape every detail page uses.
+    // This surface is one tap from those pages and used to answer a search with
+    // a bare "Search started", which named neither the actor nor the scope.
+    SnackBarHelper.success(
+      context,
+      '${_serviceName(serviceType)} is searching ${_scopeLabel(serviceType)}',
+    );
   } catch (error) {
     if (!context.mounted) return;
     SnackBarHelper.error(
       context,
-      'Could not start the search. The service may be unreachable.',
+      "Couldn't start a search in ${_serviceName(serviceType)}.",
+      detail: error,
     );
   }
 }
@@ -75,9 +83,13 @@ Future<void> showWantedInteractiveSearch(
   final itemId = extractWantedItemId(serviceType, item);
   if (itemId == null) return;
 
-  final sheetTitle =
-      title ??
-      'Releases for ${stringOrNull(item['title']) ?? _fallbackLabel(serviceType)}';
+  // The sheet heads itself "Releases" and this string lands in its subtitle, so
+  // "Releases for X" printed the word twice. Capped for the same reason the
+  // detail screens cap it: the subtitle is where an untrusted service title
+  // lands, and a 200-character one grows the header until it eats the list.
+  final sheetTitle = truncateTitle(
+    title ?? stringOrNull(item['title']) ?? _fallbackLabel(serviceType),
+  );
 
   final ReleaseFetcher? fetchReleases = switch (serviceType) {
     ServiceType.movies => (token) => (service as RadarrService).getReleases(
@@ -119,6 +131,26 @@ String _fallbackLabel(ServiceType serviceType) {
     ServiceType.series => 'Episode',
     ServiceType.music => 'Album',
     ServiceType.discover => 'Item',
+  };
+}
+
+/// The service that will actually do the work, named in its own confirmation.
+String _serviceName(ServiceType serviceType) {
+  return switch (serviceType) {
+    ServiceType.movies => ServiceKey.radarr.title,
+    ServiceType.series => ServiceKey.sonarr.title,
+    ServiceType.music => ServiceKey.lidarr.title,
+    ServiceType.discover => ServiceKey.seerr.title,
+  };
+}
+
+/// What the search covers, in the words the detail pages use.
+String _scopeLabel(ServiceType serviceType) {
+  return switch (serviceType) {
+    ServiceType.movies => 'for this movie',
+    ServiceType.series => 'this episode',
+    ServiceType.music => 'this album',
+    ServiceType.discover => 'this title',
   };
 }
 

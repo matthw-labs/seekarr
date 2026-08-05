@@ -13,12 +13,33 @@ import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/features/services/domain/recently_added.dart';
 import 'package:seekarr/features/services/domain/service_signal.dart';
 import 'package:seekarr/features/services/domain/service_summary.dart';
+import 'package:seekarr/features/services/domain/services_semantics.dart';
 import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
+import 'package:seekarr/features/services/presentation/service_matrix_collapse_provider.dart';
+import 'package:seekarr/features/services/presentation/services_alert_band.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/services/presentation/services_screen.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
+
+/// How many services the more-services hint has left to offer, derived rather
+/// than written down.
+///
+/// [_providerOverrides] configures four, so the remainder tracks the registry.
+/// This was a literal — "Set up 9 more services", asserted in eight places — and
+/// it rotted the moment the Stream domain took `ServiceKey` from thirteen
+/// entries to fifteen. Deriving it means the next service to land changes this
+/// file not at all, and the strings come from the same
+/// [servicesUnconfiguredCellLabel] the widget calls, so a copy change cannot
+/// pass here and fail on screen.
+final int _unconfiguredServiceCount = ServiceKey.values.length - 4;
+final String _moreServicesLabel = servicesUnconfiguredCellLabel(
+  count: _unconfiguredServiceCount,
+);
+final String _dismissMoreServicesTooltip = servicesDismissMoreServicesLabel(
+  count: _unconfiguredServiceCount,
+);
 
 void main() {
   testWidgets('renders the stack matrix and every region in order', (
@@ -35,29 +56,56 @@ void main() {
       expect(find.text(title), findsWidgets);
     }
 
-    // The live line: a figure and its label, per service — the thing the old
-    // card spent on a static library total.
-    // One text run with two spans, not a figure and a word in a `Row` — so they
-    // cannot be found separately, which is exactly what stops the pair from
-    // eliding the word away while the number sits in half an empty cell.
+    // The matrix opens folded, and a folded card paints no figure at all —
+    // just the name and a connection dot. What survives the fold is the band
+    // header's rollup: one attention figure (the first among its services) and
+    // the down count, so a closed band never swallows its news entirely.
+    // Radarr's "12 missing" is second in line and stays covered until the
+    // band opens.
+    expect(
+      find.textContaining('3 pending', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.textContaining('1 down', findRichText: true), findsOneWidget);
+    expect(find.textContaining('missing', findRichText: true), findsNothing);
+
+    // Reachability on a folded card is a coloured dot, not a state word —
+    // there is no tier left on a 36pt row to paint "Offline" on. It is still
+    // never colour alone: the dot is reinforcement over `serviceSummaryProvider`
+    // and the same fact is in the alert band and in the spoken value.
+    expect(find.text('Offline'), findsNothing);
+    expect(find.text('MISSING'), findsNothing);
+    expect(find.text('ONLINE'), findsNothing);
+
+    // Nine of thirteen unconfigured, offered once rather than as nine dimmed
+    // cells — and named with the verb, since a bare count reads as a truncated
+    // list rather than as somewhere to go.
+    expect(find.text(_moreServicesLabel), findsOneWidget);
+  });
+
+  testWidgets('an expanded card paints the figure, the host and the state', (
+    tester,
+  ) async {
+    // What compact drops. Covered separately from the default render above
+    // because the matrix opens folded and none of this paints there.
+    await _pumpServices(tester, expandedDomains: const ['media']);
+    await _pumpDashboard(tester);
+
     expect(find.textContaining('3 pending', findRichText: true), findsWidgets);
     expect(find.textContaining('12 missing', findRichText: true), findsWidgets);
+    expect(find.text('radarr.local:7878'), findsOneWidget);
 
     // Set in plain body, not the eyebrow. One tracked uppercase overline per
     // cell across a thirteen-cell grid is the "eyebrow everywhere" noise
     // DESIGN.md's Eyebrow Rule exists to prevent.
     expect(find.text('MISSING'), findsNothing);
 
-    // Reachability is a word, never colour alone. 'Online' is not printed: a
-    // live figure can only have come from a service that answered, and the old
-    // card's 'ONLINE' next to a green dot said the same thing twice.
+    // Reachability is a word, never colour alone, on the expanded card.
+    // 'Online' is not printed: a live figure can only have come from a service
+    // that answered, and the old card's 'ONLINE' next to a green dot said the
+    // same thing twice.
     expect(find.text('Offline'), findsWidgets);
     expect(find.text('ONLINE'), findsNothing);
-
-    // Nine of thirteen unconfigured, offered once rather than as nine dimmed
-    // cells — and named with the verb, since a bare count reads as a truncated
-    // list rather than as somewhere to go.
-    expect(find.text('Set up 9 more services'), findsOneWidget);
   });
 
   testWidgets('the matrix never scrolls sideways', (tester) async {
@@ -117,10 +165,14 @@ void main() {
       // band that cried wolf. The old grid had the matching bug in reverse: it
       // fabricated an offline summary while checking, so every card flashed a
       // red border before a single request came back.
+      // Expanded, because "Checking" is a word the expanded card paints — the
+      // compact card carries it as an amber dot instead, which this test
+      // cannot assert on by text.
       await _pumpServices(
         tester,
         summaryBuilder: (ref, service) =>
             Future.delayed(const Duration(seconds: 5), () => _summary(service)),
+        expandedDomains: const ['media'],
       );
       await tester.pump();
 
@@ -131,65 +183,191 @@ void main() {
 
       await tester.pump(const Duration(seconds: 6));
     });
+
+    testWidgets('can be acknowledged, and stays acknowledged', (tester) async {
+      // A notice you cannot silence about a box you knowingly left down is a
+      // permanent banner. Dismissing is scoped to the outage, not to the notice.
+      await _pumpServices(tester);
+      await _pumpDashboard(tester);
+      expect(find.text("Lidarr isn't answering"), findsOneWidget);
+
+      await tester.tap(find.byTooltip("Dismiss: Lidarr isn't answering"));
+      await _pumpDashboard(tester);
+
+      expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
+    });
+  });
+
+  group('acknowledging an outage', () {
+    // Unit-level, because the interesting behaviour is the *scope* of a
+    // dismissal over time, and driving three sequential outage states through
+    // a widget fixture would test the fixture.
+    ProviderContainer container() {
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+      return c;
+    }
+
+    test('an acknowledgement is spent when the service recovers', () {
+      // So the next failure is news again. Persisting it, or keeping it after
+      // recovery, is how a notice about a genuinely broken box goes unsaid.
+      final c = container();
+      final notifier = c.read(dismissedOutagesProvider.notifier);
+
+      notifier.dismiss([ServiceKey.lidarr]);
+      expect(c.read(dismissedOutagesProvider), {ServiceKey.lidarr});
+
+      notifier.retainOnly(const {});
+      expect(c.read(dismissedOutagesProvider), isEmpty);
+    });
+
+    test('it covers the outage it was given for, not the whole band', () {
+      // Dismissing "Lidarr isn't answering" says nothing about Sonarr, so a
+      // later Sonarr failure is still unacknowledged and still raises the band.
+      final c = container();
+      final notifier = c.read(dismissedOutagesProvider.notifier);
+
+      notifier.dismiss([ServiceKey.lidarr]);
+      notifier.retainOnly({ServiceKey.lidarr, ServiceKey.sonarr});
+
+      expect(c.read(dismissedOutagesProvider), {ServiceKey.lidarr});
+    });
   });
 
   group('folding a domain band', () {
-    testWidgets('collapsing takes its cells out of the tree', (tester) async {
-      await _pumpServices(tester);
-      await _pumpDashboard(tester);
-
-      expect(
-        find.byKey(const ValueKey('service-matrix-cell-radarr')),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.text('MEDIA'));
-      await _pumpFold(tester);
-
-      // Removed, not hidden. `CollapsibleDomainSection`'s `AnimatedCrossFade`
-      // keeps both children built, which for this grid would mean a folded band
-      // still watching `serviceSignalProvider` — a library fetch per invisible
-      // cell on every refresh, to paint nothing.
-      expect(
-        find.byKey(const ValueKey('service-matrix-cell-radarr')),
-        findsNothing,
-      );
-      // The strip that replaces them keeps each service's identity mark, so the
-      // fold does not cost the "is anything dark in here" reading.
-      expect(find.byIcon(ServiceKey.radarr.icon), findsWidgets);
-    });
-
-    testWidgets('the header carries its state and what it folded away', (
+    testWidgets('a folded card is one line: the name and a connection dot', (
       tester,
     ) async {
       await _pumpServices(tester);
       await _pumpDashboard(tester);
 
-      // Expanded: the cells speak for themselves, so the header adds no value.
+      // Folded is the default now, and folded is still a card — but the
+      // shortest form this app has: no figure, no host, just what the
+      // service is called and whether it is answering. That is a deliberate
+      // narrowing from the first compact card, which carried the same live
+      // figure the expanded card does and only fit two to a row for it.
+      expect(
+        find.byKey(const ValueKey('service-matrix-cell-radarr')),
+        findsOneWidget,
+      );
+      expect(find.text('Radarr'), findsWidgets);
+      expect(find.textContaining('missing', findRichText: true), findsNothing);
+      expect(find.text('radarr.local:7878'), findsNothing);
+      expect(find.text('Offline'), findsNothing);
+
+      // The connection dot itself: green under Radarr (online), the
+      // surface's error tone under Lidarr (offline) — the same three-state
+      // reachability the expanded card spells out as a word, carried by
+      // colour where a 32pt row has no room for a sentence.
+      expect(
+        _dotColorIn(tester, 'service-matrix-cell-radarr'),
+        AppColors.success,
+      );
+      expect(
+        _dotColorIn(tester, 'service-matrix-cell-lidarr'),
+        Theme.of(tester.element(find.byType(ServicesScreen))).colorScheme.error,
+      );
+    });
+
+    testWidgets('expanding adds the host', (tester) async {
+      await _pumpServices(tester);
+      await _pumpDashboard(tester);
+
+      await tester.tap(find.text('MEDIA'));
+      await _pumpFold(tester);
+
+      expect(find.text('radarr.local:7878'), findsOneWidget);
+      expect(
+        find.textContaining('12 missing', findRichText: true),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('the header carries its state, its size and its rollup', (
+      tester,
+    ) async {
+      await _pumpServices(tester);
+      await _pumpDashboard(tester);
+
+      // Folded, the header speaks the band's rollup too — the figure and the
+      // down count its cards can no longer paint. Seerr's "3 pending" is the
+      // first attention signal in the band; Lidarr is the one service down.
       expect(
         tester.getSemantics(find.bySemanticsLabel('Media')),
-        containsSemantics(label: 'Media', isButton: true, isExpanded: true),
+        containsSemantics(
+          label: 'Media',
+          value: '4 services, 3 pending, 1 down',
+          isButton: true,
+          isExpanded: false,
+        ),
       );
 
       await tester.tap(find.text('MEDIA'));
       await _pumpFold(tester);
 
-      // Folded: the unlit tiles in the strip are invisible to a screen reader,
-      // so the health they carry moves onto the header instead.
+      // Open, the rollup hands off to the cards and the value drops back to
+      // the count — the expanded cells announce their own figures, so saying
+      // them twice would be noise.
       expect(
         tester.getSemantics(find.bySemanticsLabel('Media')),
         containsSemantics(
           label: 'Media',
-          value: "4 services, Lidarr isn't answering",
+          value: '4 services',
           isButton: true,
-          isExpanded: false,
+          isExpanded: true,
         ),
       );
     });
 
-    testWidgets('a stored fold arrives collapsed', (tester) async {
+    testWidgets('a stored expansion arrives open', (tester) async {
       // Persisted, not per-visit: a fold that springs back on every cold open is
       // a control you press once and never trust again.
+      SharedPreferences.setMockInitialValues({
+        'services_expanded_domains': ['media'],
+      });
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._providerOverrides(),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MaterialApp(home: ServicesScreen()),
+        ),
+      );
+      await _pumpDashboard(tester);
+
+      expect(find.text('radarr.local:7878'), findsOneWidget);
+    });
+
+    testWidgets('everything is folded by default', (tester) async {
+      // The inverse of what shipped before. A folded band is no longer a hidden
+      // band, so the hub can open short and let the user pull open the third of
+      // the stack they actually watch.
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._providerOverrides(),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MaterialApp(home: ServicesScreen()),
+        ),
+      );
+      await _pumpDashboard(tester);
+
+      expect(find.text('MEDIA'), findsOneWidget);
+      expect(find.text('radarr.local:7878'), findsNothing);
+    });
+
+    testWidgets('a stale collapse list from the old key is ignored', (
+      tester,
+    ) async {
+      // The polarity flipped. Reading the old set would fold open exactly the
+      // bands the user had shut, which is worse than starting from the default.
       SharedPreferences.setMockInitialValues({
         'services_collapsed_domains': ['media'],
       });
@@ -206,17 +384,222 @@ void main() {
       );
       await _pumpDashboard(tester);
 
-      expect(find.text('MEDIA'), findsOneWidget);
+      expect(find.text('radarr.local:7878'), findsNothing);
+    });
+  });
+
+  group('the fold demo', () {
+    // The matrix opens folded, so nothing on screen says the cards get
+    // taller. Once per launch, the first band demonstrates it in reverse: it
+    // mounts open and folds itself shut with the real close animation, so
+    // the expanded state is shown existing and the default is what remains.
+    Future<SharedPreferences> prefsWith(Map<String, Object> values) async {
+      SharedPreferences.setMockInitialValues(values);
+      return SharedPreferences.getInstance();
+    }
+
+    Widget app(
+      SharedPreferences prefs, {
+      bool reduceMotion = false,
+      bool demoPlayed = false,
+      bool show = true,
+    }) => ProviderScope(
+      overrides: [
+        ..._providerOverrides(demoPlayed: demoPlayed),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: MediaQuery(
+        data: MediaQueryData(disableAnimations: reduceMotion),
+        child: MaterialApp(
+          home: show ? const ServicesScreen() : const SizedBox.shrink(),
+        ),
+      ),
+    );
+
+    // How much room the Media band occupies, measured from its own header
+    // down to the next thing on the page.
+    double bandExtent(WidgetTester tester) =>
+        tester.getTopLeft(find.text(_moreServicesLabel)).dy -
+        tester.getTopLeft(find.text('MEDIA')).dy;
+
+    Future<void> pumpFor(WidgetTester tester, Duration total) async {
+      const step = Duration(milliseconds: 50);
+      for (var spent = Duration.zero; spent < total; spent += step) {
+        await tester.pump(step);
+      }
+    }
+
+    // Past the demo entirely: the 1100ms hold plus the close animation.
+    Future<void> pumpPastDemo(WidgetTester tester) =>
+        pumpFor(tester, const Duration(milliseconds: 1800));
+
+    testWidgets('starts open and folds itself shut', (tester) async {
+      final prefs = await prefsWith({});
+
+      await tester.pumpWidget(app(prefs));
+      await _pumpDashboard(tester);
+      final held = bandExtent(tester);
+
+      await pumpPastDemo(tester);
+      final folded = bandExtent(tester);
+
       expect(
-        find.byKey(const ValueKey('service-matrix-cell-radarr')),
-        findsNothing,
+        held,
+        greaterThan(folded),
+        reason:
+            'the band should mount at its expanded size and settle folded — '
+            'the demo is the real close animation, not a partial growth',
       );
     });
 
-    testWidgets('nothing is folded by default', (tester) async {
-      // Compaction is opt-in. A hub that arrives folded shut hides the one thing
-      // the screen exists to show.
+    testWidgets('plays once per launch, not once per landing', (tester) async {
+      final prefs = await prefsWith({});
+
+      await tester.pumpWidget(app(prefs));
+      await _pumpDashboard(tester);
+      await pumpPastDemo(tester);
+      final folded = bandExtent(tester);
+
+      // Leave the tab and come back: the screen remounts under the same
+      // ProviderScope, exactly as the ShellRoute remounts it in the app.
+      await tester.pumpWidget(app(prefs, show: false));
+      await tester.pumpWidget(app(prefs));
+      await _pumpDashboard(tester);
+
+      expect(
+        bandExtent(tester),
+        folded,
+        reason: 'a second landing in the same launch starts settled',
+      );
+      await pumpFor(tester, const Duration(milliseconds: 700));
+      expect(bandExtent(tester), folded);
+    });
+
+    testWidgets('a rebuild mid-demo does not restart it', (tester) async {
+      // The guard is on the mount, not the lifetime: a pull-to-refresh or a
+      // summary arriving must not rewind the fold.
+      final prefs = await prefsWith({});
+
+      await tester.pumpWidget(app(prefs));
+      await _pumpDashboard(tester);
+      await pumpPastDemo(tester);
+      final settled = bandExtent(tester);
+
+      await tester.pumpWidget(app(prefs));
+      await pumpFor(tester, const Duration(milliseconds: 700));
+      expect(bandExtent(tester), settled);
+    });
+
+    testWidgets('the first touch folds it early', (tester) async {
+      // A control still moving while the user reaches for it is worse than
+      // one that never moved: any touch in the band ends the hold and folds
+      // now.
+      final prefs = await prefsWith({});
+
+      await tester.pumpWidget(app(prefs));
+      await _pumpDashboard(tester);
+      final held = bandExtent(tester);
+
+      // Well inside the 1100ms hold. The touch lands on the header, and its
+      // tap must NOT toggle the persisted state — pointer-down only ends the
+      // demo. Use a bare pointer down/up away from any control.
+      await pumpFor(tester, const Duration(milliseconds: 200));
+      final gesture = await tester.startGesture(
+        tester.getCenter(
+          find.byKey(const ValueKey('service-matrix-cell-radarr')),
+        ),
+      );
+      await gesture.cancel();
+
+      await pumpFor(tester, const Duration(milliseconds: 500));
+      expect(
+        bandExtent(tester),
+        lessThan(held),
+        reason: 'a touch during the hold starts the fold immediately',
+      );
+    });
+
+    testWidgets('does not play under Reduce Motion', (tester) async {
+      // Degrading to an instant state rather than a slower animation is the
+      // Reduce Motion Rule, and a teaching animation is decoration by
+      // definition — it carries nothing the layout does not already say.
+      final prefs = await prefsWith({});
+
+      await tester.pumpWidget(app(prefs, reduceMotion: true));
+      await _pumpDashboard(tester);
+      final folded = bandExtent(tester);
+      await pumpFor(tester, const Duration(milliseconds: 700));
+
+      expect(bandExtent(tester), folded);
+    });
+
+    testWidgets('does not play on a band that is already open', (tester) async {
+      // Nothing to demonstrate: the band is open, and folding it shut would
+      // discard the user's own persisted choice for a demonstration.
+      final prefs = await prefsWith({
+        'services_expanded_domains': ['media'],
+      });
+
+      await tester.pumpWidget(app(prefs));
+      await _pumpDashboard(tester);
+      final open = bandExtent(tester);
+      await pumpFor(tester, const Duration(milliseconds: 1800));
+
+      expect(bandExtent(tester), open);
+    });
+
+    testWidgets('does not play when it already played this launch', (
+      tester,
+    ) async {
+      final prefs = await prefsWith({});
+
+      await tester.pumpWidget(app(prefs, demoPlayed: true));
+      await _pumpDashboard(tester);
+      final folded = bandExtent(tester);
+      await pumpFor(tester, const Duration(milliseconds: 700));
+
+      expect(bandExtent(tester), folded);
+    });
+  });
+
+  group('the more-services hint', () {
+    testWidgets('dismisses, and stays dismissed', (tester) async {
       SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      Widget app() => ProviderScope(
+        overrides: [
+          ..._providerOverrides(),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: const MaterialApp(home: ServicesScreen()),
+      );
+
+      await tester.pumpWidget(app());
+      await _pumpDashboard(tester);
+      expect(find.text(_moreServicesLabel), findsOneWidget);
+
+      // By tooltip, which is the button's own accessible name — the semantics
+      // node it produces is not the tappable widget.
+      await tester.tap(find.byTooltip(_dismissMoreServicesTooltip));
+      await _pumpFold(tester);
+      expect(find.text(_moreServicesLabel), findsNothing);
+
+      // Persisted, not per-visit. A nudge you have to decline once per launch
+      // is not a nudge.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(app());
+      await _pumpDashboard(tester);
+      expect(find.text(_moreServicesLabel), findsNothing);
+    });
+
+    testWidgets('comes back if the registry grows past the dismissed count', (
+      tester,
+    ) async {
+      // Dismissing said "not these nine". A release that adds a fourteenth
+      // service is a different statement, and worth one line to make once.
+      SharedPreferences.setMockInitialValues({
+        'services_more_services_dismissed_at': 8,
+      });
       final prefs = await SharedPreferences.getInstance();
 
       await tester.pumpWidget(
@@ -230,10 +613,7 @@ void main() {
       );
       await _pumpDashboard(tester);
 
-      expect(
-        find.byKey(const ValueKey('service-matrix-cell-radarr')),
-        findsOneWidget,
-      );
+      expect(find.text(_moreServicesLabel), findsOneWidget);
     });
   });
 
@@ -275,20 +655,26 @@ void main() {
       expect(find.semantics.byValue('missing'), findsNothing);
     });
 
-    testWidgets('the unconfigured cell names where it goes', (tester) async {
+    testWidgets('the more-services hint is two separate controls', (
+      tester,
+    ) async {
       await _pumpServices(tester);
       await _pumpDashboard(tester);
 
+      // Navigating and dismissing sit on one line and do opposite things, so
+      // they have to be two nodes with two names. A single row labelled "Set up
+      // 9 more services" with an unnamed × inside it is a coin flip.
       expect(
-        tester.getSemantics(
-          find.byKey(const ValueKey('services-unconfigured-cell')),
-        ),
+        tester.getSemantics(find.bySemanticsLabel(_moreServicesLabel)),
         containsSemantics(
-          label: 'Set up 9 more services',
+          label: _moreServicesLabel,
           isButton: true,
           hasTapAction: true,
         ),
       );
+      // `byTooltip`, which is how the rest of the suite asserts on icon-only
+      // buttons: the tooltip is this button's accessible name.
+      expect(find.byTooltip(_dismissMoreServicesTooltip), findsOneWidget);
     });
 
     testWidgets('a download row announces progress with the row', (
@@ -513,9 +899,19 @@ void main() {
       // Light is not an inverted afterthought, and it is where a tone-coloured
       // figure goes wrong: the saturated amber measures about 2:1 on a light
       // card, which is why the live line resolves through `ServiceTheme.onTint`.
+      // Media expanded so the figure this test checks is actually painted —
+      // the matrix opens folded, and a folded card carries no figure at all.
+      SharedPreferences.setMockInitialValues({
+        'services_expanded_domains': ['media'],
+      });
+      final prefs = await SharedPreferences.getInstance();
+
       await tester.pumpWidget(
         ProviderScope(
-          overrides: _providerOverrides(),
+          overrides: [
+            ..._providerOverrides(),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
           child: MaterialApp(
             theme: AppTheme.lightTheme(),
             home: const ServicesScreen(),
@@ -686,16 +1082,31 @@ Future<void> _pumpServices(
   Future<ServiceSummary> Function(Ref ref, ServiceKey service)? summaryBuilder,
   Future<List<RecentlyAddedItem>> Function(Ref ref)? recentlyAddedBuilder,
   SettingsModel? settings,
+  // The matrix opens folded by default, so a test that needs the expanded
+  // card's host and figure — text a compact card no longer paints at all —
+  // has to ask for a band open explicitly rather than relying on the old
+  // all-expanded default.
+  List<String>? expandedDomains,
 }) async {
+  final overrides = _providerOverrides(
+    queueBuilder: queueBuilder,
+    requestsBuilder: requestsBuilder,
+    summaryBuilder: summaryBuilder,
+    recentlyAddedBuilder: recentlyAddedBuilder,
+    settings: settings,
+  );
+
+  if (expandedDomains != null) {
+    SharedPreferences.setMockInitialValues({
+      'services_expanded_domains': expandedDomains,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    overrides.add(sharedPreferencesProvider.overrideWithValue(prefs));
+  }
+
   await tester.pumpWidget(
     ProviderScope(
-      overrides: _providerOverrides(
-        queueBuilder: queueBuilder,
-        requestsBuilder: requestsBuilder,
-        summaryBuilder: summaryBuilder,
-        recentlyAddedBuilder: recentlyAddedBuilder,
-        settings: settings,
-      ),
+      overrides: overrides,
       child: const MaterialApp(home: ServicesScreen()),
     ),
   );
@@ -711,6 +1122,26 @@ Future<void> _pumpFold(WidgetTester tester) async {
 Future<void> _pumpDashboard(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
+}
+
+/// The colour of the small circular reachability dot inside the cell keyed
+/// [cellKey]. Matches on the `Container` itself rather than a widget type,
+/// since the dot has no public class of its own — it is private to
+/// `service_matrix.dart`, on purpose: it is anatomy of that one screen, not a
+/// reusable component.
+Color _dotColorIn(WidgetTester tester, String cellKey) {
+  final dot = tester.widget<Container>(
+    find.descendant(
+      of: find.byKey(ValueKey(cellKey)),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration! as BoxDecoration).shape == BoxShape.circle,
+      ),
+    ),
+  );
+  return ((dot.decoration! as BoxDecoration).color)!;
 }
 
 Future<void> _scrollTo(WidgetTester tester, Finder target) {
@@ -751,14 +1182,25 @@ const _resolvedRequest = SeerrRequest(
   requestedBy: RequestedBy(id: 1, displayName: 'sarah'),
 );
 
+/// Marks the launch fold demo as already played, so the matrix under test
+/// starts settled. Tests that exercise the demo itself pass `demoPlayed: false`
+/// to [_providerOverrides].
+class _DemoAlreadyPlayed extends ServicesFoldDemoPlayedNotifier {
+  @override
+  bool build() => true;
+}
+
 List<Override> _providerOverrides({
   Future<List<ServiceQueueItem>> Function(Ref ref)? queueBuilder,
   Future<List<SeerrRequest>> Function(Ref ref)? requestsBuilder,
   Future<ServiceSummary> Function(Ref ref, ServiceKey service)? summaryBuilder,
   Future<List<RecentlyAddedItem>> Function(Ref ref)? recentlyAddedBuilder,
   SettingsModel? settings,
+  bool demoPlayed = true,
 }) {
   return [
+    if (demoPlayed)
+      servicesFoldDemoPlayedProvider.overrideWith(_DemoAlreadyPlayed.new),
     currentSettingsProvider.overrideWith(
       (ref) =>
           settings ??

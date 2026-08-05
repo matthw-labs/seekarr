@@ -1,0 +1,62 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "totalSize": 137,
+    "offset": 136,
+    "allowSync": true,
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": 1,
+    "librarySectionTitle": "Movies",
+    "nocache": true,
+    "title1": "Movies",
+    "title2": "All Movies",
+    "viewGroup": "movie",
+    "Metadata": [
+      {
+        "addedAt": 1688000000,
+        "art": "/library/metadata/21877/art/1740000000",
+        "contentRating": "PG",
+        "duration": 5460000,
+        "guid": "plex://movie/5d7768264de0ee001fcc8d0f",
+        "key": "/library/metadata/21877",
+        "librarySectionID": 1,
+        "librarySectionKey": "/library/sections/1",
+        "librarySectionTitle": "Movies",
+        "originallyAvailableAt": "1988-04-16",
+        "ratingKey": "21877",
+        "studio": "Studio Ghibli",
+        "summary": "Two sisters move to the countryside and meet friendly spirits.",
+        "thumb": "/library/metadata/21877/thumb/1740000000",
+        "title": "My Neighbor Totoro",
+        "titleSort": "Neighbor Totoro",
+        "type": "movie",
+        "updatedAt": 1740000000,
+        "year": 1988,
+        "Media": [
+          {
+            "audioChannels": 2,
+            "audioCodec": "flac",
+            "bitrate": 9800,
+            "container": "mkv",
+            "duration": 5460000,
+            "height": 1080,
+            "id": "70998",
+            "videoCodec": "h264",
+            "videoResolution": "1080",
+            "width": 1920,
+            "Part": [
+              {
+                "container": "mkv",
+                "duration": 5460000,
+                "file": "/mnt/tank/media/movies/My Neighbor Totoro (1988)/Totoro.1988.1080p.mkv",
+                "id": "71098",
+                "key": "/library/parts/71098/1688000000/file.mkv",
+                "size": 6712004221
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

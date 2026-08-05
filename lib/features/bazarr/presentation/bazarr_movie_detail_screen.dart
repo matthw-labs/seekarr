@@ -1,462 +1,231 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/route_utils.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
+import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:seekarr/features/bazarr/presentation/bazarr_detail_view_model.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:seekarr/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
+/// Bazarr movie subtitle detail, on the shared media-detail scaffold.
 class BazarrMovieDetailScreen extends ConsumerWidget {
   const BazarrMovieDetailScreen({
     super.key,
     required this.radarrId,
-    this.heroTag,
     this.initialWanted,
   });
 
   final int radarrId;
-  final String? heroTag;
   final BazarrWantedItem? initialWanted;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
-    final isConfigured = settings.isServiceConfigured(ServiceKey.bazarr);
+    if (!settings.isServiceConfigured(ServiceKey.bazarr)) {
+      return const BazarrDetailErrorState(error: 'Bazarr is not configured');
+    }
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.bazarr.withValues(alpha: 0.12),
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded),
-          onPressed: () =>
-              RouteUtils.popOrGo(context, ServiceRoutes.bazarrLibrary),
-          tooltip: 'Back',
-        ),
-        title: const Text('Movie'),
-      ),
-      body: isConfigured
-          ? _BazarrMovieDetailBody(
-              radarrId: radarrId,
-              initialWanted: initialWanted,
-            )
-          : Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Text(
-                  'Bazarr is not configured yet.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-    );
-  }
-}
-
-class _BazarrMovieDetailBody extends ConsumerWidget {
-  const _BazarrMovieDetailBody({
-    required this.radarrId,
-    required this.initialWanted,
-  });
-
-  final int radarrId;
-  final BazarrWantedItem? initialWanted;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
     final movieAsync = ref.watch(bazarrMovieByIdProvider(radarrId));
     final wantedAsync = ref.watch(bazarrWantedMovieByIdProvider(radarrId));
+    final movie = movieAsync.asData?.value;
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(bazarrMovieByIdProvider(radarrId));
-        ref.invalidate(bazarrWantedMovieByIdProvider(radarrId));
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          movieAsync.when(
-            data: (movie) {
-              if (movie == null && initialWanted == null) {
-                return _DetailMessage(
-                  icon: Icons.movie_filter_rounded,
-                  label: 'Movie not found in Bazarr.',
-                );
-              }
-              return _MovieHeader(movie: movie, fallback: initialWanted);
-            },
-            loading: () => const _HeaderShimmer(),
-            error: (error, _) => _DetailError(
-              message: 'Failed to load movie: $error',
-              onRetry: () => ref.invalidate(bazarrMovieByIdProvider(radarrId)),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          const _SectionTitle('Missing Subtitles'),
-          wantedAsync.when(
-            data: (item) {
-              if (item == null) {
-                return const _DetailMessage(
-                  icon: Icons.check_circle_outline_rounded,
-                  label: 'No missing subtitles. All languages covered!',
-                  color: AppColors.success,
-                );
-              }
-              return _MissingMovieLanguages(item: item);
-            },
-            loading: () => const _LanguagesShimmer(),
-            error: (error, _) => _DetailError(
-              message: 'Failed to load missing subtitles: $error',
-              onRetry: () =>
-                  ref.invalidate(bazarrWantedMovieByIdProvider(radarrId)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+    // Declared above the early returns so the failure and not-found states can
+    // offer the same recovery the loaded page offers.
+    void refresh() {
+      ref.invalidate(bazarrMovieByIdProvider(radarrId));
+      ref.invalidate(bazarrWantedMovieByIdProvider(radarrId));
+    }
 
-class _MovieHeader extends StatelessWidget {
-  const _MovieHeader({required this.movie, required this.fallback});
-
-  final BazarrMovie? movie;
-  final BazarrWantedItem? fallback;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final title = movie?.title ?? fallback?.title ?? 'Unknown movie';
-    final year = movie?.year;
-    final monitored = movie?.monitored ?? false;
-    final missing = movie?.missingSubtitlesCount ?? 0;
-    final langs = movie?.profileId != null
-        ? 'Profile #${movie!.profileId}'
-        : null;
-    final tags = movie?.tags ?? const <String>[];
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.bazarr.withValues(alpha: 0.12),
-                  borderRadius: AppRadius.borderRadiusSm,
-                ),
-                alignment: Alignment.center,
-                child: const Text('🎬', style: TextStyle(fontSize: 22)),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (year != null)
-                      Text(
-                        'Year: $year',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: monitored
-                      ? AppColors.success.withValues(alpha: 0.12)
-                      : colorScheme.surfaceContainerHighest,
-                  borderRadius: AppRadius.borderRadiusSm,
-                ),
-                child: Text(
-                  monitored ? 'MONITORED' : 'UNMONITORED',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: monitored
-                        ? AppColors.success
-                        : colorScheme.onSurfaceVariant,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            children: [
-              _MetaBadge(label: 'Missing: $missing', accent: AppColors.bazarr),
-              if (langs != null) _MetaBadge(label: langs, accent: null),
-              ...tags.take(4).map((t) => _MetaBadge(label: t, accent: null)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MissingMovieLanguages extends StatelessWidget {
-  const _MissingMovieLanguages({required this.item});
-
-  final BazarrWantedItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final langs = item.missingLanguages;
-    if (langs.isEmpty) {
-      return _DetailMessage(
-        icon: Icons.language_rounded,
-        label: 'No language data available.',
-        color: colorScheme.onSurfaceVariant,
+    if (movie == null && initialWanted == null) {
+      if (movieAsync.isLoading) {
+        return MediaDetailLoadingView(
+          accent: ServiceKey.bazarr.accent,
+          heroFallbackIcon: Icons.subtitles_outlined,
+        );
+      }
+      if (movieAsync.hasError) {
+        return BazarrDetailErrorState(
+          error: movieAsync.error!,
+          onRetry: refresh,
+        );
+      }
+      // Bazarr learns about a movie on its next Radarr sync, so "not here yet"
+      // is a state a retry can genuinely resolve.
+      return BazarrDetailNotFoundState(
+        icon: Icons.movie_filter_rounded,
+        title: 'Movie not found in Bazarr',
+        onRetry: refresh,
       );
     }
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: langs
-          .map(
-            (lang) => Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.bazarr.withValues(alpha: 0.12),
-                borderRadius: AppRadius.borderRadiusSm,
-                border: Border.all(
-                  color: AppColors.bazarr.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    (lang.code2 ?? lang.name ?? '?').toUpperCase(),
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.bazarr,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                  if (lang.name != null && lang.code2 != null)
-                    Text(
-                      lang.name!,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  if (lang.forced || lang.hi)
-                    Text(
-                      [
-                        if (lang.forced) 'forced',
-                        if (lang.hi) 'hi',
-                      ].join(' · '),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
+
+    final viewModel = BazarrDetailViewModel.forMovie(movie, initialWanted);
+    final accent = ServiceKey.bazarr.accent;
+    final missing = viewModel.missing;
+
+    return MediaDetailView(
+      accent: accent,
+      title: viewModel.title,
+      // Bazarr has no artwork of its own, so the fallback glyph is the hero's
+      // only art and it must be Bazarr's, not a film reel.
+      heroFallbackIcon: Icons.subtitles_outlined,
+      // The spine owns the indicator, the always-scrollable physics and the
+      // reconciliation with the hero's overscroll stretch, so this screen no
+      // longer wraps its own.
+      onRefresh: () async => refresh(),
+      posterRow: MediaDetailPosterRow(
+        statusBadge: StatusBadge.animated(info: viewModel.status),
+        title: viewModel.title,
+        // Year only: the missing count is the figure plate and the chip below,
+        // so it is not also a third item in the metadata line.
+        metadataItems: [if (movie?.year != null) '${movie!.year}'],
+        tags: [
+          TagChip(
+            text: missing > 0 ? '$missing missing' : 'All covered',
+            color: accent,
+          ),
+        ],
+        // Bazarr has no poster *by definition*, so the 82x123 slot carried a
+        // fake one rendering a film reel. It now carries the page's own figure.
+        posterCard: MediaDetailFigurePlate(
+          value: '$missing',
+          label: 'Missing',
+          accent: accent,
+        ),
+      ),
+      body: MediaDetailBody(
+        // Region 1 wants Bazarr's own promoted action ('Refresh from Bazarr'
+        // while anything is missing). Until a Bazarr action resolver exists the
+        // refresh lives on the section label, where the spine documents a
+        // refresh control as belonging, and on the pull gesture above.
+        // Region 3 — the manifest, and the only question this page exists to
+        // answer. It used to render *after* Details and Tags, because the old
+        // spine emitted every content section before every sliver.
+        operate: [
+          MediaDetailSlot.box(
+            label: 'Missing subtitles',
+            // No count: the hero chip already states the missing figure in
+            // words, and the language pills below are the detail.
+            labelAction: IconButton(
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              // Names the side being re-read. A bare "Refresh" on a page whose
+              // whole subject is what another service has not done yet leaves
+              // the user guessing whether it re-checks Bazarr or asks Bazarr to
+              // go hunting.
+              tooltip: 'Refresh from Bazarr',
+              onPressed: refresh,
+            ),
+            child: wantedAsync.when(
+              data: (item) {
+                if (item == null) {
+                  return const AppEmptyState.compact(
+                    icon: Icons.check_circle_outline_rounded,
+                    title: 'All languages covered',
+                    message: 'No missing subtitles for this movie.',
+                    accentColor: AppColors.success,
+                  );
+                }
+                if (item.missingLanguages.isEmpty) {
+                  // Bazarr filed this movie as wanted but named no languages —
+                  // "No language data available" reported the app's own gap
+                  // rather than the server's, and gave a self-hoster nothing to
+                  // check.
+                  return const AppEmptyState.compact(
+                    icon: Icons.language_rounded,
+                    title: 'No languages listed',
+                    message:
+                        'Bazarr is looking for subtitles here but did not say '
+                        'which languages are missing. Check the language '
+                        'profile on this movie in Bazarr.',
+                  );
+                }
+                return BazarrSubtitleLanguageWrap(
+                  languages: item.missingLanguages,
+                );
+              },
+              loading: () => ShimmerList(itemCount: 2, itemHeight: 56),
+              error: (error, _) => AppErrorState.compact(
+                error: error,
+                serviceName: 'Bazarr',
+                onRetry: () =>
+                    ref.invalidate(bazarrWantedMovieByIdProvider(radarrId)),
               ),
             ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Text(
-        title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-      ),
-    );
-  }
-}
-
-class _MetaBadge extends StatelessWidget {
-  const _MetaBadge({required this.label, required this.accent});
-
-  final String label;
-  final Color? accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final color = accent ?? colorScheme.onSurfaceVariant;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: AppRadius.borderRadiusSm,
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderShimmer extends StatelessWidget {
-  const _HeaderShimmer();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const ShimmerPlaceholder(
-                width: 48,
-                height: 48,
-                borderRadius: null,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    ShimmerPlaceholder(height: 18, borderRadius: null),
-                    SizedBox(height: AppSpacing.xs),
-                    ShimmerPlaceholder(height: 12, borderRadius: null),
-                  ],
-                ),
-              ),
-            ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          const ShimmerPlaceholder(height: 16, borderRadius: null),
+        ],
+        reference: [
+          if (viewModel.facts.isNotEmpty)
+            MediaDetailSlot.box(
+              label: 'Details',
+              child: AppCard.surfaceOutlined(
+                child: MediaFactsList(facts: viewModel.facts),
+              ),
+            ),
+          if (viewModel.tags.isNotEmpty)
+            MediaDetailSlot.box(
+              // The one page in the app where this word is true: these are real
+              // Bazarr tags off the user's server, not genres.
+              label: 'Tags',
+              child: MediaChipSection.accented(
+                values: viewModel.tags,
+                accent: accent,
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
-class _LanguagesShimmer extends StatelessWidget {
-  const _LanguagesShimmer();
+/// Error / not-configured state for the two Bazarr detail screens.
+///
+/// A thin alias over the shared [MediaDetailPlaceholderView] so both screens
+/// name Bazarr and light the room in Bazarr's accent from one place.
+class BazarrDetailErrorState extends StatelessWidget {
+  const BazarrDetailErrorState({super.key, required this.error, this.onRetry});
+
+  final Object error;
+
+  /// Re-runs the failed load in place. Omitted for the not-configured case,
+  /// whose fix is in Settings rather than another request.
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: List.generate(
-        2,
-        (_) => Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: const ShimmerPlaceholder(height: 56, borderRadius: null),
-        ),
-      ),
+    return MediaDetailPlaceholderView.error(
+      error: error,
+      serviceName: 'Bazarr',
+      accent: ServiceKey.bazarr.accent,
+      onRetry: onRetry,
     );
   }
 }
 
-class _DetailMessage extends StatelessWidget {
-  const _DetailMessage({required this.icon, required this.label, this.color});
+/// The looked-up item does not exist in Bazarr — a normal state, not an
+/// error, so it gets the empty-state voice rather than alarm chrome.
+class BazarrDetailNotFoundState extends StatelessWidget {
+  const BazarrDetailNotFoundState({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.onRetry,
+  });
 
   final IconData icon;
-  final String label;
-  final Color? color;
+  final String title;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final tint = color ?? colorScheme.onSurfaceVariant;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-      child: Row(
-        children: [
-          Icon(icon, color: tint),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text(label)),
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailError extends StatelessWidget {
-  const _DetailError({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withValues(alpha: 0.4),
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.error.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline_rounded, color: colorScheme.error),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text(message)),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
-      ),
+    return MediaDetailPlaceholderView.notFound(
+      icon: icon,
+      title: title,
+      message: 'Bazarr picks new titles up on its next sync with the -arrs.',
+      serviceName: 'Bazarr',
+      accent: ServiceKey.bazarr.accent,
+      onRetry: onRetry,
     );
   }
 }

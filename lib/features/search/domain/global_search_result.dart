@@ -11,6 +11,14 @@ class GlobalSearchResult {
   final String route;
   final Object? routeExtra;
 
+  /// Shared-element tag for this result's poster, already stamped into [route]
+  /// so the flight has a matching destination on the detail page.
+  ///
+  /// Stored rather than derived from `service` + `id`: within one service a
+  /// movie and a series can carry the same id, so the builder that knows which
+  /// kind this is also owns making the tag unique.
+  final String heroTag;
+
   const GlobalSearchResult({
     required this.service,
     required this.id,
@@ -20,8 +28,16 @@ class GlobalSearchResult {
     required this.imageHeaders,
     required this.tags,
     required this.route,
+    required this.heroTag,
     this.routeExtra,
   });
+
+  /// Whether this result has artwork worth flying.
+  ///
+  /// Bazarr's API carries no poster, so its rows would otherwise fly an empty
+  /// grey box into the detail page's fallback glyph — motion with nothing to
+  /// follow. Same rule the Recently Added rail applies.
+  bool get canFlyPoster => imageUrl.isNotEmpty;
 }
 
 class GlobalSearchServiceResults {

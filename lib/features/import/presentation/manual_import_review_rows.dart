@@ -4,6 +4,7 @@ import 'package:seekarr/core/app_animation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/import/domain/manual_import_display.dart';
 import 'package:seekarr/features/import/domain/manual_import_models.dart';
@@ -148,15 +149,16 @@ class IdentityCodeChip extends StatelessWidget {
       ),
       child: Text(
         code,
-        style: theme.textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: ServiceTheme.onTint(
-            accent,
-            surface: theme.colorScheme.surface,
-            tintAlpha: 0.14,
-          ),
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
+        style: theme.textTheme.labelSmall!
+            .weight(FontWeight.w700)
+            .tabular
+            .copyWith(
+              color: ServiceTheme.onTint(
+                accent,
+                surface: theme.colorScheme.surface,
+                tintAlpha: 0.14,
+              ),
+            ),
       ),
     );
   }
@@ -268,8 +270,8 @@ class ReadyGroupHeader extends StatelessWidget {
                               title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
+                              style: theme.textTheme.titleSmall!.weight(
+                                FontWeight.w700,
                               ),
                             ),
                             Text(
@@ -282,9 +284,11 @@ class ReadyGroupHeader extends StatelessWidget {
                               ].join(' · '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              // The selected count changes as rows are ticked.
+                              style: theme.textTheme.labelSmall!.tabular
+                                  .copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
                             ),
                           ],
                         ),
@@ -393,12 +397,14 @@ class MatchedFileRow extends StatelessWidget {
     final dimStyle = theme.textTheme.labelSmall?.copyWith(
       color: colorScheme.onSurfaceVariant,
     );
-    final strongStyle = theme.textTheme.titleSmall?.copyWith(
-      fontWeight: FontWeight.w600,
-      // Handled files recede a step in ink as well as in surface; a re-import
-      // has been promoted back into the batch, so it comes forward again.
-      color: imported && !reimporting ? colorScheme.onSurfaceVariant : null,
-    );
+    final strongStyle = theme.textTheme.titleSmall!
+        .weight(FontWeight.w600)
+        .copyWith(
+          // Handled files recede a step in ink as well as in surface; a
+          // re-import has been promoted back into the batch, so it comes
+          // forward again.
+          color: imported && !reimporting ? colorScheme.onSurfaceVariant : null,
+        );
 
     // The row has exactly three lines and each one has exactly one job:
     //
@@ -610,14 +616,15 @@ class _RowNote extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: ServiceTheme.onTint(
-                  tone,
-                  surface: theme.colorScheme.surface,
-                  tintAlpha: 0.1,
-                ),
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.labelSmall!
+                  .weight(FontWeight.w600)
+                  .copyWith(
+                    color: ServiceTheme.onTint(
+                      tone,
+                      surface: theme.colorScheme.surface,
+                      tintAlpha: 0.1,
+                    ),
+                  ),
             ),
           ),
         ],
@@ -688,8 +695,8 @@ class AttentionFileRow extends StatelessWidget {
                   children: [
                     FilenameText(
                       filename: item.fileName,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                      style: theme.textTheme.titleSmall!.weight(
+                        FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -857,9 +864,7 @@ class InFlightFileRow extends StatelessWidget {
                     ].join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
                   ),
                   FilenameText(
                     filename: item.fileName,
@@ -925,12 +930,13 @@ class ImportChoiceRow extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected
-                          ? colorScheme.onSurface
-                          : colorScheme.onSurfaceVariant,
-                    ),
+                    style: theme.textTheme.bodyLarge!
+                        .weight(selected ? FontWeight.w700 : FontWeight.w500)
+                        .copyWith(
+                          color: selected
+                              ? colorScheme.onSurface
+                              : colorScheme.onSurfaceVariant,
+                        ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),

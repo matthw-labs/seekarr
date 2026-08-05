@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/pressable_scale.dart';
@@ -134,9 +135,7 @@ class _SystemTile extends StatelessWidget {
             const Spacer(),
             Text(
               entry.title,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
             ),
             const SizedBox(height: 2),
             Text(

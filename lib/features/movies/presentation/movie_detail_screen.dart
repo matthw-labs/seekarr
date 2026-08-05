@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/api/quality_profile_mixin.dart';
-import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/app_animation.dart';
+import 'package:seekarr/core/utils/rating_display.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/presentation/widgets/arr_media_extras_section.dart';
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
@@ -38,9 +42,17 @@ class MovieDetailScreen extends ConsumerStatefulWidget {
 
 class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     with QualityProfileMixin<MovieDetailScreen> {
-  bool _isSearching = false;
+  bool _isAutoSearching = false;
+  bool _isAutoSearchConfirmed = false;
+  Timer? _searchConfirmTimer;
   bool _isDeleting = false;
   bool _isUpdatingMonitoredState = false;
+
+  @override
+  void dispose() {
+    _searchConfirmTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,12 +64,21 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
 
     if (movie == null) {
       if (movieAsync.isLoading) {
-        return const MediaDetailLoadingView();
+        return MediaDetailLoadingView(
+          accent: ServiceKey.radarr.accent,
+          heroFallbackIcon: Icons.movie_outlined,
+        );
       }
 
-      return _MovieDetailErrorState(
+      return MediaDetailPlaceholderView.error(
         error: movieAsync.asError?.error ?? 'Movie not found.',
         serviceName: 'Radarr',
+        accent: ServiceKey.radarr.accent,
+        // Recover in place. With no id there is no provider to re-run, so the
+        // retry is withheld rather than offered and doing nothing.
+        onRetry: widget.movieId > 0
+            ? () => ref.invalidate(movieDetailProvider(widget.movieId))
+            : null,
       );
     }
 
@@ -82,13 +103,20 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
 
     return MediaDetailView(
       accent: ServiceKey.radarr.accent,
+      heroFallbackIcon: Icons.movie_outlined,
       posterUrl: viewModel.posterUrl,
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
-      posterRow: (collapseFactor) =>
-          _buildPosterRow(context, viewModel, status, collapseFactor),
-      contentSections: _buildContentSections(
+      title: viewModel.title,
+      posterRow: _buildPosterRow(context, viewModel, status),
+      // The same load the retry button re-runs, on the gesture the hero was
+      // already accepting and doing nothing with.
+      onRefresh: widget.movieId > 0
+          ? () async => ref.invalidate(movieDetailProvider(widget.movieId))
+          : null,
+      body: _buildBody(
         viewModel,
+        status,
         infoGroups,
         movie.id > 0 ? movie.id : widget.movieId,
         movie.tmdbId,
@@ -111,14 +139,21 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     BuildContext context,
     MovieDetailViewModel viewModel,
     MediaStatusInfo status,
-    double collapseFactor,
   ) {
     return MediaDetailPosterRow(
-      collapseFactor: collapseFactor,
-      statusBadge: StatusBadge(info: status),
+      statusBadge: StatusBadge.animated(info: status),
       title: viewModel.title,
       metadataItems: viewModel.metadataItems,
-      tags: _buildSummaryTags(viewModel),
+      // The hero's chip slot has one meaning on every variant: how much of the
+      // manifest exists. Genres moved to the catalogue block below, where they
+      // now appear exactly once instead of in the hero *and* in a section
+      // mislabelled "Tags".
+      tags: [
+        TagChip(
+          text: viewModel.hasFile ? '1 file' : 'No file',
+          color: ServiceKey.radarr.accent,
+        ),
+      ],
       posterCard: MediaPosterCard(
         heroTag: widget.heroTag,
         imageUrl: viewModel.posterUrl,
@@ -128,136 +163,128 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     );
   }
 
-  List<Widget> _buildContentSections(
+  MediaDetailBody _buildBody(
     MovieDetailViewModel viewModel,
+    MediaStatusInfo status,
     List<MediaInfoGroup> infoGroups,
     int movieId,
     int tmdbId,
   ) {
-    final detailInfoGroups = _detailInfoGroups(infoGroups);
+    final accent = ServiceKey.radarr.accent;
 
-    return [
-      LibraryDetailActions(
-        collapseFactor: 0,
-        accent: ServiceKey.radarr.accent,
-        isInLibrary: viewModel.isInLibrary,
-        isMonitored: viewModel.isMonitored,
-        addLabel: 'Add Movie',
-        isSearching: _isSearching,
-        isDeleting: _isDeleting,
-        isUpdatingMonitoredState: _isUpdatingMonitoredState,
-        currentProfileName: currentProfileName,
-        currentProfileId: currentProfileId,
-        qualityProfiles: qualityProfiles,
-        onPrimaryAction: () => _handlePrimaryAction(
-          context,
-          viewModel: viewModel,
-          movieId: movieId,
-        ),
-        onInteractiveSearch: () =>
-            _showInteractiveSearch(context, title: viewModel.title),
-        onAutoSearch: () => _triggerSearch(context),
-        onProfileSelected: _updateProfile,
-        onImport: openManualImportCallback(context, ServiceKey.radarr, movieId),
-        onDelete: () => _confirmDelete(context, title: viewModel.title),
-      ),
-      if (viewModel.overview.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: MediaDetailOverviewSection(overview: viewModel.overview),
-        ),
-      ],
-      if (viewModel.ratings.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            0,
-            AppSpacing.lg,
-            AppSpacing.md,
+    return MediaDetailBody(
+      deck: viewModel.isInLibrary
+          ? LibraryDetailActions(
+              service: ServiceKey.radarr,
+              status: status,
+              mediaTitle: viewModel.title,
+              isMonitored: viewModel.isMonitored,
+              // One flag, mapped from whichever per-action flag can be in flight
+              // on this page: only one action is ever promoted.
+              isBusy:
+                  _isAutoSearching || _isUpdatingMonitoredState || _isDeleting,
+              isConfirmed: _isAutoSearchConfirmed,
+              currentProfileName: currentProfileName,
+              currentProfileId: currentProfileId,
+              qualityProfiles: qualityProfiles,
+              onSearch: () => _triggerSearch(context),
+              onInteractiveSearch: () =>
+                  _showInteractiveSearch(context, title: viewModel.title),
+              onImport: openManualImportCallback(
+                context,
+                ServiceKey.radarr,
+                movieId,
+              ),
+              // Every in-flight pipeline state promotes 'Open queue' only if the
+              // host actually has a route for it; without this the most common
+              // transient state on a real page degraded to a sentence. Pushed, not
+              // gone: checking on a download should leave the title behind you.
+              onOpenQueue: () => context.push('/activity/movies'),
+              onMonitoredChanged: (monitored) => _updateMonitoredState(
+                context,
+                movieId: movieId,
+                monitored: monitored,
+              ),
+              onProfileSelected: (profileId) =>
+                  _updateProfile(profileId, mediaTitle: viewModel.title),
+              onDelete: () => _confirmDelete(context, title: viewModel.title),
+            )
+          // No add path exists from this view, so an untracked title falls
+          // through to a sentence rather than to the full-width accent CTA whose
+          // only behaviour was a snackbar saying it is not available.
+          : const MediaDetailUnavailableSection(
+              message:
+                  'Radarr is not tracking this movie, so there is nothing to '
+                  'manage here yet. Add it in Radarr, or request it in Seerr.',
+            ),
+      // Region 3 — the manifest. A movie has no child records, so the manifest
+      // is the file, and the path a self-hoster actually hunts for lives here
+      // rather than at the bottom of an encyclopaedic grid.
+      operate: [
+        if (viewModel.isInLibrary)
+          MediaDetailSlot.box(
+            label: 'File',
+            child: viewModel.hasFile && viewModel.path != null
+                ? FileInfoSection(
+                    path: viewModel.path,
+                    filename: viewModel.filename,
+                    accent: accent,
+                  )
+                : const AppEmptyState.compact(
+                    icon: Icons.search_off_rounded,
+                    title: 'Nothing on disk',
+                    message:
+                        'Radarr is tracking this but no file has been '
+                        'imported.',
+                  ),
           ),
-          child: SizedBox(
-            width: double.infinity,
-            child: RatingChipsRow(
-              ratings: viewModel.ratings,
-              accent: ServiceKey.radarr.accent,
+      ],
+      synopsis: [
+        if (viewModel.overview.isNotEmpty)
+          MediaDetailSlot.box(
+            label: 'Overview',
+            child: MediaProseSection(text: viewModel.overview),
+          ),
+      ],
+      reference: [
+        if (infoGroups.isNotEmpty)
+          MediaDetailSlot.box(
+            label: 'Details',
+            child: AppCard.surfaceOutlined(
+              child: MediaInfoCard(groups: infoGroups),
             ),
           ),
-        ),
-      ],
-      if (viewModel.hasFile && viewModel.path != null) ...[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: FileInfoSection(
-            path: viewModel.path,
-            filename: viewModel.filename,
-            accent: ServiceKey.radarr.accent,
+        if (viewModel.ratings.isNotEmpty)
+          MediaDetailSlot.box(
+            label: 'Scores',
+            // Through `legibleRatings` so a pill names its source the way the
+            // source names itself. Radarr's keys arrive as `metacritic`,
+            // `rottenTomatoes`, `trakt` and the parser badges them `MC`, `RO`,
+            // `TR` — abbreviations that appear nowhere else in the app and are
+            // not what anyone calls those sites.
+            child: RatingChipsRow(
+              ratings: legibleRatings(viewModel.ratings),
+              accent: accent,
+            ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-      ],
-      if (detailInfoGroups.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              MediaDetailSectionHeader(
-                title: 'Details',
-                accent: ServiceKey.radarr.accent,
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: MediaInfoCard(groups: detailInfoGroups),
-              ),
-            ],
+        if (viewModel.genres.isNotEmpty)
+          MediaDetailSlot.box(
+            // Not 'Tags': in this domain a tag is a Radarr concept that targets
+            // release profiles and import lists, so calling genres tags
+            // asserted something false about the user's server.
+            label: 'Genres',
+            child: MediaChipSection.neutral(values: viewModel.genres),
           ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
       ],
-      ArrMediaExtrasSection(
+      // One `CAST` slot and one `COLLECTION` slot, each labelled by the spine and
+      // each omitted when Seerr has nothing for it — rather than one
+      // undifferentiated extras section that drew its own headings.
+      related: arrMediaExtrasSlots(
+        ref,
         tmdbId: tmdbId,
         mediaType: 'movie',
-        accent: ServiceKey.radarr.accent,
+        accent: accent,
       ),
-      if (viewModel.genres.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: MediaDetailTagsSection(
-            tags: viewModel.genres,
-            accent: ServiceKey.radarr.accent,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-      ],
-    ];
-  }
-
-  List<Widget> _buildSummaryTags(MovieDetailViewModel viewModel) {
-    return viewModel.genres
-        .map((genre) => GenreChip(genre: genre))
-        .toList(growable: false);
-  }
-
-  List<MediaInfoGroup> _detailInfoGroups(List<MediaInfoGroup> infoGroups) =>
-      infoGroups;
-
-  Future<void> _handlePrimaryAction(
-    BuildContext context, {
-    required MovieDetailViewModel viewModel,
-    required int movieId,
-  }) async {
-    if (!viewModel.isInLibrary || movieId <= 0) {
-      SnackBarHelper.info(
-        context,
-        'Add Movie is not available yet from this view.',
-      );
-      return;
-    }
-
-    await _updateMonitoredState(
-      context,
-      movieId: movieId,
-      monitored: !viewModel.isMonitored,
     );
   }
 
@@ -273,30 +300,73 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       if (!mounted) return;
       ref.invalidate(movieDetailProvider(movieId));
       ref.invalidate(moviesProvider);
+      // What changed, in the words of the thing that will act on it. "Movie
+      // unmonitored" states a flag; "Radarr has stopped monitoring" states the
+      // consequence, and Monitored is a term a self-hoster genuinely needs.
       SnackBarHelper.success(
         context,
-        monitored ? 'Movie monitored' : 'Movie unmonitored',
+        monitored
+            ? 'Radarr is monitoring this movie'
+            : 'Radarr has stopped monitoring this movie',
       );
     } catch (e) {
       if (!mounted) return;
-      SnackBarHelper.error(context, 'Failed to update monitoring: $e');
+      SnackBarHelper.error(
+        context,
+        "Couldn't change monitoring in Radarr.",
+        detail: e,
+      );
     } finally {
       if (mounted) setState(() => _isUpdatingMonitoredState = false);
     }
   }
 
-  Future<void> _updateProfile(int profileId) async {
+  /// Changes the quality profile behind a confirmation that names the
+  /// transition and its consequence.
+  ///
+  /// This used to fire straight off a tap in the icon row, which made a
+  /// server-side write with real cost — Radarr can start hunting upgrades for
+  /// the whole title the moment the profile lands — the one action on the page
+  /// with no confirmation and no way back. An Undo would be a lie here: putting
+  /// the old profile back does not recall searches that are already queued on
+  /// the user's connection, so the recoverable moment is *before* the write.
+  Future<void> _updateProfile(
+    int profileId, {
+    required String mediaTitle,
+  }) async {
+    if (profileId == currentProfileId) return;
+
+    final from = currentProfileName ?? 'its current profile';
+    final to = getProfileName(profileId) ?? 'the selected profile';
+
+    final result = await showAppConfirmDialog(
+      context: context,
+      title: 'Change quality profile?',
+      icon: Icons.high_quality_rounded,
+      message:
+          '${truncateTitle(mediaTitle)} moves from $from to $to. Radarr may '
+          'start searching for an upgrade as soon as this lands, and a search '
+          'cannot be called back from here.',
+      confirmLabel: 'Change profile',
+    );
+
+    if (!result.confirmed || !mounted) return;
+
     try {
       final radarrService = ref.read(radarrServiceProvider);
       await radarrService.updateMovieProfile(widget.movieId, profileId);
       if (mounted) {
         updateProfileState(profileId);
         ref.invalidate(moviesProvider);
-        SnackBarHelper.success(context, 'Quality profile updated');
+        SnackBarHelper.success(context, 'Quality profile changed to $to');
       }
     } catch (e) {
       if (!mounted) return;
-      SnackBarHelper.error(context, 'Failed to update profile: $e');
+      SnackBarHelper.error(
+        context,
+        "Couldn't change the quality profile in Radarr.",
+        detail: e,
+      );
     }
   }
 
@@ -308,7 +378,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
 
     final result = await showDeleteMediaDialog(
       context: context,
-      title: title,
+      // The dialog builds "Delete <title>?" as its heading, which sits above the
+      // scrollable content in an AlertDialog — so a 200-character release name
+      // pushes the two checkboxes and both buttons off the screen. Capped here,
+      // where the untrusted string enters.
+      title: truncateTitle(title),
       mediaType: DeleteMediaType.movie,
     );
 
@@ -323,11 +397,23 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         addImportExclusion: result.addExclusion,
       );
       if (!context.mounted) return;
-      SnackBarHelper.success(context, 'Movie deleted');
+      // "Movie deleted" left the one thing the user just decided unstated. The
+      // dialog offered two different destructions; the confirmation says which
+      // one happened.
+      SnackBarHelper.success(
+        context,
+        result.deleteFiles
+            ? 'Removed from Radarr and deleted from disk'
+            : 'Removed from Radarr',
+      );
       context.pop();
     } catch (e) {
       if (!context.mounted) return;
-      SnackBarHelper.error(context, 'Failed to delete movie: $e');
+      SnackBarHelper.error(
+        context,
+        "Couldn't delete this movie from Radarr.",
+        detail: e,
+      );
     } finally {
       if (mounted) setState(() => _isDeleting = false);
     }
@@ -335,18 +421,36 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
 
   Future<void> _triggerSearch(BuildContext context) async {
     HapticFeedback.selectionClick();
-    setState(() => _isSearching = true);
+    setState(() => _isAutoSearching = true);
     try {
       final radarrService = ref.read(radarrServiceProvider);
       await radarrService.searchMovie(widget.movieId);
       if (!context.mounted) return;
-      SnackBarHelper.success(context, 'Search started');
+      // One shape for every search confirmation on every library page:
+      // "<Service> is searching <what>". The old set drifted between "Search
+      // started", "Search started for entire series" and "Album search
+      // started", which read as three different features.
+      SnackBarHelper.success(context, 'Radarr is searching for this movie');
+      _showSearchConfirmation();
     } catch (e) {
       if (!context.mounted) return;
-      SnackBarHelper.error(context, 'Search failed: $e');
+      SnackBarHelper.error(
+        context,
+        "Couldn't start a search in Radarr.",
+        detail: e,
+      );
     } finally {
-      if (mounted) setState(() => _isSearching = false);
+      if (mounted) setState(() => _isAutoSearching = false);
     }
+  }
+
+  void _showSearchConfirmation() {
+    if (!mounted) return;
+    setState(() => _isAutoSearchConfirmed = true);
+    _searchConfirmTimer?.cancel();
+    _searchConfirmTimer = Timer(AppAnimation.confirmationHold, () {
+      if (mounted) setState(() => _isAutoSearchConfirmed = false);
+    });
   }
 
   Future<void> _showInteractiveSearch(
@@ -358,51 +462,16 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     await InteractiveSearchSheet.showAsync(
       context: context,
       accent: ServiceKey.radarr.accent,
-      title: 'Releases for $title',
+      // The sheet's own heading is already "Releases" and this string lands in
+      // the subtitle beneath it, so "Releases for X" printed the word twice.
+      // Capped because the subtitle Text has no maxLines: a long title used to
+      // grow the header until it ate the list it was introducing.
+      title: truncateTitle(title),
       fetchReleases: (token) =>
           radarrService.getReleases(widget.movieId, cancelToken: token),
       onGrabRelease: (guid, indexerId) async {
         await radarrService.grabRelease(guid: guid, indexerId: indexerId);
       },
-    );
-  }
-}
-
-class _MovieDetailErrorState extends StatelessWidget {
-  final Object error;
-  final String serviceName;
-
-  const _MovieDetailErrorState({
-    required this.error,
-    required this.serviceName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isNotConfigured = error.toString().contains('not configured');
-
-    return Material(
-      color: colorScheme.surface,
-      child: CustomScrollView(
-        slivers: [
-          SliverAppBar(pinned: true, backgroundColor: colorScheme.surface),
-          SliverFillRemaining(
-            child: isNotConfigured
-                ? NotConfiguredPlaceholder(serviceName: serviceName)
-                : Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.xl),
-                      child: Text(
-                        'Error: $error',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-          ),
-        ],
-      ),
     );
   }
 }

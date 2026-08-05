@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:seekarr/core/theme.dart';
+
 /// A 270° radial gauge for a single 0..1 value (e.g. CPU load, pool usage).
 class RadialGauge extends StatelessWidget {
   final double value;
@@ -38,13 +40,15 @@ class RadialGauge extends StatelessWidget {
             children: [
               Text(
                 valueLabel,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: theme.textTheme.titleLarge!
+                    .weight(FontWeight.w700)
+                    .tabular,
               ),
               Text(
                 caption,
-                style: theme.textTheme.labelSmall?.copyWith(
+                // The caption carries a reading too (used memory, load
+                // window), so it gets the same locked digits as the value.
+                style: theme.textTheme.labelSmall!.tabular.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),

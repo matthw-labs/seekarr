@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/app_error_state.dart';
 import 'package:seekarr/core/widgets/app_skeleton.dart';
@@ -81,9 +82,9 @@ class _AppDetailBody extends ConsumerWidget {
                   children: [
                     Text(
                       app.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleMedium!.weight(FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
                     AppStateLabel(state: app.state, version: app.humanVersion),

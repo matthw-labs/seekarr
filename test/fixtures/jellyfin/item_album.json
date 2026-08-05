@@ -1,0 +1,43 @@
+{
+  "Name": "Ants From Up There",
+  "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+  "Id": "5c9e3a7d1f5b9c3e7a1d5f9b3c7e1a50",
+  "Etag": "2233445566778899aabbccddeeff0011",
+  "DateCreated": "2026-02-04T14:22:08.0000000Z",
+  "CanDelete": true,
+  "CanDownload": true,
+  "ProductionYear": 2022,
+  "RunTimeTicks": 34320000000,
+  "IsFolder": true,
+  "Type": "MusicAlbum",
+  "Genres": ["Rock", "Post-Rock"],
+  "AlbumArtist": "Black Country, New Road",
+  "AlbumArtists": [
+    {
+      "Name": "Black Country, New Road",
+      "Id": "7d1f5b9c3e7a1d5f9b3c7e1a50c9e3a7"
+    }
+  ],
+  "Artists": ["Black Country, New Road"],
+  "ArtistItems": [
+    {
+      "Name": "Black Country, New Road",
+      "Id": "7d1f5b9c3e7a1d5f9b3c7e1a50c9e3a7"
+    }
+  ],
+  "ChildCount": 10,
+  "PrimaryImageAspectRatio": 1.0,
+  "ImageTags": {
+    "Primary": "4d6f8a0c2e4557799bbddff113355779"
+  },
+  "BackdropImageTags": [],
+  "UserData": {
+    "PlaybackPositionTicks": 0,
+    "PlayCount": 0,
+    "IsFavorite": true,
+    "Played": false,
+    "Key": "Black Country, New Road-Ants From Up There"
+  },
+  "LocationType": "FileSystem",
+  "MediaType": "Unknown"
+}

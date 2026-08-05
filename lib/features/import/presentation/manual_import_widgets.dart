@@ -6,6 +6,7 @@ import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/service_theme.dart';
 import 'package:seekarr/core/text_scale.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -79,15 +80,16 @@ class ManualImportFrame extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: theme.textTheme.titleMedium!.weight(FontWeight.w800),
             ),
             Text(
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.copyWith(
+              // Track passes a submitted-file count through this slot; the
+              // other two stations pass digitless copy, which tabular figures
+              // leave untouched.
+              style: theme.textTheme.labelSmall!.tabular.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -208,14 +210,17 @@ class ImportStationBar extends StatelessWidget {
                             stations[index],
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              fontWeight: index == activeIndex
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: index == activeIndex
-                                  ? activeLabelColor
-                                  : colorScheme.onSurfaceVariant,
-                            ),
+                            style: theme.textTheme.labelMedium!
+                                .weight(
+                                  index == activeIndex
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                )
+                                .copyWith(
+                                  color: index == activeIndex
+                                      ? activeLabelColor
+                                      : colorScheme.onSurfaceVariant,
+                                ),
                           ),
                         ),
                       ],
@@ -291,8 +296,8 @@ class ImportBreadcrumb extends StatelessWidget {
                 foregroundColor: index == pathSegments.length - 1
                     ? service.accent
                     : colorScheme.onSurfaceVariant,
-                textStyle: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: index == pathSegments.length - 1
+                textStyle: theme.textTheme.labelMedium!.weight(
+                  index == pathSegments.length - 1
                       ? FontWeight.w700
                       : FontWeight.w500,
                 ),

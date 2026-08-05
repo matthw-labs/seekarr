@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/core/widgets/app_error_state.dart';
@@ -202,13 +203,11 @@ class _SnapshotTile extends ConsumerWidget {
               children: [
                 Text(
                   snapshot.name,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
                 ),
                 Text(
                   'used ${snapshot.usedBytes != null ? formatSize(snapshot.usedBytes!) : '—'}',
-                  style: theme.textTheme.labelSmall?.copyWith(
+                  style: theme.textTheme.labelSmall!.tabular.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),

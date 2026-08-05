@@ -1,0 +1,60 @@
+{
+  "Items": [
+    {
+      "Name": "Intro",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "1f5b9c3e7a1d5f9b3c7e1a50c9e3a7d1",
+      "Container": "flac",
+      "ProductionYear": 2022,
+      "IndexNumber": 1,
+      "ParentIndexNumber": 1,
+      "RunTimeTicks": 592000000,
+      "IsFolder": false,
+      "Type": "Audio",
+      "Album": "Ants From Up There",
+      "AlbumId": "5c9e3a7d1f5b9c3e7a1d5f9b3c7e1a50",
+      "AlbumPrimaryImageTag": "4d6f8a0c2e4557799bbddff113355779",
+      "AlbumArtist": "Black Country, New Road",
+      "Artists": ["Black Country, New Road"],
+      "MediaType": "Audio",
+      "ImageTags": {},
+      "UserData": {
+        "PlaybackPositionTicks": 0,
+        "PlayCount": 3,
+        "IsFavorite": false,
+        "Played": true,
+        "Key": "Black Country, New Road-Ants From Up There-0001-0001Intro"
+      },
+      "LocationType": "FileSystem"
+    },
+    {
+      "Name": "Chaos Space Marine",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "2a6c0e4b8d2f1357913579bdf02468ac",
+      "Container": "flac",
+      "ProductionYear": 2022,
+      "IndexNumber": 2,
+      "ParentIndexNumber": 1,
+      "RunTimeTicks": 2532000000,
+      "IsFolder": false,
+      "Type": "Audio",
+      "Album": "Ants From Up There",
+      "AlbumId": "5c9e3a7d1f5b9c3e7a1d5f9b3c7e1a50",
+      "AlbumPrimaryImageTag": "4d6f8a0c2e4557799bbddff113355779",
+      "AlbumArtist": "Black Country, New Road",
+      "Artists": ["Black Country, New Road"],
+      "MediaType": "Audio",
+      "ImageTags": {},
+      "UserData": {
+        "PlaybackPositionTicks": 0,
+        "PlayCount": 2,
+        "IsFavorite": true,
+        "Played": true,
+        "Key": "Black Country, New Road-Ants From Up There-0001-0002Chaos Space Marine"
+      },
+      "LocationType": "FileSystem"
+    }
+  ],
+  "TotalRecordCount": 2,
+  "StartIndex": 0
+}

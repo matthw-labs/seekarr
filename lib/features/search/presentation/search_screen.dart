@@ -17,6 +17,7 @@ import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
+import 'package:seekarr/core/widgets/media_poster_card.dart';
 import 'package:seekarr/core/widgets/search_bar_header.dart';
 import 'package:seekarr/features/search/domain/global_search_result.dart';
 import 'package:seekarr/features/search/presentation/global_search_provider.dart';
@@ -184,14 +185,15 @@ class _FilterChip extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              // Foreground picked from the fill's luminance: white on the
-              // Radarr amber measures 2.15:1, well below AA.
-              color: selected
-                  ? ServiceTheme.foregroundOn(effectiveColor)
-                  : effectiveColor,
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.labelMedium
+                ?.weight(FontWeight.w700)
+                .copyWith(
+                  // Foreground picked from the fill's luminance: white on the
+                  // Radarr amber measures 2.15:1, well below AA.
+                  color: selected
+                      ? ServiceTheme.foregroundOn(effectiveColor)
+                      : effectiveColor,
+                ),
           ),
         ),
       ),
@@ -272,14 +274,16 @@ class _SearchSection extends StatelessWidget {
                 service.title,
                 style: Theme.of(
                   context,
-                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                ).textTheme.labelLarge?.weight(FontWeight.w700),
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 group.hasError
                     ? 'offline'
                     : '$count result${count == 1 ? '' : 's'}',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                // The result count moves as each service answers, so the
+                // digits are locked to one advance width.
+                style: Theme.of(context).textTheme.labelSmall?.tabular.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -334,25 +338,7 @@ class _SearchResultCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 50,
-            height: 75,
-            child: ContentCard(
-              imageUrl: result.imageUrl,
-              httpHeaders: result.imageHeaders,
-              badge: Align(
-                alignment: Alignment.bottomLeft,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: service.accent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          SizedBox(width: 50, height: 75, child: _ResultPoster(result: result)),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -364,7 +350,7 @@ class _SearchResultCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(
                     context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                  ).textTheme.bodyMedium?.weight(FontWeight.w700),
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -418,6 +404,44 @@ class _SearchResultCard extends StatelessWidget {
   }
 }
 
+/// A result's poster, flying into its detail page as a shared element.
+///
+/// The Hero is skipped where the service has no artwork (Bazarr), matching the
+/// Recently Added rail: an empty grey box flying into a fallback glyph is
+/// motion with nothing to follow.
+class _ResultPoster extends StatelessWidget {
+  final GlobalSearchResult result;
+
+  const _ResultPoster({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final card = ContentCard(
+      imageUrl: result.imageUrl,
+      httpHeaders: result.imageHeaders,
+      badge: Align(
+        alignment: Alignment.bottomLeft,
+        child: Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: result.service.accent,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
+    );
+
+    if (!result.canFlyPoster) return card;
+
+    return Hero(
+      tag: result.heroTag,
+      transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
+      child: card,
+    );
+  }
+}
+
 class _ResultTag extends StatelessWidget {
   final String label;
   final Color color;
@@ -434,11 +458,9 @@ class _ResultTag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w800,
-          fontSize: 10,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.weight(FontWeight.w800).copyWith(color: color),
       ),
     );
   }
@@ -537,7 +559,7 @@ class _SearchEmptyState extends ConsumerWidget {
           textAlign: TextAlign.center,
           style: Theme.of(
             context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ).textTheme.titleMedium?.weight(FontWeight.w700),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
@@ -585,10 +607,9 @@ class _SearchEmptyState extends ConsumerWidget {
                 ),
                 child: Text(
                   'Clear',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall
+                      ?.weight(FontWeight.w700)
+                      .copyWith(color: colorScheme.primary),
                 ),
               ),
             ],

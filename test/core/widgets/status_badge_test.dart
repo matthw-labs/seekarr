@@ -372,5 +372,52 @@ void main() {
 
       expect(find.semantics.byLabel('Available'), findsNothing);
     });
+
+    testWidgets('animated variant settles cleanly across a status change', (
+      tester,
+    ) async {
+      Widget wrap(MediaStatusInfo info) => MaterialApp(
+        home: Scaffold(body: StatusBadge.animated(info: info)),
+      );
+
+      await tester.pumpWidget(
+        wrap(
+          const MediaStatusInfo(
+            pipeline: MediaPipeline.downloading,
+            progress: 0.3,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(AnimatedSwitcher), findsOneWidget);
+
+      await tester.pumpWidget(
+        wrap(const MediaStatusInfo(availability: MediaAvailability.available)),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Available'), findsOneWidget);
+    });
+
+    testWidgets('animated variant renders statically under Reduce Motion', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          ),
+          home: const Scaffold(
+            body: StatusBadge.animated(
+              info: MediaStatusInfo(availability: MediaAvailability.available),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(AnimatedSwitcher), findsNothing);
+      expect(find.text('Available'), findsOneWidget);
+    });
   });
 }

@@ -16,6 +16,8 @@ enum ServiceKey {
   sabnzbd,
   nzbget,
   unraid,
+  jellyfin,
+  plex,
 }
 
 /// High-level grouping used to organise services across the app.
@@ -28,6 +30,20 @@ enum ServiceKey {
 enum ServiceDomain {
   media(label: 'Media'),
   downloads(label: 'Downloads'),
+
+  /// Media servers — the only services in the app that know about *people*.
+  ///
+  /// Every other domain answers questions about objects: is this film owned,
+  /// grabbed, subtitled, on disk. A media server is the only source of
+  /// subject-and-time state — who is watching, where they stopped, what is next
+  /// for them, what nobody has played. That is why this is its own domain and
+  /// not more Media, and it is the guard against re-rendering Radarr's library
+  /// under a second name.
+  ///
+  /// Ordered between [downloads] and [infrastructure] deliberately: the bands
+  /// then read as the pipeline they are — catalogue, acquire, watch, and the box
+  /// it all runs on.
+  stream(label: 'Stream'),
   infrastructure(label: 'Infrastructure');
 
   const ServiceDomain({required this.label});
@@ -55,6 +71,9 @@ extension ServiceKeyExtension on ServiceKey {
       case ServiceKey.sabnzbd:
       case ServiceKey.nzbget:
         return ServiceDomain.downloads;
+      case ServiceKey.jellyfin:
+      case ServiceKey.plex:
+        return ServiceDomain.stream;
       case ServiceKey.truenas:
       case ServiceKey.dockge:
       case ServiceKey.unraid:
@@ -96,6 +115,10 @@ extension ServiceKeyExtension on ServiceKey {
         return 'NZBGet';
       case ServiceKey.unraid:
         return 'Unraid';
+      case ServiceKey.jellyfin:
+        return 'Jellyfin';
+      case ServiceKey.plex:
+        return 'Plex';
     }
   }
 
@@ -127,6 +150,16 @@ extension ServiceKeyExtension on ServiceKey {
         return Icons.cloud_sync_rounded;
       case ServiceKey.unraid:
         return Icons.developer_board_rounded;
+      // The two media servers do the same job, so they are told apart by
+      // *silhouette* rather than by detail: a circle against a rounded
+      // rectangle survives the 18pt glyph on an expanded matrix cell and the
+      // 32pt one on a folded card, where two screen-shaped glyphs would not.
+      // Neither may be `live_tv_rounded` — that is a TV outline with signal
+      // arcs and collides with Sonarr's `tv_rounded` at cell size.
+      case ServiceKey.jellyfin:
+        return Icons.play_circle_rounded;
+      case ServiceKey.plex:
+        return Icons.smart_display_rounded;
     }
   }
 
@@ -158,6 +191,10 @@ extension ServiceKeyExtension on ServiceKey {
         return AppColors.nzbget;
       case ServiceKey.unraid:
         return AppColors.unraid;
+      case ServiceKey.jellyfin:
+        return AppColors.jellyfin;
+      case ServiceKey.plex:
+        return AppColors.plex;
     }
   }
 
@@ -167,6 +204,18 @@ extension ServiceKeyExtension on ServiceKey {
         this != ServiceKey.nzbget;
   }
 
+  /// Whether the global search tab fans out to this service.
+  ///
+  /// **Jellyfin and Plex are deliberately excluded, and this is a design
+  /// decision rather than an omission.** Adding them would make the same film
+  /// return in up to six sections: Radarr and Sonarr "search" is `movie/lookup`
+  /// and `series/lookup` — a TMDB/TVDB lookup, not a library search — so "Dune"
+  /// already produces four groups, in `Future.wait` declaration order with no
+  /// relevance ranking, and `_SearchSection` renders every group including the
+  /// empty ones. A Stream match is worth strictly more as a *decoration* on the
+  /// Radarr/Sonarr/Seerr row that is already there — "On Jellyfin · 34 min in" —
+  /// joined on `tmdbId`, which is the same move `arrMediaExtrasSlots` already
+  /// makes for Seerr data inside an arr screen.
   bool get isSearchable {
     return this == ServiceKey.seerr ||
         this == ServiceKey.radarr ||
@@ -206,6 +255,10 @@ extension ServiceKeyExtension on ServiceKey {
         return 'JSON-RPC';
       case ServiceKey.unraid:
         return 'GraphQL';
+      case ServiceKey.jellyfin:
+        return 'v10';
+      case ServiceKey.plex:
+        return 'v1';
     }
   }
 
@@ -237,6 +290,13 @@ extension ServiceKeyExtension on ServiceKey {
         return 'downloads';
       case ServiceKey.unraid:
         return 'containers';
+      // The top-level thing you enumerate on a media server. Not "movies" —
+      // a single Jellyfin or Plex instance mixes films, shows and music, and
+      // naming one of them would both misdescribe the server and read as a
+      // duplicate of Radarr's or Sonarr's own label.
+      case ServiceKey.jellyfin:
+      case ServiceKey.plex:
+        return 'libraries';
     }
   }
 
@@ -256,6 +316,8 @@ extension ServiceKeyExtension on ServiceKey {
       case ServiceKey.sabnzbd:
       case ServiceKey.nzbget:
       case ServiceKey.unraid:
+      case ServiceKey.jellyfin:
+      case ServiceKey.plex:
         return name;
     }
   }

@@ -92,9 +92,7 @@ class _ServiceTile extends ConsumerWidget {
               children: [
                 Text(
                   item.name,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
                 ),
                 if (item.enabled)
                   Text(

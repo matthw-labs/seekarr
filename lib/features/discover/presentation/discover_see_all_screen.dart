@@ -8,6 +8,7 @@ import 'package:seekarr/core/models/media_preview.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
+import 'package:seekarr/core/widgets/media_poster_card.dart';
 import 'package:seekarr/core/widgets/pressable_scale.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 
@@ -125,6 +126,8 @@ class _DiscoverSeeAllScreenState extends ConsumerState<DiscoverSeeAllScreen> {
                     },
                     child: Hero(
                       tag: heroTag,
+                      transitionOnUserGestures:
+                          MediaPosterCard.flightOnUserGestures,
                       child: ContentCard(imageUrl: imageUrl),
                     ),
                   );

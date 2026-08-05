@@ -68,8 +68,8 @@ class QueueItemTile extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                      style: theme.textTheme.titleSmall?.weight(
+                        FontWeight.w700,
                       ),
                     ),
                     if (subtitle != null) _SubtitleText(text: subtitle),
@@ -159,8 +159,8 @@ class HistoryItemTile extends StatelessWidget {
                       ),
                     Text(
                       title,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                      style: theme.textTheme.titleSmall?.weight(
+                        FontWeight.w700,
                       ),
                     ),
                   ],
@@ -209,9 +209,7 @@ class BlocklistItemTile extends StatelessWidget {
         children: [
           _TitleRow(
             title: _blocklistTitle(item, serviceType),
-            titleStyle: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            titleStyle: theme.textTheme.titleSmall?.weight(FontWeight.w700),
             trailing: StatusBadge(info: status),
           ),
           if (subtitle != null) _SubtitleText(text: subtitle),
@@ -283,9 +281,7 @@ class WantedItemTile extends StatelessWidget {
         children: [
           _TitleRow(
             title: title,
-            titleStyle: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            titleStyle: theme.textTheme.titleSmall?.weight(FontWeight.w700),
             maxLines: isCutoff ? 1 : null,
             trailing: canSearch
                 ? MediaSearchPopupMenu(
@@ -381,9 +377,9 @@ class GlobalActivityItemTile extends ConsumerWidget {
                     item.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.weight(FontWeight.w700),
                   ),
                   if (item.subtitle.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.xs),
@@ -571,7 +567,9 @@ class GlobalActivityItemTile extends ConsumerWidget {
       ref.read(resolvedArrServiceProvider(item.serviceType)),
       item.serviceType,
       raw,
-      title: 'Releases for ${item.title}',
+      // The subject alone: the sheet's own heading already says "Releases", and
+      // `showWantedInteractiveSearch` caps whatever it is handed.
+      title: item.title,
     );
   }
 }
@@ -699,8 +697,14 @@ class _RowActionsMenu extends ConsumerWidget {
                 const SizedBox(width: AppSpacing.md),
                 Text(
                   action.label,
+                  // Recoloured from the ambient row style, not built from
+                  // scratch: a bare `TextStyle(color:)` only happened to keep
+                  // the family and size because `Text` merges an inheriting
+                  // style, which makes the base invisible at the call site.
                   style: action.destructive
-                      ? TextStyle(color: colorScheme.error)
+                      ? DefaultTextStyle.of(
+                          context,
+                        ).style.copyWith(color: colorScheme.error)
                       : null,
                 ),
               ],

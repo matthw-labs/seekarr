@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/route_utils.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -269,10 +270,9 @@ class _ServicePickerOption extends StatelessWidget {
                 Expanded(
                   child: Text(
                     service.title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.weight(FontWeight.w700)
+                        .copyWith(color: colorScheme.onSurface),
                   ),
                 ),
                 if (selected)

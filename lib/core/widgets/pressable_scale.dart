@@ -37,6 +37,13 @@ class PressableScale extends StatefulWidget {
   /// Additional context announced after the label, e.g. "Missing".
   final String? semanticValue;
 
+  /// What activating this does, e.g. 'opens the queue item'.
+  ///
+  /// Exists so [AppCard] can hand its own `semanticHint` down when it delegates
+  /// press feedback here: without it the hint would be dropped silently, which
+  /// is the sort of gap only a screen reader notices.
+  final String? semanticHint;
+
   /// Whether to hide the child's own semantics behind [semanticLabel].
   final bool excludeChildSemantics;
 
@@ -50,6 +57,7 @@ class PressableScale extends StatefulWidget {
     this.borderRadius,
     this.semanticLabel,
     this.semanticValue,
+    this.semanticHint,
     this.excludeChildSemantics = false,
   });
 
@@ -103,6 +111,7 @@ class _PressableScaleState extends State<PressableScale> {
       enabled: enabled,
       label: widget.semanticLabel,
       value: widget.semanticValue,
+      hint: enabled ? widget.semanticHint : null,
       excludeSemantics: widget.excludeChildSemantics,
       onTap: enabled ? _handleTap : null,
       onLongPress: widget.onLongPress,

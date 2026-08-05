@@ -113,18 +113,37 @@ Future<GlobalSearchServiceResults> _loadServiceResults<T>({
   }
 }
 
+/// Tag shared by a result's poster and the detail page it flies into.
+///
+/// [kind] discriminates within a service, because Bazarr and Seerr can each
+/// return a movie and a series carrying the same id — two Heroes with one tag
+/// on the same screen throws.
+String _heroTag(ServiceKey service, String kind, int id) =>
+    'search_${service.routeParam}_${kind}_$id';
+
 GlobalSearchResult _seerrResult(MediaPreview item) {
   final type = item.mediaType == 'tv' ? 'Series' : 'Movie';
   final year = item.year;
+  final imageUrl = ImageUtils.buildTmdbPosterUrl(item.posterPath);
+  final heroTag = _heroTag(ServiceKey.seerr, item.mediaType, item.id);
   return GlobalSearchResult(
     service: ServiceKey.seerr,
     id: item.id,
     title: item.title,
     subtitle: [type, year].where((part) => part.isNotEmpty).join(' · '),
-    imageUrl: ImageUtils.buildTmdbPosterUrl(item.posterPath),
+    imageUrl: imageUrl,
     imageHeaders: null,
     tags: [type, if (year.isNotEmpty) year],
-    route: ServiceRoutes.seerrDetail(mediaType: item.mediaType, id: item.id),
+    heroTag: heroTag,
+    // Seerr has no `routeExtra` to preload from, so the poster travels in the
+    // URL: the detail page paints real art during its lookup instead of
+    // landing the flight on an empty gradient.
+    route: ServiceRoutes.seerrDetail(
+      mediaType: item.mediaType,
+      id: item.id,
+      heroTag: heroTag,
+      posterUrl: imageUrl,
+    ),
   );
 }
 
@@ -134,6 +153,7 @@ GlobalSearchResult _radarrResult(RadarrMovie item, SettingsModel settings) {
     baseUrl: settings.radarrUrl,
     apiKey: settings.radarrApiKey,
   );
+  final heroTag = _heroTag(ServiceKey.radarr, 'movie', item.id);
   return GlobalSearchResult(
     service: ServiceKey.radarr,
     id: item.id,
@@ -145,7 +165,8 @@ GlobalSearchResult _radarrResult(RadarrMovie item, SettingsModel settings) {
     imageUrl: image.url,
     imageHeaders: image.headers,
     tags: ['Movie', item.hasFile ? 'Available' : 'Missing'],
-    route: ServiceRoutes.radarrMovie(item.id),
+    heroTag: heroTag,
+    route: ServiceRoutes.radarrMovie(item.id, heroTag: heroTag),
     routeExtra: item,
   );
 }
@@ -156,6 +177,7 @@ GlobalSearchResult _sonarrResult(SonarrSeries item, SettingsModel settings) {
     baseUrl: settings.sonarrUrl,
     apiKey: settings.sonarrApiKey,
   );
+  final heroTag = _heroTag(ServiceKey.sonarr, 'series', item.id);
   return GlobalSearchResult(
     service: ServiceKey.sonarr,
     id: item.id,
@@ -167,24 +189,30 @@ GlobalSearchResult _sonarrResult(SonarrSeries item, SettingsModel settings) {
     imageUrl: image.url,
     imageHeaders: image.headers,
     tags: ['Series', item.status],
-    route: ServiceRoutes.sonarrSeries(item.id),
+    heroTag: heroTag,
+    route: ServiceRoutes.sonarrSeries(item.id, heroTag: heroTag),
     routeExtra: item,
   );
 }
 
 GlobalSearchResult _bazarrResult(BazarrSearchHit item) {
   final type = item.isMovie ? 'Movie' : 'Series';
+  final kind = item.isMovie ? 'movie' : 'series';
+  final heroTag = _heroTag(ServiceKey.bazarr, kind, item.id);
   return GlobalSearchResult(
     service: ServiceKey.bazarr,
     id: item.id,
     title: item.title,
     subtitle: 'Subtitles · $type',
+    // Bazarr's API carries no artwork, so this row does not fly (see
+    // `canFlyPoster`); the tag still travels for the day it does.
     imageUrl: '',
     imageHeaders: null,
     tags: ['Subtitles', type],
+    heroTag: heroTag,
     route: item.isMovie
-        ? ServiceRoutes.bazarrMovie(item.id)
-        : ServiceRoutes.bazarrSeries(item.id),
+        ? ServiceRoutes.bazarrMovie(item.id, heroTag: heroTag)
+        : ServiceRoutes.bazarrSeries(item.id, heroTag: heroTag),
   );
 }
 
@@ -198,6 +226,7 @@ GlobalSearchResult _lidarrResult(LidarrArtist item, SettingsModel settings) {
   final albumLabel = item.albumCount == 1
       ? '1 album'
       : '${item.albumCount} albums';
+  final heroTag = _heroTag(ServiceKey.lidarr, 'artist', item.id);
   return GlobalSearchResult(
     service: ServiceKey.lidarr,
     id: item.id,
@@ -206,7 +235,8 @@ GlobalSearchResult _lidarrResult(LidarrArtist item, SettingsModel settings) {
     imageUrl: image.url,
     imageHeaders: image.headers,
     tags: ['Artist', item.hasFiles ? 'Available' : 'Missing'],
-    route: ServiceRoutes.lidarrArtist(item.id),
+    heroTag: heroTag,
+    route: ServiceRoutes.lidarrArtist(item.id, heroTag: heroTag),
     routeExtra: item,
   );
 }

@@ -1,0 +1,86 @@
+{
+  "Items": [
+    {
+      "Name": "Specials",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "4a8c2e6b0d1f3957ac1e3b5d7f902468",
+      "IndexNumber": 0,
+      "IsFolder": true,
+      "Type": "Season",
+      "SeriesName": "Severance",
+      "SeriesId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+      "SeriesPrimaryImageTag": "77aa11bb22cc33dd44ee55ff66009988",
+      "ChildCount": 2,
+      "ImageTags": {},
+      "UserData": {
+        "UnplayedItemCount": 2,
+        "PlaybackPositionTicks": 0,
+        "PlayCount": 0,
+        "IsFavorite": false,
+        "Played": false,
+        "Key": "371980-0"
+      },
+      "LocationType": "FileSystem",
+      "MediaType": "Unknown"
+    },
+    {
+      "Name": "Season 1",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "9c3e7a1b5d2f4860bc8e0a2d4f681357",
+      "PremiereDate": "2022-02-18T00:00:00.0000000Z",
+      "ProductionYear": 2022,
+      "IndexNumber": 1,
+      "IsFolder": true,
+      "Type": "Season",
+      "SeriesName": "Severance",
+      "SeriesId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+      "SeriesPrimaryImageTag": "77aa11bb22cc33dd44ee55ff66009988",
+      "ChildCount": 9,
+      "PrimaryImageAspectRatio": 0.6666666666666666,
+      "ImageTags": {
+        "Primary": "1a3c5e7092b4d6f81a3c5e7092b4d6f8"
+      },
+      "UserData": {
+        "UnplayedItemCount": 0,
+        "PlaybackPositionTicks": 0,
+        "PlayCount": 9,
+        "IsFavorite": false,
+        "LastPlayedDate": "2026-01-16T23:41:02.0000000Z",
+        "Played": true,
+        "Key": "371980-1"
+      },
+      "LocationType": "FileSystem",
+      "MediaType": "Unknown"
+    },
+    {
+      "Name": "Season 2",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "6d2a8c4e0b1f39578a3c7e1b5d9f0246",
+      "PremiereDate": "2025-01-17T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "IndexNumber": 2,
+      "IsFolder": true,
+      "Type": "Season",
+      "SeriesName": "Severance",
+      "SeriesId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+      "SeriesPrimaryImageTag": "77aa11bb22cc33dd44ee55ff66009988",
+      "ChildCount": 10,
+      "PrimaryImageAspectRatio": 0.6666666666666666,
+      "ImageTags": {
+        "Primary": "2b4d6f8a0c1e3557799bbddff1133557"
+      },
+      "UserData": {
+        "UnplayedItemCount": 6,
+        "PlaybackPositionTicks": 0,
+        "PlayCount": 0,
+        "IsFavorite": false,
+        "Played": false,
+        "Key": "371980-2"
+      },
+      "LocationType": "FileSystem",
+      "MediaType": "Unknown"
+    }
+  ],
+  "TotalRecordCount": 3,
+  "StartIndex": 0
+}

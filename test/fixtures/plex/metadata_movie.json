@@ -1,0 +1,116 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "allowSync": true,
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": 1,
+    "librarySectionTitle": "Movies",
+    "librarySectionUUID": "6f1c0e2a-7b3d-4e5f-8a9b-0c1d2e3f4a5b",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "mediaTagVersion": 1748100000,
+    "Metadata": [
+      {
+        "addedAt": 1735689600,
+        "art": "/library/metadata/20418/art/1748102400",
+        "audienceRating": 8.3,
+        "audienceRatingImage": "rottentomatoes://image.rating.upright",
+        "contentRating": "PG-13",
+        "duration": 9114000,
+        "guid": "plex://movie/5d776b59ad5437001f79c6f8",
+        "key": "/library/metadata/20418",
+        "librarySectionID": 1,
+        "librarySectionKey": "/library/sections/1",
+        "librarySectionTitle": "Movies",
+        "originallyAvailableAt": "2014-11-05",
+        "originalTitle": "Interstellar",
+        "rating": 8.7,
+        "ratingImage": "rottentomatoes://image.rating.ripe",
+        "ratingKey": "20418",
+        "studio": "Legendary Pictures",
+        "summary": "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival.",
+        "tagline": "Mankind was born on Earth. It was never meant to die here.",
+        "thumb": "/library/metadata/20418/thumb/1748102400",
+        "title": "Interstellar",
+        "titleSort": "Interstellar",
+        "type": "movie",
+        "updatedAt": 1748102400,
+        "viewOffset": 2278500,
+        "year": 2014,
+        "Media": [
+          {
+            "audioChannels": 6,
+            "audioCodec": "eac3",
+            "bitrate": 14320,
+            "container": "mkv",
+            "duration": 9114000,
+            "height": 2160,
+            "id": "88431",
+            "videoCodec": "hevc",
+            "videoFrameRate": "24p",
+            "videoProfile": "main 10",
+            "videoResolution": "4k",
+            "width": 3840,
+            "Part": [
+              {
+                "audioProfile": "dolby digital plus",
+                "container": "mkv",
+                "duration": 9114000,
+                "file": "/mnt/tank/media/movies/Interstellar (2014)/Interstellar.2014.2160p.mkv",
+                "hasThumbnail": "1",
+                "id": "91204",
+                "key": "/library/parts/91204/1735689600/file.mkv",
+                "size": 16321504422,
+                "videoProfile": "main 10",
+                "Stream": [
+                  {
+                    "bitDepth": 10,
+                    "codec": "hevc",
+                    "default": true,
+                    "displayTitle": "4K HEVC",
+                    "height": 2160,
+                    "id": "220401",
+                    "index": 0,
+                    "streamType": 1,
+                    "width": 3840
+                  },
+                  {
+                    "audioChannelLayout": "5.1(side)",
+                    "channels": 6,
+                    "codec": "eac3",
+                    "default": true,
+                    "displayTitle": "English (EAC3 5.1)",
+                    "id": "220402",
+                    "index": 1,
+                    "language": "English",
+                    "languageCode": "eng",
+                    "selected": true,
+                    "streamType": 2
+                  },
+                  {
+                    "codec": "srt",
+                    "displayTitle": "English (SRT External)",
+                    "id": "220403",
+                    "key": "/library/streams/220403",
+                    "language": "English",
+                    "languageCode": "eng",
+                    "streamType": 3
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "Genre": [
+          { "id": 32, "tag": "Adventure" },
+          { "id": 41, "tag": "Science Fiction" }
+        ],
+        "Director": [{ "id": 1131, "tag": "Christopher Nolan" }],
+        "Writer": [{ "id": 1132, "tag": "Jonathan Nolan" }],
+        "Role": [
+          { "id": 6011, "tag": "Matthew McConaughey", "role": "Cooper" },
+          { "id": 6012, "tag": "Anne Hathaway", "role": "Brand" }
+        ]
+      }
+    ]
+  }
+}

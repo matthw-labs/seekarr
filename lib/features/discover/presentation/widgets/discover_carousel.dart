@@ -8,6 +8,7 @@ import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/app_skeleton.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
+import 'package:seekarr/core/widgets/media_poster_card.dart';
 import 'package:seekarr/core/widgets/pressable_scale.dart';
 import 'package:seekarr/core/widgets/section_header.dart';
 import 'package:seekarr/core/widgets/staggered_entrance.dart';
@@ -103,6 +104,7 @@ class DiscoverCarousel extends StatelessWidget {
           ),
           child: Hero(
             tag: heroTag,
+            transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
             child: ContentCard(imageUrl: imageUrl),
           ),
         ),

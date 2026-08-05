@@ -407,8 +407,8 @@ class _NetworkCard extends StatelessWidget {
                         const SizedBox(width: AppSpacing.sm),
                         Text(
                           iface.name,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                          style: theme.textTheme.bodyMedium!.weight(
+                            FontWeight.w600,
                           ),
                         ),
                         const Spacer(),
@@ -477,15 +477,13 @@ class _PoolHealthCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     pool.name,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: theme.textTheme.labelMedium!.weight(FontWeight.w700),
                   ),
                   if (pool.usedFraction != null) ...[
                     const SizedBox(width: 6),
                     Text(
                       '${(pool.usedFraction! * 100).round()}%',
-                      style: theme.textTheme.labelSmall?.copyWith(
+                      style: theme.textTheme.labelSmall!.tabular.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),

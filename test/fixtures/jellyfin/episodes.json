@@ -1,0 +1,100 @@
+{
+  "Items": [
+    {
+      "Name": "Hello, Ms. Cobel",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "b1d5f9a3c7e1b5029d1f3a5c7e9b0246",
+      "DateCreated": "2026-01-17T06:00:03.0000000Z",
+      "Container": "mkv",
+      "PremiereDate": "2025-01-17T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "IndexNumber": 1,
+      "ParentIndexNumber": 2,
+      "RunTimeTicks": 30600000000,
+      "IsFolder": false,
+      "Type": "Episode",
+      "Overview": "Mark wakes up somewhere unexpected.",
+      "SeriesName": "Severance",
+      "SeriesId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+      "SeasonId": "6d2a8c4e0b1f39578a3c7e1b5d9f0246",
+      "SeasonName": "Season 2",
+      "SeriesPrimaryImageTag": "77aa11bb22cc33dd44ee55ff66009988",
+      "PrimaryImageAspectRatio": 1.7777777777777777,
+      "MediaType": "Video",
+      "ImageTags": {
+        "Primary": "0f1e2d3c4b5a69788796a5b4c3d2e1f0"
+      },
+      "UserData": {
+        "PlaybackPositionTicks": 0,
+        "PlayCount": 1,
+        "IsFavorite": false,
+        "LastPlayedDate": "2026-01-18T21:14:55.0000000Z",
+        "Played": true,
+        "Key": "0f4b8d2a6c1e39574a8b2c6d0e4f8192-2-1"
+      },
+      "LocationType": "FileSystem"
+    },
+    {
+      "Name": "Goodbye, Mrs. Selvig",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "c2e6a0b4d8f2135791ace13579bdf024",
+      "DateCreated": "2026-01-24T06:00:03.0000000Z",
+      "Container": "mkv",
+      "PremiereDate": "2025-01-24T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "IndexNumber": 2,
+      "ParentIndexNumber": 2,
+      "RunTimeTicks": 25800000000,
+      "IsFolder": false,
+      "Type": "Episode",
+      "SeriesName": "Severance",
+      "SeriesId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+      "SeasonId": "6d2a8c4e0b1f39578a3c7e1b5d9f0246",
+      "SeasonName": "Season 2",
+      "SeriesPrimaryImageTag": "77aa11bb22cc33dd44ee55ff66009988",
+      "MediaType": "Video",
+      "ImageTags": {},
+      "UserData": {
+        "PlaybackPositionTicks": 0,
+        "PlayCount": 0,
+        "IsFavorite": false,
+        "Played": false,
+        "Key": "0f4b8d2a6c1e39574a8b2c6d0e4f8192-2-2"
+      },
+      "LocationType": "FileSystem"
+    },
+    {
+      "Name": "Who Is Alive?",
+      "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+      "Id": "d3f7b1c5e9a3d7f1b5c9e3a7d1f5b902",
+      "DateCreated": "2026-01-31T06:00:03.0000000Z",
+      "Container": "mkv",
+      "PremiereDate": "2025-01-31T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "IndexNumber": 3,
+      "ParentIndexNumber": 2,
+      "RunTimeTicks": 23400000000,
+      "IsFolder": false,
+      "Type": "Episode",
+      "SeriesName": "Severance",
+      "SeriesId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+      "SeasonId": "6d2a8c4e0b1f39578a3c7e1b5d9f0246",
+      "SeasonName": "Season 2",
+      "SeriesPrimaryImageTag": "77aa11bb22cc33dd44ee55ff66009988",
+      "MediaType": "Video",
+      "ImageTags": {
+        "Thumb": "9b7d5f3a1c9e7b5d3f1a9c7e5b3d1f09"
+      },
+      "UserData": {
+        "PlaybackPositionTicks": 4680000000,
+        "PlayCount": 0,
+        "IsFavorite": false,
+        "Played": false,
+        "Key": "0f4b8d2a6c1e39574a8b2c6d0e4f8192-2-3"
+      },
+      "LocationType": "FileSystem"
+    }
+  ],
+  "TotalRecordCount": 3,
+  "StartIndex": 0
+}

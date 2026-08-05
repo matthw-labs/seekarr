@@ -5,6 +5,7 @@ import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/widgets/app_empty_state.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/core/widgets/media_poster_card.dart';
 import 'package:seekarr/core/widgets/pressable_scale.dart';
 import 'package:seekarr/core/widgets/staggered_entrance.dart';
 import 'package:seekarr/core/widgets/status_badge.dart';
@@ -166,6 +167,7 @@ class MediaGrid<T> extends StatelessWidget {
             excludeChildSemantics: title != null,
             child: Hero(
               tag: heroTag,
+              transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
               child: ContentCard(
                 imageUrl: imageSource.url,
                 httpHeaders: imageSource.headers,

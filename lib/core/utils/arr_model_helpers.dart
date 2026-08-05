@@ -52,7 +52,12 @@ List<RatingSource> parseArrRatings(
 
   ratings.add(
     RatingSource(
-      name: singleSourceName ?? '$votes voti',
+      // The badge, never a vote count. `RatingSource.name` is the field
+      // `RatingChip` speaks to a screen reader and shows in its tooltip, so the
+      // old `'$votes voti'` announced a Sonarr rating as "145000 voti rating
+      // 7.2" — a number where a source name belongs, in Italian, in an
+      // English-only app. The count is already carried by `votes`.
+      name: singleSourceName ?? singleSourceIcon,
       value: value,
       votes: votes,
       icon: singleSourceIcon,
@@ -95,8 +100,14 @@ String _iconForSource(String source) {
       return 'TVDB';
     case 'metacritic':
       return 'MC';
+    // Radarr and Sonarr send `rottenTomatoes`, not `rotten`, and they send
+    // `trakt` — neither of which used to match, so both fell to the default
+    // branch and became the first two letters of the key: `RO` and `TR`.
     case 'rotten':
+    case 'rottentomatoes':
       return 'RT';
+    case 'trakt':
+      return 'Trakt';
     default:
       final upper = source.toUpperCase();
       return upper.length >= 2 ? upper.substring(0, 2) : upper;
@@ -114,8 +125,14 @@ String _displayNameForSource(String source) {
     case 'metacritic':
       return 'Metacritic';
     case 'rotten':
+    case 'rottentomatoes':
       return 'Rotten Tomatoes';
+    case 'trakt':
+      return 'Trakt';
     default:
-      return source.toUpperCase();
+      // Not `toUpperCase()`: an unrecognised key used to arrive on screen as
+      // `ROTTENTOMATOES`. Left as the service spelled it, so an unknown source
+      // is shown rather than shouted.
+      return source;
   }
 }

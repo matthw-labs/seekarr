@@ -6,6 +6,7 @@ import 'package:seekarr/core/app_animation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/import/domain/manual_import_models.dart';
 import 'package:seekarr/features/import/presentation/manual_import_provider.dart';
@@ -271,15 +272,15 @@ class _RootFolderChip extends StatelessWidget {
               children: [
                 Text(
                   folder.displayName,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: labelColor,
-                  ),
+                  style: theme.textTheme.labelMedium!
+                      .weight(FontWeight.w700)
+                      .copyWith(color: labelColor),
                 ),
                 if (subtitle != null)
                   Text(
                     subtitle,
-                    style: theme.textTheme.labelSmall?.copyWith(
+                    // Reports free space, which moves as the import runs.
+                    style: theme.textTheme.labelSmall!.tabular.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
@@ -341,9 +342,7 @@ class _LastFolderShortcut extends ConsumerWidget {
                     path,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: theme.textTheme.labelMedium!.weight(FontWeight.w600),
                   ),
                 ],
               ),
@@ -485,10 +484,8 @@ class _DirectoryRow extends StatelessWidget {
                           entry.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w600,
+                          style: theme.textTheme.titleSmall!.weight(
+                            selected ? FontWeight.w700 : FontWeight.w600,
                           ),
                         ),
                         Text(

@@ -71,9 +71,7 @@ class AppErrorState extends StatelessWidget {
               serviceName == null
                   ? "Couldn't load this"
                   : "Couldn't load $serviceName",
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: theme.textTheme.titleMedium!.weight(FontWeight.w700),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.xs),

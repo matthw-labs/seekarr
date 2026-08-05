@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekarr/core/app_animation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/service_theme.dart';
@@ -31,13 +32,32 @@ class StatusBadge extends StatelessWidget {
   /// badge is decoration, which is what a coloured dot on a poster is.
   final bool excludeFromSemantics;
 
+  /// Whether status changes animate (tone cross-tween, icon/label switcher,
+  /// swept progress ring). Only the `.animated` constructor sets this — the
+  /// default badge stays static because it appears on twenty-odd surfaces
+  /// (poster overlays, queue rows, activity feeds) where a per-cell animation
+  /// would be noise.
+  final bool _animated;
+
   const StatusBadge({
     super.key,
     required this.info,
     this.compact = false,
     this.iconOnly = false,
     this.excludeFromSemantics = false,
-  });
+  }) : _animated = false;
+
+  /// Full badge whose tone, glyph and progress ring animate between resolved
+  /// statuses. Used on the media detail hero, where a single badge changing
+  /// state (missing → downloading → available) is the point of the surface.
+  /// Renders identically to the default under Reduce Motion.
+  const StatusBadge.animated({
+    super.key,
+    required this.info,
+    this.excludeFromSemantics = false,
+  }) : compact = false,
+       iconOnly = false,
+       _animated = true;
 
   @override
   Widget build(BuildContext context) {
@@ -75,9 +95,18 @@ class StatusBadge extends StatelessWidget {
           decoration: BoxDecoration(
             color: accentColor,
             shape: BoxShape.circle,
+            // A separator ring, not a depth level — this is why it is a single
+            // `BoxShadow` rather than an `AppElevation` stack. An 8px mark sits
+            // directly on arbitrary poster artwork in a dense row, and without a
+            // ring a tone-coloured dot can land on artwork of its own tone and
+            // vanish. `colorScheme.shadow` is the token for exactly this ink
+            // (`Colors.black` in both schemes, so nothing painted changes) and
+            // keeps the file inside the no-raw-`Colors` rule; the back button
+            // that used to be cited as the earned exception here no longer holds
+            // one.
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.35),
+                color: colorScheme.shadow.withValues(alpha: 0.35),
                 spreadRadius: 1.5,
               ),
             ],
@@ -88,47 +117,60 @@ class StatusBadge extends StatelessWidget {
 
     final foreground = compact ? onAccentColor : accentColor;
     final percentText = _percentText;
+    final animate = _animated && !MediaQuery.disableAnimationsOf(context);
 
-    return _spoken(
-      Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
-          vertical: compact ? 2 : AppSpacing.xs,
-        ),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: AppRadius.borderRadiusSm,
-          border: Border.all(color: borderColor, width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _leading(size: compact ? 10 : 12, color: foreground),
-            if (!compact) ...[
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                info.label,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: textColor,
-                ),
-              ),
-            ],
-            if (percentText != null) ...[
-              SizedBox(width: compact ? 2 : AppSpacing.xs),
-              Text(
-                percentText,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+    Widget content = Row(
+      mainAxisSize: MainAxisSize.min,
+      // Keyed by the resolved state (not the live percentage) so the switcher
+      // fires on a status change without restarting every progress tick.
+      key: animate
+          ? ValueKey('${info.availability}-${info.pipeline}-${info.label}')
+          : null,
+      children: [
+        _leading(size: compact ? 10 : 12, color: foreground, animate: animate),
+        if (!compact) ...[
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            info.label,
+            style: theme.textTheme.labelSmall!
+                .weight(FontWeight.w600)
+                .copyWith(color: textColor),
+          ),
+        ],
+        if (percentText != null) ...[
+          SizedBox(width: compact ? 2 : AppSpacing.xs),
+          Text(
+            percentText,
+            style: theme.textTheme.labelSmall!
+                .weight(FontWeight.w700)
+                .tabular
+                .copyWith(color: textColor),
+          ),
+        ],
+      ],
     );
+    if (animate) {
+      content = AnimatedSwitcher(
+        duration: AppAnimation.durationSm,
+        switchInCurve: AppAnimation.emphasizedCurve,
+        child: content,
+      );
+    }
+
+    Widget badge = Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
+        vertical: compact ? 2 : AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: AppRadius.borderRadiusSm,
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: content,
+    );
+
+    return _spoken(badge);
   }
 
   /// One spoken form for all three variants.
@@ -154,18 +196,37 @@ class StatusBadge extends StatelessWidget {
   }
 
   /// A determinate ring while bytes are moving, the state icon otherwise.
-  Widget _leading({required double size, required Color color}) {
+  ///
+  /// When [animate] is set, the ring sweeps to each new value instead of
+  /// snapping — the digits beside it stay live and honest, only the arc
+  /// eases. A count-up on the numbers themselves was considered and
+  /// rejected: a percentage that lags the actual transfer is briefly wrong
+  /// on purpose.
+  Widget _leading({
+    required double size,
+    required Color color,
+    bool animate = false,
+  }) {
     if (info.isActive && info.progress != null) {
-      return SizedBox(
-        width: size,
-        height: size,
-        child: CircularProgressIndicator(
-          value: info.progress,
-          strokeWidth: 2,
-          color: color,
-          backgroundColor: color.withValues(alpha: 0.25),
-        ),
-      );
+      final ring = animate
+          ? TweenAnimationBuilder<double>(
+              tween: Tween<double>(end: info.progress),
+              duration: AppAnimation.durationMd,
+              curve: AppAnimation.standardCurve,
+              builder: (context, value, _) => CircularProgressIndicator(
+                value: value,
+                strokeWidth: 2,
+                color: color,
+                backgroundColor: color.withValues(alpha: 0.25),
+              ),
+            )
+          : CircularProgressIndicator(
+              value: info.progress,
+              strokeWidth: 2,
+              color: color,
+              backgroundColor: color.withValues(alpha: 0.25),
+            );
+      return SizedBox(width: size, height: size, child: ring);
     }
 
     return Icon(statusIconFor(info), size: size, color: color);

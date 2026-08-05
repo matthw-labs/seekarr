@@ -25,22 +25,45 @@ class ApiClient {
   /// one. Normalising here (rather than at each of the twelve call sites) means
   /// a bare host can only ever fail as a connection error.
   ApiClient({required String baseUrl, required String apiKey})
-    : _dio = Dio(
-        BaseOptions(
-          baseUrl: UrlUtils.normalizeBaseUrl(baseUrl),
-          connectTimeout: _connectTimeout,
-          receiveTimeout: _receiveTimeout,
-          // Redirects are followed by SameOriginRedirectInterceptor instead, so
-          // `X-Api-Key` can never be replayed to an unconfigured host.
-          followRedirects: false,
-          validateStatus: allowRedirectStatus,
-          headers: {
-            'X-Api-Key': apiKey,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        ),
-      ) {
+    : this._(baseUrl: baseUrl, authHeaders: {'X-Api-Key': apiKey});
+
+  /// For a service whose credential does not travel as `X-Api-Key`.
+  ///
+  /// Jellyfin wants `Authorization: MediaBrowser Token="…"` and Plex wants
+  /// `X-Plex-Token` alongside a persisted `X-Plex-Client-Identifier`, so neither
+  /// fits the arr-family header this class was built around. A named constructor
+  /// rather than an optional parameter on the default one, because the two are
+  /// genuinely different contracts: passing both an `apiKey` and a header map
+  /// would leave the caller guessing which one authenticates the request.
+  ///
+  /// Everything else is deliberately shared — the timeouts, the JSON headers and
+  /// above all [SameOriginRedirectInterceptor], which is what stops a credential
+  /// being replayed to a host the user never configured. A bespoke `Dio` per
+  /// media server would have had to re-earn that guarantee twice.
+  ApiClient.authenticatedBy({
+    required String baseUrl,
+    required Map<String, String> headers,
+  }) : this._(baseUrl: baseUrl, authHeaders: headers);
+
+  ApiClient._({
+    required String baseUrl,
+    required Map<String, String> authHeaders,
+  }) : _dio = Dio(
+         BaseOptions(
+           baseUrl: UrlUtils.normalizeBaseUrl(baseUrl),
+           connectTimeout: _connectTimeout,
+           receiveTimeout: _receiveTimeout,
+           // Redirects are followed by SameOriginRedirectInterceptor instead, so
+           // the credential can never be replayed to an unconfigured host.
+           followRedirects: false,
+           validateStatus: allowRedirectStatus,
+           headers: {
+             ...authHeaders,
+             'Content-Type': 'application/json',
+             'Accept': 'application/json',
+           },
+         ),
+       ) {
     _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
   }
 

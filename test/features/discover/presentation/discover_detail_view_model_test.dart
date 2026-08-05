@@ -58,7 +58,8 @@ void main() {
       expect(viewModel.genres, 'Action, Drama');
       expect(viewModel.genresList, ['Action', 'Drama']);
       expect(viewModel.year, '2024');
-      expect(viewModel.runtimeStr, '123min');
+      // Seerr's `123min` now speaks the same voice as Radarr's page.
+      expect(viewModel.runtimeStr, '2h 3m');
       expect(viewModel.studios, ['Studio A', 'Studio B', 'Studio C']);
       expect(viewModel.voteAverage, 7.4);
       expect(viewModel.voteCount, 240);
@@ -164,7 +165,7 @@ void main() {
         'episodeRunTime': ['45', 50],
       });
 
-      expect(viewModel.runtimeStr, '45min');
+      expect(viewModel.runtimeStr, '45m');
     });
 
     test('parses season episodes when present', () {

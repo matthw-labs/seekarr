@@ -3,6 +3,7 @@ import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/dynamic_map_utils.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/app_error_state.dart';
@@ -273,8 +274,9 @@ class TrueNasNetworkScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             iface.name,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium!.weight(FontWeight.w600),
                           ),
                         ),
                         Flexible(

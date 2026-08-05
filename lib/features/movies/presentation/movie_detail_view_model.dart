@@ -123,11 +123,12 @@ class MovieDetailViewModel {
   ];
 
   List<MediaFact> _buildReleaseFacts() => [
-    if (_hasText(inCinemas)) MediaFact('In Cinemas', formatIsoDate(inCinemas!)),
+    if (_hasText(inCinemas))
+      MediaFact('In Cinemas', formatMediumDate(inCinemas!)),
     if (_hasText(digitalRelease))
-      MediaFact('Digital', formatIsoDate(digitalRelease!)),
+      MediaFact('Digital', formatMediumDate(digitalRelease!)),
     if (_hasText(physicalRelease))
-      MediaFact('Physical', formatIsoDate(physicalRelease!)),
+      MediaFact('Physical', formatMediumDate(physicalRelease!)),
   ];
 
   bool _hasText(String? value) => value != null && value.isNotEmpty;
@@ -150,6 +151,10 @@ class MovieDetailViewModel {
     );
     final moviePath = movie.path;
     final isInLibrary = movie.id > 0 && moviePath?.isNotEmpty == true;
+    // `formatRuntimeMinutes` answers '' for a runtime the service does not
+    // have, and the metadata line only drops nulls — so the empty string has
+    // to become one here.
+    final runtime = formatRuntimeMinutes(movie.runtime);
 
     return MovieDetailViewModel(
       title: movie.title,
@@ -164,7 +169,7 @@ class MovieDetailViewModel {
       isInLibrary: isInLibrary,
       isMonitored: movie.monitored,
       year: movie.year > 0 ? movie.year.toString() : '',
-      runtimeStr: movie.runtime > 0 ? '${movie.runtime} min' : null,
+      runtimeStr: runtime.isEmpty ? null : runtime,
       studio: movie.studio,
       genres: movie.genres,
       ratings: movie.ratings,

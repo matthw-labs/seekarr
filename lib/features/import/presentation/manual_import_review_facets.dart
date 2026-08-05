@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/import/domain/manual_import_status.dart';
 
@@ -167,11 +168,10 @@ class _FacetChip extends StatelessWidget {
                       Text(
                         info.label,
                         maxLines: 1,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: foreground,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
+                        style: theme.textTheme.labelSmall!
+                            .weight(FontWeight.w700)
+                            .tabular
+                            .copyWith(color: foreground),
                       ),
                     ],
                   ),

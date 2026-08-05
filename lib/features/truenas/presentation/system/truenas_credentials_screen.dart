@@ -127,9 +127,7 @@ class _UserTile extends ConsumerWidget {
               children: [
                 Text(
                   user.username,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
                 ),
                 Text(
                   '${user.fullName ?? '—'}${user.uid != null ? ' · uid ${user.uid}' : ''}'
@@ -241,9 +239,7 @@ class _GroupTile extends ConsumerWidget {
               children: [
                 Text(
                   group.name,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
                 ),
                 Text(
                   '${group.userCount} users${group.gid != null ? ' · gid ${group.gid}' : ''}'

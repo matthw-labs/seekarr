@@ -149,10 +149,9 @@ class _ReleaseListItemState extends State<ReleaseListItem> {
                                     releaseTitle,
                                     maxLines: _expanded ? 4 : 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      height: 1.25,
-                                    ),
+                                    style: theme.textTheme.bodyMedium!
+                                        .weight(FontWeight.w600)
+                                        .copyWith(height: 1.25),
                                   ),
                                   const SizedBox(height: AppSpacing.sm),
                                   _ReleaseMetaRow(
@@ -509,13 +508,16 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.6,
-            color: isError
-                ? AppColors.error
-                : theme.colorScheme.onSurfaceVariant,
-          ),
+          // Not `AppTheme.eyebrow`: this repeats inside every expanded release
+          // card (and twice in one when a release is both scored and
+          // rejected), so it is a dense label, not a region kicker.
+          style: theme.textTheme.labelSmall!
+              .weight(FontWeight.w700)
+              .copyWith(
+                color: isError
+                    ? AppColors.error
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
         ),
         if (score != null) ...[
           const Spacer(),
@@ -557,17 +559,19 @@ class ScoreBadge extends StatelessWidget {
         children: [
           Text(
             _signed(score),
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
+            // Scores stack down a release list and are read against each other.
+            style: theme.textTheme.labelSmall!
+                .weight(FontWeight.w700)
+                .tabular
+                .copyWith(color: color),
           ),
           const SizedBox(width: AppSpacing.xs),
           Text(
+            // Was fontSize 9; the unit keeps its dimmer tone to stay quieter
+            // than the number it annotates.
             'CF',
             style: theme.textTheme.labelSmall?.copyWith(
               color: color.withValues(alpha: 0.8),
-              fontSize: 9,
             ),
           ),
         ],
@@ -615,10 +619,10 @@ class CustomFormatChip extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Text(
             _signed(score),
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
+            style: theme.textTheme.labelSmall!
+                .weight(FontWeight.w700)
+                .tabular
+                .copyWith(color: color),
           ),
         ],
       ),
@@ -656,7 +660,11 @@ class InfoChip extends StatelessWidget {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(color: effective),
+            // Every caller feeds this a size, an age or a seed/peer pair, and
+            // the chips line up in a column down the release list.
+            style: theme.textTheme.labelSmall!.tabular.copyWith(
+              color: effective,
+            ),
           ),
         ),
       ],
@@ -703,10 +711,9 @@ class _Pill extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: color,
-                fontWeight: emphasize ? FontWeight.w700 : FontWeight.w600,
-              ),
+              style: theme.textTheme.labelSmall!
+                  .weight(emphasize ? FontWeight.w700 : FontWeight.w600)
+                  .copyWith(color: color),
             ),
           ),
         ],

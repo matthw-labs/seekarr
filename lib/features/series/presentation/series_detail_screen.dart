@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/api/quality_profile_mixin.dart';
-import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/app_animation.dart';
+import 'package:seekarr/core/utils/rating_display.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/presentation/widgets/arr_media_extras_section.dart';
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
@@ -38,7 +43,16 @@ class SeriesDetailScreen extends ConsumerStatefulWidget {
 
 class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     with QualityProfileMixin<SeriesDetailScreen> {
-  bool _isSearching = false;
+  bool _isAutoSearching = false;
+  bool _isAutoSearchConfirmed = false;
+  Timer? _searchConfirmTimer;
+
+  @override
+  void dispose() {
+    _searchConfirmTimer?.cancel();
+    super.dispose();
+  }
+
   bool _isDeleting = false;
   bool _isUpdatingMonitoredState = false;
   final Set<int> _searchingSeasons = {};
@@ -57,12 +71,27 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
 
     if (series == null) {
       if (seriesAsync.isLoading) {
-        return const MediaDetailLoadingView(subtitleWidth: 180);
+        return MediaDetailLoadingView(
+          accent: ServiceKey.sonarr.accent,
+          // Passed even though it has a default: without it the skeleton shows a
+          // film reel and the loaded hero a television, one frame apart.
+          heroFallbackIcon: Icons.tv_rounded,
+        );
       }
 
-      return _SeriesDetailErrorState(
+      return MediaDetailPlaceholderView.error(
         error: seriesAsync.asError?.error ?? 'Series not found.',
         serviceName: 'Sonarr',
+        accent: ServiceKey.sonarr.accent,
+        // Recover in place. Both loads share one outage, so one retry re-runs
+        // both. With no id there is no provider to re-run, so no retry is
+        // offered rather than one that does nothing.
+        onRetry: widget.seriesId > 0
+            ? () {
+                ref.invalidate(seriesDetailProvider(widget.seriesId));
+                ref.invalidate(seriesEpisodesProvider(widget.seriesId));
+              }
+            : null,
       );
     }
 
@@ -87,19 +116,44 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
 
     return MediaDetailView(
       accent: ServiceKey.sonarr.accent,
+      // Sonarr's own page used to pass nothing here, so a backdrop-less show got
+      // a film reel on the first-party page and a television on the Bazarr one.
+      heroFallbackIcon: Icons.tv_rounded,
       posterUrl: viewModel.posterUrl,
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
-      posterRow: (collapseFactor) =>
-          _buildPosterRow(context, viewModel, status, collapseFactor),
-      contentSections: _buildContentSections(
+      title: viewModel.title,
+      posterRow: _buildPosterRow(context, viewModel, status),
+      // Both loads share one outage, so one pull re-runs both — the same pair the
+      // retry button re-runs.
+      onRefresh: widget.seriesId > 0
+          ? () async {
+              ref.invalidate(seriesDetailProvider(widget.seriesId));
+              ref.invalidate(seriesEpisodesProvider(widget.seriesId));
+            }
+          : null,
+      body: _buildBody(
         viewModel,
+        status,
         infoGroups,
         episodesAsync,
         series.id > 0 ? series.id : widget.seriesId,
         series.tmdbId,
       ),
     );
+  }
+
+  /// `41/48 episodes` — how much of the manifest exists, for the hero chip slot.
+  String? _episodeCounter(SeriesDetailViewModel viewModel) {
+    final total = viewModel.episodeCount ?? 0;
+    if (total <= 0) return null;
+    return '${viewModel.episodeFileCount ?? 0}/$total episodes';
+  }
+
+  String? _seasonCounter(SeriesDetailViewModel viewModel) {
+    final seasons = viewModel.seasonCount ?? 0;
+    if (seasons <= 0) return null;
+    return '$seasons ${seasons == 1 ? 'season' : 'seasons'}';
   }
 
   void _syncQualityProfiles(SonarrSeries series) {
@@ -117,14 +171,27 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     BuildContext context,
     SeriesDetailViewModel viewModel,
     MediaStatusInfo status,
-    double collapseFactor,
   ) {
+    final episodeCounter = _episodeCounter(viewModel);
+    final seasonCounter = _seasonCounter(viewModel);
+
     return MediaDetailPosterRow(
-      collapseFactor: collapseFactor,
-      statusBadge: StatusBadge(info: status),
+      statusBadge: StatusBadge.animated(info: status),
       title: viewModel.title,
-      metadataItems: viewModel.metadataItems,
-      tags: _buildSummaryTags(viewModel),
+      // The season/episode summary moved into the chip slot below, so it is
+      // stated once rather than in the metadata line and in a chip.
+      metadataItems: [
+        viewModel.year,
+        if (viewModel.runtimeStr != null) viewModel.runtimeStr!,
+      ].where((item) => item.isNotEmpty).toList(growable: false),
+      // One meaning for the chip slot on every variant: how much of the manifest
+      // exists. Genres moved to the catalogue block below.
+      tags: [
+        if (episodeCounter != null)
+          TagChip(text: episodeCounter, color: ServiceKey.sonarr.accent),
+        if (seasonCounter != null)
+          TagChip(text: seasonCounter, color: ServiceKey.sonarr.accent),
+      ],
       posterCard: MediaPosterCard(
         heroTag: widget.heroTag,
         imageUrl: viewModel.posterUrl,
@@ -134,144 +201,146 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     );
   }
 
-  List<Widget> _buildContentSections(
+  MediaDetailBody _buildBody(
     SeriesDetailViewModel viewModel,
+    MediaStatusInfo status,
     List<MediaInfoGroup> infoGroups,
     AsyncValue<List<SonarrEpisode>> episodesAsync,
     int seriesId,
     int tmdbId,
   ) {
-    final detailInfoGroups = _detailInfoGroups(infoGroups);
+    final accent = ServiceKey.sonarr.accent;
+    final total = viewModel.episodeCount ?? 0;
+    final onDisk = viewModel.episodeFileCount ?? 0;
 
-    return [
-      LibraryDetailActions(
-        collapseFactor: 0,
-        accent: ServiceKey.sonarr.accent,
-        isInLibrary: viewModel.isInLibrary,
-        isMonitored: viewModel.isMonitored,
-        addLabel: 'Add Series',
-        isSearching: _isSearching,
-        isDeleting: _isDeleting,
-        isUpdatingMonitoredState: _isUpdatingMonitoredState,
-        currentProfileName: currentProfileName,
-        currentProfileId: currentProfileId,
-        qualityProfiles: qualityProfiles,
-        onPrimaryAction: () => _handlePrimaryAction(
-          context,
-          viewModel: viewModel,
-          seriesId: seriesId,
-        ),
-        onInteractiveSearch: () =>
-            _showInteractiveSearch(context, title: viewModel.title),
-        onAutoSearch: () => _triggerSearch(context),
-        onProfileSelected: _updateProfile,
-        onImport: openManualImportCallback(
-          context,
-          ServiceKey.sonarr,
-          seriesId,
-        ),
-        onDelete: () => _confirmDelete(context, title: viewModel.title),
-      ),
-      if (viewModel.overview.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: MediaDetailOverviewSection(overview: viewModel.overview),
-        ),
-      ],
-      if (viewModel.ratings.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            0,
-            AppSpacing.lg,
-            AppSpacing.md,
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            child: RatingChipsRow(
-              ratings: viewModel.ratings,
-              accent: ServiceKey.sonarr.accent,
+    return MediaDetailBody(
+      deck: viewModel.isInLibrary
+          ? LibraryDetailActions(
+              service: ServiceKey.sonarr,
+              status: status,
+              mediaTitle: viewModel.title,
+              isMonitored: viewModel.isMonitored,
+              partialSummary: total > 0
+                  ? '$onDisk of $total episodes on disk.'
+                  : null,
+              isBusy:
+                  _isAutoSearching || _isUpdatingMonitoredState || _isDeleting,
+              isConfirmed: _isAutoSearchConfirmed,
+              currentProfileName: currentProfileName,
+              currentProfileId: currentProfileId,
+              qualityProfiles: qualityProfiles,
+              onSearch: () => _triggerSearch(context),
+              onInteractiveSearch: () =>
+                  _showInteractiveSearch(context, title: viewModel.title),
+              onImport: openManualImportCallback(
+                context,
+                ServiceKey.sonarr,
+                seriesId,
+              ),
+              // Every in-flight pipeline state promotes 'Open queue' only if the
+              // host actually has a route for it; without this the most common
+              // transient state on a real page degraded to a sentence. Pushed, not
+              // gone: checking on a download should leave the title behind you.
+              onOpenQueue: () => context.push('/activity/series'),
+              onMonitoredChanged: (monitored) => _updateMonitoredState(
+                context,
+                seriesId: seriesId,
+                monitored: monitored,
+              ),
+              onProfileSelected: (profileId) =>
+                  _updateProfile(profileId, mediaTitle: viewModel.title),
+              onDelete: () => _confirmDelete(context, title: viewModel.title),
+            )
+          // See the Radarr screen: no add path from this view, so an untracked
+          // title gets a sentence instead of a CTA that apologises.
+          : const MediaDetailUnavailableSection(
+              message:
+                  'Sonarr is not tracking this series, so there is nothing to '
+                  'manage here yet. Add it in Sonarr, or request it in Seerr.',
+            ),
+      // Region 3 — the manifest: the episodes Sonarr expects under this title,
+      // checked against what actually arrived. It sits above the synopsis
+      // because prose about a show is never more operational than the list of
+      // episodes you are missing.
+      operate: [
+        if (viewModel.isInLibrary) ...[
+          MediaDetailSlot.lazy(
+            label: 'Seasons',
+            count: total > 0 ? '$onDisk of $total on disk' : null,
+            // A lazy sliver mid-page: a 250-episode season builds the rows on
+            // screen instead of all 250 inside one box adapter.
+            sliver: SeriesSeasonsList(
+              seasons: viewModel.seasons,
+              episodesAsync: episodesAsync,
+              onSearchSeason: (seasonNumber) =>
+                  _searchSeason(context, seasonNumber),
+              onInteractiveSearchSeason: (seasonNumber) =>
+                  _interactiveSearchSeason(
+                    context,
+                    seasonNumber,
+                    title: viewModel.title,
+                  ),
+              onSearchEpisode: (episodeId) =>
+                  _searchEpisode(context, episodeId),
+              onInteractiveSearchEpisode: (episodeId) =>
+                  _interactiveSearchEpisode(
+                    context,
+                    episodeId,
+                    title: viewModel.title,
+                  ),
+              searchingSeasons: _searchingSeasons,
+              searchingEpisodes: _searchingEpisodes,
             ),
           ),
-        ),
+          if (viewModel.hasFiles && viewModel.path != null)
+            MediaDetailSlot.box(
+              label: 'Files',
+              child: FileInfoSection(path: viewModel.path, accent: accent),
+            ),
+        ],
       ],
-      if (viewModel.hasFiles && viewModel.path != null) ...[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: FileInfoSection(
-            path: viewModel.path,
-            accent: ServiceKey.sonarr.accent,
+      synopsis: [
+        if (viewModel.overview.isNotEmpty)
+          MediaDetailSlot.box(
+            label: 'Overview',
+            child: MediaProseSection(text: viewModel.overview),
           ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
       ],
-      if (detailInfoGroups.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              MediaDetailSectionHeader(
-                title: 'Details',
-                accent: ServiceKey.sonarr.accent,
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: MediaInfoCard(groups: detailInfoGroups),
-              ),
-            ],
+      reference: [
+        if (infoGroups.isNotEmpty)
+          MediaDetailSlot.box(
+            label: 'Details',
+            child: AppCard.surfaceOutlined(
+              child: MediaInfoCard(groups: infoGroups),
+            ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
+        if (viewModel.ratings.isNotEmpty)
+          MediaDetailSlot.box(
+            label: 'Scores',
+            // See the Radarr screen: one legible source name per pill, and for
+            // Sonarr's single-source payload it also fixes what a screen reader
+            // says — the parser puts a vote count in the name field, so the pill
+            // used to announce itself as "145000 voti rating 7.2".
+            child: RatingChipsRow(
+              ratings: legibleRatings(viewModel.ratings),
+              accent: accent,
+            ),
+          ),
+        if (viewModel.genres.isNotEmpty)
+          MediaDetailSlot.box(
+            // Not 'Tags' — a Sonarr tag targets release profiles and import
+            // lists, and these are genres.
+            label: 'Genres',
+            child: MediaChipSection.neutral(values: viewModel.genres),
+          ),
       ],
-      if (viewModel.isInLibrary) ...[
-        _buildSeasonsSection(context, viewModel, episodesAsync),
-        const SizedBox(height: AppSpacing.lg),
-      ],
-      ArrMediaExtrasSection(
+      // See the movie screen: two labelled slots, each omitted when empty.
+      related: arrMediaExtrasSlots(
+        ref,
         tmdbId: tmdbId,
         mediaType: 'tv',
-        accent: ServiceKey.sonarr.accent,
+        accent: accent,
       ),
-      if (viewModel.genres.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: MediaDetailTagsSection(
-            tags: viewModel.genres,
-            accent: ServiceKey.sonarr.accent,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-      ],
-    ];
-  }
-
-  List<Widget> _buildSummaryTags(SeriesDetailViewModel viewModel) {
-    return viewModel.genres
-        .map((genre) => GenreChip(genre: genre))
-        .toList(growable: false);
-  }
-
-  List<MediaInfoGroup> _detailInfoGroups(List<MediaInfoGroup> infoGroups) =>
-      infoGroups;
-
-  Future<void> _handlePrimaryAction(
-    BuildContext context, {
-    required SeriesDetailViewModel viewModel,
-    required int seriesId,
-  }) async {
-    if (!viewModel.isInLibrary || seriesId <= 0) {
-      SnackBarHelper.info(
-        context,
-        'Add Series is not available yet from this view.',
-      );
-      return;
-    }
-
-    await _updateMonitoredState(
-      context,
-      seriesId: seriesId,
-      monitored: !viewModel.isMonitored,
     );
   }
 
@@ -287,67 +356,60 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       if (!mounted) return;
       ref.invalidate(seriesDetailProvider(seriesId));
       ref.invalidate(seriesProvider);
+      // The consequence, not the flag — the same sentence shape Radarr and
+      // Lidarr use for the same action.
       SnackBarHelper.success(
         context,
-        monitored ? 'Series monitored' : 'Series unmonitored',
+        monitored
+            ? 'Sonarr is monitoring this series'
+            : 'Sonarr has stopped monitoring this series',
       );
     } catch (e) {
       if (!mounted) return;
-      SnackBarHelper.error(context, 'Failed to update monitoring: $e');
+      SnackBarHelper.error(
+        context,
+        "Couldn't change monitoring in Sonarr.",
+        detail: e,
+      );
     } finally {
       if (mounted) setState(() => _isUpdatingMonitoredState = false);
     }
   }
 
-  Widget _buildSeasonsSection(
-    BuildContext context,
-    SeriesDetailViewModel viewModel,
-    AsyncValue<List<SonarrEpisode>> episodesAsync,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          MediaDetailSectionHeader(
-            title: 'Seasons',
-            accent: ServiceKey.sonarr.accent,
-          ),
-          SeriesSeasonsList(
-            seasons: viewModel.seasons,
-            episodesAsync: episodesAsync,
-            onSearchSeason: (seasonNumber) =>
-                _searchSeason(context, seasonNumber),
-            onInteractiveSearchSeason: (seasonNumber) =>
-                _interactiveSearchSeason(
-                  context,
-                  seasonNumber,
-                  title: viewModel.title,
-                ),
-            onSearchEpisode: (episodeId) => _searchEpisode(context, episodeId),
-            onInteractiveSearchEpisode: (episodeId) =>
-                _interactiveSearchEpisode(context, episodeId),
-            searchingSeasons: _searchingSeasons,
-            searchingEpisodes: _searchingEpisodes,
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _triggerSearch(BuildContext context) async {
-    setState(() => _isSearching = true);
+    HapticFeedback.selectionClick();
+    setState(() => _isAutoSearching = true);
     try {
       final sonarrService = ref.read(sonarrServiceProvider);
       await sonarrService.searchSeries(widget.seriesId);
       if (!context.mounted) return;
-      SnackBarHelper.success(context, 'Search started for entire series');
+      // "<Service> is searching <what>", the shape every library page uses. The
+      // scope matters here more than anywhere: this one search covers every
+      // monitored episode of the show.
+      SnackBarHelper.success(
+        context,
+        'Sonarr is searching for every monitored episode',
+      );
+      _showSearchConfirmation();
     } catch (e) {
       if (!context.mounted) return;
-      SnackBarHelper.error(context, 'Search failed: $e');
+      SnackBarHelper.error(
+        context,
+        "Couldn't start a search in Sonarr.",
+        detail: e,
+      );
     } finally {
-      if (mounted) setState(() => _isSearching = false);
+      if (mounted) setState(() => _isAutoSearching = false);
     }
+  }
+
+  void _showSearchConfirmation() {
+    if (!mounted) return;
+    setState(() => _isAutoSearchConfirmed = true);
+    _searchConfirmTimer?.cancel();
+    _searchConfirmTimer = Timer(AppAnimation.confirmationHold, () {
+      if (mounted) setState(() => _isAutoSearchConfirmed = false);
+    });
   }
 
   Future<void> _showInteractiveSearch(
@@ -355,13 +417,18 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     required String title,
     int? seasonNumber,
   }) async {
+    HapticFeedback.selectionClick();
     final sonarrService = ref.read(sonarrServiceProvider);
     await InteractiveSearchSheet.showAsync(
       context: context,
       accent: ServiceKey.sonarr.accent,
+      // The sheet titles itself "Releases" and this lands in the subtitle, so
+      // "Releases for X" said it twice. Capped: the subtitle has no maxLines, and
+      // a long show name plus a season suffix used to grow the header until it
+      // crowded out the list.
       title: seasonNumber != null
-          ? 'Releases for $title - Season $seasonNumber'
-          : 'Releases for $title',
+          ? '${truncateTitle(title)} · Season $seasonNumber'
+          : truncateTitle(title),
       fetchReleases: (token) => sonarrService.getReleases(
         seriesId: widget.seriesId,
         seasonNumber: seasonNumber ?? 1,
@@ -374,6 +441,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
   }
 
   Future<void> _searchSeason(BuildContext context, int seasonNumber) async {
+    HapticFeedback.selectionClick();
     setState(() => _searchingSeasons.add(seasonNumber));
     try {
       final sonarrService = ref.read(sonarrServiceProvider);
@@ -381,11 +449,15 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       if (!context.mounted) return;
       SnackBarHelper.success(
         context,
-        'Search started for Season $seasonNumber',
+        'Sonarr is searching Season $seasonNumber',
       );
     } catch (e) {
       if (!context.mounted) return;
-      SnackBarHelper.error(context, 'Search failed: $e');
+      SnackBarHelper.error(
+        context,
+        "Couldn't start a search for Season $seasonNumber in Sonarr.",
+        detail: e,
+      );
     } finally {
       if (mounted) setState(() => _searchingSeasons.remove(seasonNumber));
     }
@@ -409,15 +481,20 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
   }
 
   Future<void> _searchEpisode(BuildContext context, int episodeId) async {
+    HapticFeedback.selectionClick();
     setState(() => _searchingEpisodes.add(episodeId));
     try {
       final sonarrService = ref.read(sonarrServiceProvider);
       await sonarrService.searchEpisodes([episodeId]);
       if (!context.mounted) return;
-      SnackBarHelper.success(context, 'Episode search started');
+      SnackBarHelper.success(context, 'Sonarr is searching this episode');
     } catch (e) {
       if (!context.mounted) return;
-      SnackBarHelper.error(context, 'Search failed: $e');
+      SnackBarHelper.error(
+        context,
+        "Couldn't start a search for this episode.",
+        detail: e,
+      );
     } finally {
       if (mounted) setState(() => _searchingEpisodes.remove(episodeId));
     }
@@ -425,13 +502,18 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
 
   Future<void> _interactiveSearchEpisode(
     BuildContext context,
-    int episodeId,
-  ) async {
+    int episodeId, {
+    required String title,
+  }) async {
+    HapticFeedback.selectionClick();
     final sonarrService = ref.read(sonarrServiceProvider);
     await InteractiveSearchSheet.showAsync(
       context: context,
       accent: ServiceKey.sonarr.accent,
-      title: 'Episode Releases',
+      // "Episode Releases" under a heading that already reads "Releases" named
+      // neither the show nor which scope was searched. This says both, in the
+      // same shape as the series and season sheets.
+      title: '${truncateTitle(title)} · one episode',
       fetchReleases: (token) =>
           sonarrService.getReleases(episodeId: episodeId, cancelToken: token),
       onGrabRelease: (guid, indexerId) async {
@@ -440,18 +522,47 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     );
   }
 
-  Future<void> _updateProfile(int profileId) async {
+  /// Changes the quality profile behind a confirmation that names the
+  /// transition and its consequence — see the note on Radarr's equivalent for
+  /// why this is a confirm and not an Undo: putting the old profile back does
+  /// not recall searches Sonarr has already queued.
+  Future<void> _updateProfile(
+    int profileId, {
+    required String mediaTitle,
+  }) async {
+    if (profileId == currentProfileId) return;
+
+    final from = currentProfileName ?? 'its current profile';
+    final to = getProfileName(profileId) ?? 'the selected profile';
+
+    final result = await showAppConfirmDialog(
+      context: context,
+      title: 'Change quality profile?',
+      icon: Icons.high_quality_rounded,
+      message:
+          '${truncateTitle(mediaTitle)} moves from $from to $to. Sonarr may '
+          'start searching for upgrades across every monitored episode as soon '
+          'as this lands, and a search cannot be called back from here.',
+      confirmLabel: 'Change profile',
+    );
+
+    if (!result.confirmed || !mounted) return;
+
     try {
       final sonarrService = ref.read(sonarrServiceProvider);
       await sonarrService.updateSeriesProfile(widget.seriesId, profileId);
       if (mounted) {
         updateProfileState(profileId);
         ref.invalidate(seriesProvider);
-        SnackBarHelper.success(context, 'Quality profile updated');
+        SnackBarHelper.success(context, 'Quality profile changed to $to');
       }
     } catch (e) {
       if (!mounted) return;
-      SnackBarHelper.error(context, 'Failed to update profile: $e');
+      SnackBarHelper.error(
+        context,
+        "Couldn't change the quality profile in Sonarr.",
+        detail: e,
+      );
     }
   }
 
@@ -459,9 +570,17 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     BuildContext context, {
     required String title,
   }) async {
+    // Same tactile weight Radarr gives the same action: the destructive button
+    // announces itself in the hand before the dialog arrives. Tactility is a
+    // property of the action, not of which service happens to own the screen.
+    HapticFeedback.mediumImpact();
+
     final result = await showDeleteMediaDialog(
       context: context,
-      title: title,
+      // Capped where the untrusted string enters: the dialog's "Delete <title>?"
+      // heading sits above the scrollable content, so a long name pushes the
+      // checkboxes and the buttons off the screen.
+      title: truncateTitle(title),
       mediaType: DeleteMediaType.series,
     );
 
@@ -476,52 +595,23 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         addImportListExclusion: result.addExclusion,
       );
       if (!context.mounted) return;
-      SnackBarHelper.success(context, 'Series deleted');
+      // Which destruction happened, since the dialog offered two.
+      SnackBarHelper.success(
+        context,
+        result.deleteFiles
+            ? 'Removed from Sonarr and deleted from disk'
+            : 'Removed from Sonarr',
+      );
       context.pop();
     } catch (e) {
       if (!context.mounted) return;
-      SnackBarHelper.error(context, 'Failed to delete series: $e');
+      SnackBarHelper.error(
+        context,
+        "Couldn't delete this series from Sonarr.",
+        detail: e,
+      );
     } finally {
       if (mounted) setState(() => _isDeleting = false);
     }
-  }
-}
-
-class _SeriesDetailErrorState extends StatelessWidget {
-  final Object error;
-  final String serviceName;
-
-  const _SeriesDetailErrorState({
-    required this.error,
-    required this.serviceName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isNotConfigured = error.toString().contains('not configured');
-
-    return Material(
-      color: colorScheme.surface,
-      child: CustomScrollView(
-        slivers: [
-          SliverAppBar(pinned: true, backgroundColor: colorScheme.surface),
-          SliverFillRemaining(
-            child: isNotConfigured
-                ? NotConfiguredPlaceholder(serviceName: serviceName)
-                : Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.xl),
-                      child: Text(
-                        'Error: $error',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-          ),
-        ],
-      ),
-    );
   }
 }

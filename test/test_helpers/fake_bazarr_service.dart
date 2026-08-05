@@ -47,6 +47,14 @@ class FakeBazarrService extends BazarrService {
 
   Object? throwOnCall;
 
+  /// Thrown only by the wanted endpoints, so a test can fail the secondary
+  /// section while the primary lookup succeeds.
+  Object? throwOnWanted;
+
+  /// Call counters for retry assertions.
+  int wantedMoviesCalls = 0;
+  int wantedEpisodesCalls = 0;
+
   @override
   Future<BazarrSystemStatus> getStatus() async {
     if (throwOnCall != null) throw throwOnCall!;
@@ -96,7 +104,9 @@ class FakeBazarrService extends BazarrService {
     int start = 0,
     int length = 50,
   }) async {
+    wantedEpisodesCalls++;
     if (throwOnCall != null) throw throwOnCall!;
+    if (throwOnWanted != null) throw throwOnWanted!;
     if (wantedEpisodesForSeriesResult.isNotEmpty) {
       return BazarrPagedResult(
         data: wantedEpisodesForSeriesResult,
@@ -112,7 +122,9 @@ class FakeBazarrService extends BazarrService {
     int start = 0,
     int length = 50,
   }) async {
+    wantedMoviesCalls++;
     if (throwOnCall != null) throw throwOnCall!;
+    if (throwOnWanted != null) throw throwOnWanted!;
     if (wantedMovieByIdOverride != null) {
       return BazarrPagedResult(
         data: [wantedMovieByIdOverride!],

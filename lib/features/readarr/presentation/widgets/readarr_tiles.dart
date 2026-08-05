@@ -97,17 +97,18 @@ class ReadarrAuthorTile extends StatelessWidget {
                     children: [
                       Text(
                         author.authorName,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleSmall!.weight(FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         subtitle,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                        // "3/12 books · 4 missing" — counts that move as the
+                        // library is scanned.
+                        style: Theme.of(context).textTheme.bodySmall!.tabular
+                            .copyWith(color: colorScheme.onSurfaceVariant),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -183,9 +184,9 @@ class ReadarrHistoryTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleSmall!.weight(FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -210,11 +211,9 @@ class ReadarrHistoryTile extends StatelessWidget {
                 ),
                 child: Text(
                   event.label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: event.color,
-                    letterSpacing: 0.4,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!
+                      .weight(FontWeight.w800)
+                      .copyWith(color: event.color),
                 ),
               ),
             ],

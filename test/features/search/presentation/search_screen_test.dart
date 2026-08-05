@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
+import 'package:seekarr/core/widgets/media_poster_card.dart';
 
 import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
@@ -80,8 +81,90 @@ void main() {
     await tester.tap(find.text('Dune'));
     await tester.pumpAndSettle();
 
-    expect(router.state.uri.toString(), '/services/radarr/movie/10');
+    expect(router.state.uri.path, '/services/radarr/movie/10');
+    // The poster's shared-element tag travels with the route so the detail
+    // page's Hero has a matching destination.
+    expect(
+      router.state.uri.queryParameters['heroTag'],
+      'search_radarr_movie_10',
+    );
     expect(find.text('Movie detail 10 Dune'), findsOneWidget);
+  });
+
+  testWidgets('a result with artwork flies its poster into the detail page', (
+    tester,
+  ) async {
+    await _pumpSearch(tester, withPoster: true);
+
+    final hero = tester.widget<Hero>(
+      find.ancestor(of: find.byType(ContentCard), matching: find.byType(Hero)),
+    );
+    expect(hero.tag, 'search_radarr_movie_10');
+    // Same toggle every other poster Hero uses, so the interactive swipe-back
+    // carries this one home too.
+    expect(hero.transitionOnUserGestures, MediaPosterCard.flightOnUserGestures);
+  });
+
+  testWidgets('a result without artwork does not fly an empty box', (
+    tester,
+  ) async {
+    // No images on the lookup result, so `extractPosterUrl` yields nothing —
+    // the same situation every Bazarr row is in.
+    await _pumpSearch(tester);
+
+    expect(find.byType(ContentCard), findsOneWidget);
+    expect(
+      find.ancestor(of: find.byType(ContentCard), matching: find.byType(Hero)),
+      findsNothing,
+    );
+  });
+
+  testWidgets('the flight into a real detail page completes cleanly', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      initialLocation: '/search',
+      routes: [
+        GoRoute(
+          path: '/search',
+          builder: (context, state) => const SearchScreen(),
+        ),
+        GoRoute(
+          path: '/services/radarr/movie/:id',
+          builder: (context, state) => Scaffold(
+            body: SizedBox(
+              width: 82,
+              height: 123,
+              child: MediaPosterCard(
+                heroTag: state.uri.queryParameters['heroTag']!,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _overrides(withPoster: true),
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.text('Dune'));
+    await tester.pump();
+    // Mid-flight: two live Heroes sharing one tag would throw here rather than
+    // at settle.
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(tester.takeException(), isNull);
+
+    // Discrete pumps, not pumpAndSettle: the destination poster's shimmer
+    // placeholder repeats forever in tests.
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(MediaPosterCard), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 
@@ -102,17 +185,31 @@ Finder _posterSizedContentCard(WidgetTester tester) {
   return find.byKey(const ValueKey('missing-poster-sized-content-card'));
 }
 
-Future<void> _pumpSearch(WidgetTester tester) async {
+Future<void> _pumpSearch(WidgetTester tester, {bool withPoster = false}) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: _overrides(),
+      overrides: _overrides(withPoster: withPoster),
       child: const MaterialApp(home: SearchScreen()),
     ),
   );
-  await tester.pumpAndSettle();
+  if (withPoster) {
+    // A poster URL puts ContentCard's shimmer placeholder on screen, and its
+    // controller repeats forever — `pumpAndSettle` would never return.
+    await _pumpFrames(tester);
+  } else {
+    await tester.pumpAndSettle();
+  }
 }
 
-_overrides() {
+/// Advances enough frames for the providers to resolve, without waiting for a
+/// repeating shimmer to stop.
+Future<void> _pumpFrames(WidgetTester tester) async {
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
+
+_overrides({bool withPoster = false}) {
   return [
     currentSettingsProvider.overrideWith(
       (ref) => const SettingsModel(
@@ -124,7 +221,18 @@ _overrides() {
     seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
     radarrServiceProvider.overrideWith(
       (ref) => _SearchRadarrService(
-        results: [buildMovie(id: 10, title: 'Dune', year: 2024)],
+        results: [
+          buildMovie(
+            id: 10,
+            title: 'Dune',
+            year: 2024,
+            images: withPoster
+                ? const [
+                    {'coverType': 'poster', 'url': '/MediaCover/10/poster.jpg'},
+                  ]
+                : const [],
+          ),
+        ],
       ),
     ),
   ];

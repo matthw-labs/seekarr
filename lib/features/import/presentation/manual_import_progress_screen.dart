@@ -147,8 +147,8 @@ class _CommandCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'Manual import',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                        style: theme.textTheme.titleMedium!.weight(
+                          FontWeight.w700,
                         ),
                       ),
                     ),
@@ -244,10 +244,7 @@ class _Metric extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+          style: theme.textTheme.titleSmall!.weight(FontWeight.w700).tabular,
         ),
       ],
     );
@@ -365,9 +362,7 @@ class _SubmittedFileRow extends StatelessWidget {
                     ].join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
                   ),
                   FilenameText(
                     filename: item.fileName,

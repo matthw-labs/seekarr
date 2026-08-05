@@ -58,7 +58,7 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
           unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
           labelStyle: Theme.of(
             context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ).textTheme.titleSmall!.weight(FontWeight.w800),
           tabs: const [
             Tab(text: 'Episodes'),
             Tab(text: 'Movies'),
@@ -279,7 +279,7 @@ class _BazarrWantedRow extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   isMovie ? '🎬' : '📺',
-                  style: const TextStyle(fontSize: 16),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -289,9 +289,9 @@ class _BazarrWantedRow extends StatelessWidget {
                   children: [
                     Text(
                       title ?? 'Unknown',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleSmall!.weight(FontWeight.w700),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -319,11 +319,9 @@ class _BazarrWantedRow extends StatelessWidget {
                 ),
                 child: Text(
                   langCodes.isNotEmpty ? langCodes : 'WANTED',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.bazarr,
-                    letterSpacing: 0.4,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!
+                      .weight(FontWeight.w800)
+                      .copyWith(color: AppColors.bazarr),
                 ),
               ),
             ],
@@ -493,9 +491,7 @@ class _BazarrDetailAppBar extends StatelessWidget
       ),
       title: Text(
         title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        style: Theme.of(context).textTheme.titleMedium!.weight(FontWeight.w700),
       ),
       bottom: bottom,
     );

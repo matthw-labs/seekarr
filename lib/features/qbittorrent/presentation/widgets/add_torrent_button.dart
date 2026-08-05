@@ -110,7 +110,9 @@ class AddTorrentButton extends ConsumerWidget {
                                     f.name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 13),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
                                   ),
                                 ),
                                 IconButton(
@@ -226,17 +228,16 @@ class AddTorrentButton extends ConsumerWidget {
                       SnackBarHelper.error(ctx2, 'Failed to add torrent: $e');
                     }
                   },
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add_rounded, size: 18),
-                      SizedBox(width: 8),
+                      const Icon(Icons.add_rounded, size: 18),
+                      const SizedBox(width: 8),
                       Text(
                         'Add Torrent',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: Theme.of(
+                          ctx2,
+                        ).textTheme.labelLarge!.weight(FontWeight.w800),
                       ),
                     ],
                   ),

@@ -1,4 +1,5 @@
 import 'package:seekarr/core/utils/image_utils.dart';
+import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
 
 typedef DiscoverDetailRating = ({
@@ -252,7 +253,10 @@ class DiscoverDetailViewModel {
       genres: _joinNamedValues(details['genres']),
       genresList: genresList,
       year: _extractYear(releaseDate),
-      runtimeStr: runtime != null && runtime > 0 ? '${runtime}min' : null,
+      // One runtime voice with Radarr and Sonarr: `2h 53m`, never `173min`.
+      runtimeStr: runtime == null || formatRuntimeMinutes(runtime).isEmpty
+          ? null
+          : formatRuntimeMinutes(runtime),
       numberOfSeasons: (details['numberOfSeasons'] as num?)?.toInt(),
       networks: _joinNamedValues(details['networks'], take: 2),
       studios: studios,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/app_dialog.dart';
@@ -21,7 +22,10 @@ import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 /// feature: a bare Material `Card`, a hand-rolled 4K badge at a hardcoded
 /// `fontSize: 10`, bare `TextStyle`s with no `textTheme` base, a `label: value`
 /// info-row pattern found nowhere else in the app, and a raw
-/// `CircularProgressIndicator` plus `'Error: $err'` for its states.
+/// `CircularProgressIndicator` plus `'Error: $err'` for its states. Every string
+/// here still takes a role off `textTheme` — and re-weights through
+/// `SeekarrTextStyle.weight`, since `copyWith(fontWeight:)` on the bundled
+/// variable Inter does not reach the `wght` axis and silently renders Regular.
 class RequestsList extends ConsumerWidget {
   const RequestsList({super.key});
 
@@ -111,9 +115,7 @@ class _RequestCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     heading,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: theme.textTheme.titleSmall?.weight(FontWeight.w700),
                   ),
                 ),
                 if (request.is4k) ...[

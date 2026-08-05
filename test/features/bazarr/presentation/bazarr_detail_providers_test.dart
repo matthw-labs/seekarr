@@ -1,12 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:seekarr/features/bazarr/data/bazarr_service.dart';
 import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
-import 'package:seekarr/features/bazarr/presentation/bazarr_series_detail_screen.dart';
-import 'package:seekarr/features/bazarr/presentation/bazarr_movie_detail_screen.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 
@@ -133,115 +130,7 @@ void main() {
     },
   );
 
-  testWidgets('BazarrSeriesDetailScreen renders header and missing list', (
-    tester,
-  ) async {
-    final fake = FakeBazarrService()
-      ..seriesByIdOverride = const BazarrSeries(
-        sonarrSeriesId: 7,
-        title: 'Foundation',
-        year: 2021,
-        monitored: true,
-        episodeMissingCount: 2,
-      )
-      ..wantedEpisodesForSeriesResult = const [
-        BazarrWantedItem(
-          seriesTitle: 'Foundation',
-          episodeTitle: 'The Emperor',
-          episodeNumber: '1x01',
-          sonarrSeriesId: 7,
-          missingLanguages: [BazarrSubtitleLanguage(code2: 'en')],
-        ),
-      ];
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentSettingsProvider.overrideWith((ref) => _settings),
-          bazarrServiceProvider.overrideWith((ref) => fake),
-        ],
-        child: const MaterialApp(
-          home: BazarrSeriesDetailScreen(sonarrSeriesId: 7),
-        ),
-      ),
-    );
-
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.pump(const Duration(milliseconds: 50));
-
-    expect(find.text('Foundation'), findsOneWidget);
-    expect(find.text('Missing Subtitles'), findsOneWidget);
-    expect(find.text('The Emperor'), findsOneWidget);
-  });
-
-  testWidgets('BazarrSeriesDetailScreen handles missing series gracefully', (
-    tester,
-  ) async {
-    final fake = FakeBazarrService();
-    final initial = const BazarrWantedItem(
-      seriesTitle: 'Custom Series',
-      episodeNumber: '1x01',
-      sonarrSeriesId: 999,
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentSettingsProvider.overrideWith((ref) => _settings),
-          bazarrServiceProvider.overrideWith((ref) => fake),
-        ],
-        child: MaterialApp(
-          home: BazarrSeriesDetailScreen(
-            sonarrSeriesId: 999,
-            initialWanted: initial,
-          ),
-        ),
-      ),
-    );
-
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-
-    expect(find.text('Custom Series'), findsOneWidget);
-  });
-
-  testWidgets('BazarrMovieDetailScreen renders header and missing languages', (
-    tester,
-  ) async {
-    final fake = FakeBazarrService()
-      ..movieByIdOverride = const BazarrMovie(
-        radarrId: 42,
-        title: 'Dune',
-        year: 2021,
-        monitored: true,
-      )
-      ..wantedMovieByIdOverride = const BazarrWantedItem(
-        title: 'Dune',
-        radarrId: 42,
-        missingLanguages: [
-          BazarrSubtitleLanguage(code2: 'it', name: 'Italian'),
-          BazarrSubtitleLanguage(code2: 'en', name: 'English'),
-        ],
-      );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentSettingsProvider.overrideWith((ref) => _settings),
-          bazarrServiceProvider.overrideWith((ref) => fake),
-        ],
-        child: const MaterialApp(home: BazarrMovieDetailScreen(radarrId: 42)),
-      ),
-    );
-
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.pump(const Duration(milliseconds: 50));
-
-    expect(find.text('Dune'), findsWidgets);
-    expect(find.text('IT'), findsOneWidget);
-    expect(find.text('EN'), findsOneWidget);
-    expect(find.text('Italian'), findsOneWidget);
-  });
+  // The detail-screen widget tests moved to
+  // bazarr_movie_detail_screen_test.dart / bazarr_series_detail_screen_test.dart
+  // when the screens migrated onto MediaDetailView.
 }

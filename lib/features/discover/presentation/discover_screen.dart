@@ -17,6 +17,7 @@ import 'package:seekarr/core/widgets/app_skeleton.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
+import 'package:seekarr/core/widgets/media_poster_card.dart';
 import 'package:seekarr/core/widgets/pressable_scale.dart';
 import 'package:seekarr/core/widgets/search_bar_header.dart';
 import 'package:seekarr/core/widgets/service_kpi_peek.dart';
@@ -304,6 +305,8 @@ class _FeaturedBanner extends StatelessWidget {
                         height: 111,
                         child: Hero(
                           tag: heroTag,
+                          transitionOnUserGestures:
+                              MediaPosterCard.flightOnUserGestures,
                           child: ContentCard(imageUrl: imageUrl),
                         ),
                       ),
@@ -405,6 +408,7 @@ class _DiscoverSearchResults extends ConsumerWidget {
               ),
               child: Hero(
                 tag: heroTag,
+                transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
                 child: ContentCard(imageUrl: imageUrl),
               ),
             );

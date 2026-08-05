@@ -85,22 +85,27 @@ void main() {
   });
 
   group('serviceDomainBandValue', () {
-    test('a folded band still says how many and what is dark', () {
-      // The strip a collapsed band paints carries health visually; a screen
-      // reader gets nothing from unlit tiles, so folding must not cost that fact.
-      expect(
-        serviceDomainBandValue(
-          serviceCount: 6,
-          offlineServiceTitles: const ['Lidarr'],
-        ),
-        "6 services, Lidarr isn't answering",
-      );
+    test('a band announces its size and nothing else', () {
+      // It used to carry the offline services too, because a folded band was a
+      // strip of bare glyphs and an unlit tile says nothing to a screen reader.
+      // The compact cards that replaced the strip are labelled nodes of their
+      // own, so repeating it here would say "Lidarr isn't answering" twice on
+      // the way into the band.
+      expect(serviceDomainBandValue(serviceCount: 6), '6 services');
     });
 
-    test('a healthy band is just its size', () {
+    test('agrees in number', () {
+      expect(serviceDomainBandValue(serviceCount: 1), '1 service');
+    });
+  });
+
+  group('servicesDismissMoreServicesLabel', () {
+    test('names what it dismisses, not the gesture', () {
+      // A bare "Dismiss" on a row whose sibling is "Set up 8 more services"
+      // leaves the user to guess which of the two the button acts on.
       expect(
-        serviceDomainBandValue(serviceCount: 1, offlineServiceTitles: const []),
-        '1 service',
+        servicesDismissMoreServicesLabel(count: 8),
+        'Dismiss the 8 remaining services hint',
       );
     });
   });

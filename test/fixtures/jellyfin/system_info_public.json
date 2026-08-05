@@ -1,0 +1,9 @@
+{
+  "LocalAddress": "http://192.168.1.24:8096",
+  "ServerName": "basement",
+  "Version": "10.11.11",
+  "ProductName": "Jellyfin Server",
+  "OperatingSystem": "Linux",
+  "Id": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+  "StartupWizardCompleted": true
+}

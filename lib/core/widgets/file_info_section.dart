@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/widgets/media_detail_view.dart';
+import 'package:seekarr/core/theme.dart';
 
 /// A reusable widget to display file information (path and filename).
 ///
-/// Uses Material Design 3 styling with proper color tokens.
+/// Headless: the heading comes from the `MediaDetailSlot` that hosts it, so
+/// every heading on a detail page is built by the spine and cannot lose its
+/// accent, its `Semantics(header: true)` or its place in the region order.
 class FileInfoSection extends StatelessWidget {
   final String? path;
   final String? filename;
 
-  /// Optional per-service accent for the section header pipe.
+  /// Optional per-service accent for the storage glyph.
+  ///
+  /// It used to feed a section-header pipe; now that the spine owns headings it
+  /// tints the glyph, which is what stopped that glyph being a second accent
+  /// (`colorScheme.primary` indigo) on a Radarr amber or Sonarr violet page.
   final Color? accent;
 
   const FileInfoSection({super.key, this.path, this.filename, this.accent});
@@ -23,18 +29,13 @@ class FileInfoSection extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        MediaDetailSectionHeader(title: 'File', accent: accent),
-        _InfoRow(
-          title: filename ?? 'Library path',
-          subtitle: path,
-          icon: Icons.storage_rounded,
-          colorScheme: colorScheme,
-          theme: theme,
-        ),
-      ],
+    return _InfoRow(
+      title: filename ?? 'Library path',
+      subtitle: path,
+      icon: Icons.storage_rounded,
+      iconColor: accent ?? colorScheme.onSurfaceVariant,
+      colorScheme: colorScheme,
+      theme: theme,
     );
   }
 }
@@ -43,12 +44,14 @@ class _InfoRow extends StatelessWidget {
   final String title;
   final String? subtitle;
   final IconData icon;
+  final Color iconColor;
   final ColorScheme colorScheme;
   final ThemeData theme;
 
   const _InfoRow({
     required this.title,
     required this.icon,
+    required this.iconColor,
     required this.colorScheme,
     required this.theme,
     this.subtitle,
@@ -75,7 +78,7 @@ class _InfoRow extends StatelessWidget {
               color: colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(icon, size: 18, color: colorScheme.primary),
+            child: Icon(icon, size: 18, color: iconColor),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -86,10 +89,9 @@ class _InfoRow extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodySmall!
+                      .weight(FontWeight.w600)
+                      .copyWith(color: colorScheme.onSurface),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),

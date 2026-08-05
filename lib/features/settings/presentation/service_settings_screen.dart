@@ -457,9 +457,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               children: [
                 Text(
                   service.title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: theme.textTheme.titleMedium!.weight(FontWeight.w700),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -865,10 +863,9 @@ class _HeaderStatus extends StatelessWidget {
           Flexible(
             child: Text(
               label,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.labelMedium!
+                  .weight(FontWeight.w600)
+                  .copyWith(color: color),
               overflow: TextOverflow.ellipsis,
             ),
           ),

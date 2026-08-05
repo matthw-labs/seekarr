@@ -1,0 +1,36 @@
+{
+  "Name": "Season 2",
+  "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+  "Id": "6d2a8c4e0b1f39578a3c7e1b5d9f0246",
+  "Etag": "0011223344556677889900aabbccddee",
+  "DateCreated": "2026-01-17T06:00:02.0000000Z",
+  "CanDelete": false,
+  "CanDownload": false,
+  "PremiereDate": "2025-01-17T00:00:00.0000000Z",
+  "ProductionYear": 2025,
+  "IndexNumber": 2,
+  "IsFolder": true,
+  "Type": "Season",
+  "ParentLogoItemId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+  "ParentBackdropItemId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+  "ParentBackdropImageTags": ["fedcba0987654321fedcba0987654321"],
+  "SeriesName": "Severance",
+  "SeriesId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+  "SeriesPrimaryImageTag": "77aa11bb22cc33dd44ee55ff66009988",
+  "ChildCount": 10,
+  "PrimaryImageAspectRatio": 0.6666666666666666,
+  "ImageTags": {
+    "Primary": "2b4d6f8a0c1e3557799bbddff1133557"
+  },
+  "BackdropImageTags": [],
+  "UserData": {
+    "UnplayedItemCount": 6,
+    "PlaybackPositionTicks": 0,
+    "PlayCount": 0,
+    "IsFavorite": false,
+    "Played": false,
+    "Key": "371980-2"
+  },
+  "LocationType": "FileSystem",
+  "MediaType": "Unknown"
+}

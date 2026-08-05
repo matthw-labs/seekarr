@@ -218,9 +218,9 @@ class _DiskTile extends StatelessWidget {
                   children: [
                     Text(
                       disk.name,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium!.weight(FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -240,13 +240,14 @@ class _DiskTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   tempLabel,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: hot
-                        ? AppColors.warning
-                        : colorScheme.onSurfaceVariant,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!
+                      .weight(FontWeight.w700)
+                      .tabular
+                      .copyWith(
+                        color: hot
+                            ? AppColors.warning
+                            : colorScheme.onSurfaceVariant,
+                      ),
                 ),
               ],
             ],
@@ -338,9 +339,9 @@ class _ContainerTile extends StatelessWidget {
                   children: [
                     Text(
                       container.name,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium!.weight(FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

@@ -57,6 +57,12 @@ class AppAnimation {
   /// Shimmer animation cycle
   static const Duration shimmerDuration = Duration(milliseconds: 1500);
 
+  /// How long a transient success confirmation (a check that replaces a
+  /// button's icon after an action lands) stays visible before reverting.
+  /// Long enough to be seen after the eye returns from the snackbar, short
+  /// enough that the control is back to normal by the next glance.
+  static const Duration confirmationHold = Duration(milliseconds: 1600);
+
   // === HELPER METHODS ===
 
   /// Create a standard curved animation

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 
 /// One option in a settings picker.
 ///
@@ -60,14 +61,20 @@ class SettingsChoiceRow extends StatelessWidget {
                     children: [
                       Text(
                         label,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: selected
-                              ? colorScheme.onSurface
-                              : colorScheme.onSurfaceVariant,
-                        ),
+                        // The weight change is half of what carries the
+                        // selected state (see the class doc), so it has to go
+                        // through `.weight` — `copyWith(fontWeight:)` left
+                        // Inter's `wght` axis untouched and rendered both
+                        // states at Regular.
+                        style: theme.textTheme.titleMedium!
+                            .weight(
+                              selected ? FontWeight.w700 : FontWeight.w500,
+                            )
+                            .copyWith(
+                              color: selected
+                                  ? colorScheme.onSurface
+                                  : colorScheme.onSurfaceVariant,
+                            ),
                       ),
                       if (description != null) ...[
                         const SizedBox(height: 2),

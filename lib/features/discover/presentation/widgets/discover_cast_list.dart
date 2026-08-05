@@ -4,45 +4,70 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/text_scale.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/media_detail_view.dart';
+import 'package:seekarr/core/widgets/media_detail_section_label.dart';
+import 'package:seekarr/core/widgets/media_poster_card.dart';
 import 'package:seekarr/core/widgets/pressable_scale.dart';
 import 'package:seekarr/features/discover/presentation/discover_detail_view_model.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
 
+/// The horizontal `CAST` rail: a face, a name and a character per tile.
+///
+/// Headless, and carries no accent: the enclosing `MediaDetailSlot` supplies the
+/// heading, so the spine draws every page's label with that page's accent and
+/// `Semantics(header: true)`. This widget used to build its own
+/// [MediaDetailSectionLabel] because the Radarr/Sonarr hosts reached it through
+/// one undifferentiated extras section and had no slot to hang a label on; those
+/// hosts now emit a `CAST` slot of their own.
 class DiscoverCastList extends StatelessWidget {
   final List<DiscoverCastMember> cast;
 
-  /// Accent for the section rule. Defaults to Seerr, which owns this data, but
-  /// the host screen passes its own: the widget is reused inside the Radarr and
-  /// Sonarr detail screens via `ArrMediaExtrasSection`, where a hard-coded
-  /// indigo rule sat right below an amber one.
-  final Color? accent;
+  /// Horizontal inset for the rail's first and last tile.
+  ///
+  /// `MediaDetailSlot.rail` hands the resolved content-column gutter to its
+  /// builder for exactly this: the first face aligns to the column while the
+  /// rail keeps bleeding off the trailing edge.
+  final EdgeInsetsGeometry padding;
 
-  const DiscoverCastList({super.key, required this.cast, this.accent});
+  const DiscoverCastList({
+    super.key,
+    required this.cast,
+    this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+  });
+
+  /// Rail height at the default reading size: a 64pt avatar, a 4pt gap and two
+  /// lines of `labelSmall`, with a little slack.
+  static const double _railBaseHeight = 108;
+
+  /// The growing half of [_railBaseHeight]: two lines of `labelSmall` (11pt at
+  /// 1.22 leading) — the actor's name and their character.
+  static const double _labelBlockHeight = 27;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: MediaDetailSectionHeader(
-            title: 'Cast',
-            accent: accent ?? ServiceKey.seerr.accent,
-          ),
+    return SizedBox(
+      // The avatar is the fixed half of the tile, the two labels the growing
+      // half, so the rail gains exactly what the labels gain.
+      height: TextScaleMetrics.boxHeight(
+        context,
+        base: _railBaseHeight,
+        textHeight: _labelBlockHeight,
+      ),
+      // …and the labels have to lay out on the same clamp the rail grew by, or
+      // a 2x reader gets an overflow stripe instead of the ellipsis the clamp
+      // promises. Grown box and clamped scaler are one mechanism.
+      child: MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: padding,
+          itemCount: cast.length,
+          itemBuilder: (context, index) => _CastTile(member: cast[index]),
         ),
-        SizedBox(
-          height: 108,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            itemCount: cast.length,
-            itemBuilder: (context, index) => _CastTile(member: cast[index]),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -74,7 +99,11 @@ class _CastTile extends StatelessWidget {
           : null,
     );
     if (tappable) {
-      avatar = Hero(tag: heroTag, child: avatar);
+      avatar = Hero(
+        tag: heroTag,
+        transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
+        child: avatar,
+      );
     }
 
     final tile = SizedBox(
@@ -88,18 +117,17 @@ class _CastTile extends StatelessWidget {
             maxLines: 1,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: theme.textTheme.labelSmall?.weight(FontWeight.w700),
           ),
           Text(
             member.character,
             maxLines: 1,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
+            // Same role as the name above; the character reads as secondary
+            // through weight and colour, not through a hard-coded size.
             style: theme.textTheme.labelSmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
-              fontSize: 10,
             ),
           ),
         ],

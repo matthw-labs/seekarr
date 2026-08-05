@@ -1,0 +1,130 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "totalSize": 137,
+    "offset": 0,
+    "allowSync": true,
+    "art": "/:/resources/movie-fanart.jpg",
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": 1,
+    "librarySectionTitle": "Movies",
+    "librarySectionUUID": "6f1c0e2a-7b3d-4e5f-8a9b-0c1d2e3f4a5b",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "mediaTagVersion": 1748100000,
+    "nocache": true,
+    "thumb": "/:/resources/movie.png",
+    "title1": "Movies",
+    "title2": "All Movies",
+    "viewGroup": "movie",
+    "Metadata": [
+      {
+        "addedAt": 1701000000,
+        "art": "/library/metadata/19003/art/1747000000",
+        "audienceRating": 8.9,
+        "audienceRatingImage": "rottentomatoes://image.rating.upright",
+        "contentRating": "R",
+        "duration": 8940000,
+        "guid": "plex://movie/5d776825961905001eb90a1a",
+        "key": "/library/metadata/19003",
+        "librarySectionID": 1,
+        "librarySectionKey": "/library/sections/1",
+        "librarySectionTitle": "Movies",
+        "originallyAvailableAt": "1999-10-15",
+        "rating": 8.4,
+        "ratingKey": "19003",
+        "studio": "Fox 2000 Pictures",
+        "summary": "An insomniac office worker forms an underground fight club.",
+        "thumb": "/library/metadata/19003/thumb/1747000000",
+        "title": "Fight Club",
+        "titleSort": "Fight Club",
+        "type": "movie",
+        "updatedAt": 1747000000,
+        "viewCount": 2,
+        "lastViewedAt": 1746000000,
+        "year": 1999,
+        "Media": [
+          {
+            "audioChannels": 6,
+            "audioCodec": "dca",
+            "bitrate": 12100,
+            "container": "mkv",
+            "duration": 8940000,
+            "height": 1080,
+            "id": "70112",
+            "videoCodec": "h264",
+            "videoResolution": "1080",
+            "width": 1920,
+            "Part": [
+              {
+                "container": "mkv",
+                "duration": 8940000,
+                "file": "/mnt/tank/media/movies/Fight Club (1999)/Fight Club.1999.1080p.mkv",
+                "id": "70212",
+                "key": "/library/parts/70212/1701000000/file.mkv",
+                "size": 13512004221
+              }
+            ]
+          }
+        ],
+        "Genre": [
+          { "tag": "Drama" },
+          { "tag": "Thriller" }
+        ],
+        "Director": [{ "tag": "David Fincher" }]
+      },
+      {
+        "addedAt": 1735689600,
+        "art": "/library/metadata/20418/art/1748102400",
+        "audienceRating": 8.3,
+        "contentRating": "PG-13",
+        "duration": 9114000,
+        "guid": "plex://movie/5d776b59ad5437001f79c6f8",
+        "key": "/library/metadata/20418",
+        "librarySectionID": 1,
+        "librarySectionKey": "/library/sections/1",
+        "librarySectionTitle": "Movies",
+        "originallyAvailableAt": "2014-11-05",
+        "rating": 8.7,
+        "ratingKey": "20418",
+        "studio": "Legendary Pictures",
+        "summary": "A team of explorers travel through a wormhole in space.",
+        "thumb": "/library/metadata/20418/thumb/1748102400",
+        "title": "Interstellar",
+        "titleSort": "Interstellar",
+        "type": "movie",
+        "updatedAt": 1748102400,
+        "viewOffset": 2278500,
+        "year": 2014,
+        "Media": [
+          {
+            "audioChannels": 6,
+            "audioCodec": "eac3",
+            "bitrate": 14320,
+            "container": "mkv",
+            "duration": 9114000,
+            "height": 2160,
+            "id": "88431",
+            "videoCodec": "hevc",
+            "videoResolution": "4k",
+            "width": 3840,
+            "Part": [
+              {
+                "container": "mkv",
+                "duration": 9114000,
+                "file": "/mnt/tank/media/movies/Interstellar (2014)/Interstellar.2014.2160p.mkv",
+                "id": "91204",
+                "key": "/library/parts/91204/1735689600/file.mkv",
+                "size": 16321504422
+              }
+            ]
+          }
+        ],
+        "Genre": [
+          { "tag": "Adventure" },
+          { "tag": "Science Fiction" }
+        ],
+        "Director": [{ "tag": "Christopher Nolan" }]
+      }
+    ]
+  }
+}

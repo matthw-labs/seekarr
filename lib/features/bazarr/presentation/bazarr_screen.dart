@@ -238,7 +238,7 @@ class _WantedTile extends ConsumerWidget {
                   alignment: Alignment.center,
                   child: Text(
                     isMovie ? '🎬' : '📺',
-                    style: const TextStyle(fontSize: 16),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -248,9 +248,9 @@ class _WantedTile extends ConsumerWidget {
                     children: [
                       Text(
                         title ?? 'Unknown',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleSmall!.weight(FontWeight.w700),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -277,11 +277,9 @@ class _WantedTile extends ConsumerWidget {
                   ),
                   child: Text(
                     langCodes.isNotEmpty ? langCodes.toUpperCase() : 'WANTED',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.bazarr,
-                      letterSpacing: 0.4,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!
+                        .weight(FontWeight.w800)
+                        .copyWith(color: AppColors.bazarr),
                   ),
                 ),
               ],
@@ -387,11 +385,9 @@ class _QuickActionButton extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: accent,
-                  letterSpacing: 0.4,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!
+                    .weight(FontWeight.w800)
+                    .copyWith(color: accent),
               ),
             ],
           ),
@@ -482,7 +478,7 @@ class _HistoryTile extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   isEpisode ? '📺' : '🎬',
-                  style: const TextStyle(fontSize: 15),
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
               const SizedBox(width: 10),
@@ -492,9 +488,9 @@ class _HistoryTile extends StatelessWidget {
                   children: [
                     Text(
                       item.title ?? 'Unknown',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleSmall!.weight(FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -519,11 +515,9 @@ class _HistoryTile extends StatelessWidget {
                 ),
                 child: Text(
                   item.action.label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: tagColor,
-                    letterSpacing: 0.4,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!
+                      .weight(FontWeight.w800)
+                      .copyWith(color: tagColor),
                 ),
               ),
             ],
@@ -556,9 +550,11 @@ class _BazarrCta extends StatelessWidget {
             ),
           ),
           icon: const Icon(Icons.add_rounded, size: 16),
-          label: const Text(
+          label: Text(
             'Add Provider',
-            style: TextStyle(fontWeight: FontWeight.w800),
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge!.weight(FontWeight.w800),
           ),
         ),
       ),

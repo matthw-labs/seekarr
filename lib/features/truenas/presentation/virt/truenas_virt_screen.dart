@@ -210,8 +210,8 @@ class _InstanceCard extends ConsumerWidget {
                       Flexible(
                         child: Text(
                           instance.name,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+                          style: theme.textTheme.titleSmall!.weight(
+                            FontWeight.w700,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -265,12 +265,9 @@ class _AutostartBadge extends StatelessWidget {
           const SizedBox(width: 3),
           Text(
             'AUTOSTART',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: AppColors.truenas,
-              fontWeight: FontWeight.w800,
-              fontSize: 9,
-              letterSpacing: 0.4,
-            ),
+            style: theme.textTheme.labelSmall!
+                .weight(FontWeight.w800)
+                .copyWith(color: AppColors.truenas),
           ),
         ],
       ),

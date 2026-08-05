@@ -109,9 +109,7 @@ class _TaskTile extends ConsumerWidget {
               children: [
                 Text(
                   task.title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (task.subtitle.isNotEmpty)

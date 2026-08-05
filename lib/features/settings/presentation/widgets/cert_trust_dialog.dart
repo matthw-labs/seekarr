@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/network/cert_trust.dart';
+import 'package:seekarr/core/theme.dart';
 
 /// Prompts the user to trust an untrusted (typically self-signed) TLS
 /// certificate for a self-hosted service, mirroring a browser's "this site
@@ -90,8 +91,15 @@ class _CertRow extends StatelessWidget {
           ),
           SelectableText(
             value,
+            // The SHA-256 fingerprint is read by comparing it, character by
+            // character, against the one the server shows. `fontFamily:
+            // 'monospace'` only resolves on Android — on iOS and macOS
+            // CoreText has no such family, so this hex was rendering in the
+            // proportional system face with nothing lining up and 0/O
+            // indistinguishable. `.mono` carries a real fallback chain and
+            // turns on the slashed zero.
             style: monospace
-                ? theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace')
+                ? theme.textTheme.bodySmall!.mono
                 : theme.textTheme.bodySmall,
           ),
         ],

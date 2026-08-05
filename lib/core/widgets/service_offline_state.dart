@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 
 /// Full-page state shown when a service is configured but unreachable.
 ///
@@ -42,9 +43,7 @@ class ServiceOfflineState extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             Text(
               '$serviceName is offline',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: theme.textTheme.titleMedium!.weight(FontWeight.w700),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.sm),

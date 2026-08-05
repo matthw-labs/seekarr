@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/utils/rating_display.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/domain/seerr_status.dart';
 import 'package:seekarr/features/discover/presentation/discover_detail_extras_provider.dart';
@@ -43,8 +43,14 @@ class DiscoverDetailScreen extends ConsumerWidget {
     final hasInitialPoster =
         initialPosterUrl != null && initialPosterUrl!.isNotEmpty;
 
+    final heroFallbackIcon = normalizedMediaType == 'movie'
+        ? Icons.movie_outlined
+        : Icons.tv_rounded;
+
     return detailsAsync.when(
       loading: () => MediaDetailLoadingView(
+        accent: ServiceKey.seerr.accent,
+        heroFallbackIcon: heroFallbackIcon,
         // Guard against an empty (non-null) poster URL: ImageUtils returns ''
         // when there is no posterPath, which would otherwise spawn a blank
         // destination Hero with no source counterpart and fade in.
@@ -52,12 +58,20 @@ class DiscoverDetailScreen extends ConsumerWidget {
             ? MediaPosterCard(
                 heroTag: heroTag,
                 imageUrl: initialPosterUrl,
-                fallbackIcon: Icons.movie_outlined,
+                fallbackIcon: heroFallbackIcon,
               )
             : null,
         backdropPosterUrl: hasInitialPoster ? initialPosterUrl : null,
       ),
-      error: (error, stackTrace) => _DiscoverDetailErrorState(error: error),
+      error: (error, stackTrace) => MediaDetailPlaceholderView.error(
+        error: error,
+        serviceName: 'Seerr',
+        accent: ServiceKey.seerr.accent,
+        // Recover in place: re-run the very lookup that failed.
+        onRetry: () => ref.invalidate(
+          discoverDetailProvider((id: mediaId, type: normalizedMediaType)),
+        ),
+      ),
       data: (details) {
         final viewModel = DiscoverDetailViewModel.fromResponse(
           details,
@@ -80,10 +94,13 @@ class DiscoverDetailScreen extends ConsumerWidget {
             ? viewModel.movieContentRatingForRegion(region)
             : viewModel.tvContentRatingForRegion(region);
         final regionReleases = viewModel.releasesForRegion(region);
+        // The certification joins the metadata line as plain text rather than a
+        // bordered chip. As a chip it was visually indistinguishable from a genre
+        // beside it, so an "R" read as a genre called R.
         final metadataItems = [
           viewModel.year,
+          if (contentRating != null && contentRating.isNotEmpty) contentRating,
           if (isMovie) viewModel.runtimeStr,
-          if (!isMovie) viewModel.episodeSummary,
           if (!isMovie && viewModel.runtimeStr != null) viewModel.runtimeStr,
         ].whereType<String>().where((value) => value.isNotEmpty).toList();
 
@@ -91,40 +108,55 @@ class DiscoverDetailScreen extends ConsumerWidget {
             ? extras.isInLibrary ?? false
             : false;
 
-        final tags = <Widget>[
-          if (contentRating != null && contentRating.isNotEmpty)
-            _CertificationChip(text: contentRating),
-        ];
+        // The hero chip slot's one meaning, here as everywhere: how much of the
+        // manifest exists. The episode/season summary moved out of the metadata
+        // line into it, and the genres moved down to the catalogue block.
+        final manifestCounter = isMovie ? null : viewModel.episodeSummary;
         final ratingWidgets = _buildRatingWidgets(
           viewModel,
           extras.lookupRatings,
         );
 
+        final accent = ServiceKey.seerr.accent;
+
         return MediaDetailView(
-          accent: ServiceKey.seerr.accent,
+          accent: accent,
+          heroFallbackIcon: heroFallbackIcon,
           posterUrl: viewModel.posterUrl,
           backdropUrl: viewModel.backdropUrl,
-          posterRow: (collapseFactor) => MediaDetailPosterRow(
-            collapseFactor: collapseFactor,
-            statusBadge: StatusBadge(
+          title: viewModel.title,
+          posterRow: MediaDetailPosterRow(
+            statusBadge: StatusBadge.animated(
               info: seerrMediaStatus(viewModel.mediaInfo),
             ),
             title: viewModel.title,
             metadataItems: metadataItems,
             tags: [
-              ...tags,
-              ...viewModel.genresList
-                  .take(3)
-                  .map((genre) => GenreChip(genre: genre)),
+              if (manifestCounter != null && manifestCounter.isNotEmpty)
+                TagChip(text: manifestCounter, color: accent),
             ],
             posterCard: MediaPosterCard(
               heroTag: heroTag,
               imageUrl: viewModel.posterUrl,
-              fallbackIcon: isMovie ? Icons.movie_outlined : Icons.tv_outlined,
+              fallbackIcon: heroFallbackIcon,
             ),
           ),
-          contentSections: [
-            DiscoverActionButtons(
+          // The same pair the retry path re-runs.
+          onRefresh: () async {
+            ref.invalidate(
+              discoverDetailProvider((id: mediaId, type: normalizedMediaType)),
+            );
+            ref.invalidate(
+              discoverDetailExtrasProvider((
+                mediaId: mediaId,
+                mediaType: normalizedMediaType,
+                tvdbId: viewModel.tvdbId,
+                voteAverage: viewModel.voteAverage,
+              )),
+            );
+          },
+          body: MediaDetailBody(
+            deck: DiscoverActionButtons(
               mediaId: mediaId,
               mediaType: normalizedMediaType,
               hasManageableMedia: viewModel.hasManageableMedia,
@@ -134,38 +166,38 @@ class DiscoverDetailScreen extends ConsumerWidget {
               mediaInfo: viewModel.mediaInfo,
               title: viewModel.title,
               voteAverage: viewModel.voteAverage,
-              collapseFactor: 0,
               videos: viewModel.hasRelatedVideos
                   ? viewModel.playableVideos
                   : const [],
             ),
-            if (viewModel.overview.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: MediaDetailOverviewSection(overview: viewModel.overview),
-              ),
-            if (ratingWidgets.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  0,
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: ratingWidgets,
+            // Region 3 — the manifest. For a show that is the seasons Seerr
+            // knows about, checked against what is already in the library.
+            operate: [
+              if (viewModel.hasSeasons)
+                MediaDetailSlot.lazy(
+                  label: 'Seasons',
+                  count: manifestCounter,
+                  // A lazy sliver mid-page: a 40-season show builds the rows on
+                  // screen instead of every episode of every season.
+                  sliver: DiscoverSeasonsList(
+                    seasons: viewModel.seasons,
+                    seasonStatuses: seerrSeasonStatuses(
+                      viewModel.mediaInfo,
+                      viewModel.seasons,
+                    ),
                   ),
                 ),
-              ),
             ],
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: SizedBox(
-                width: double.infinity,
+            synopsis: [
+              if (viewModel.overview.isNotEmpty)
+                MediaDetailSlot.box(
+                  label: 'Overview',
+                  child: MediaProseSection(text: viewModel.overview),
+                ),
+            ],
+            reference: [
+              MediaDetailSlot.box(
+                label: 'Details',
                 child: isMovie
                     ? DiscoverReleaseInfoCard.movie(
                         releases: regionReleases,
@@ -184,41 +216,55 @@ class DiscoverDetailScreen extends ConsumerWidget {
                         networks: viewModel.networks,
                       ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: SizedBox(
-                width: double.infinity,
+              if (ratingWidgets.isNotEmpty)
+                MediaDetailSlot.box(
+                  label: 'Scores',
+                  child: Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: ratingWidgets,
+                  ),
+                ),
+              if (viewModel.genresList.isNotEmpty)
+                MediaDetailSlot.box(
+                  label: 'Genres',
+                  child: MediaChipSection.neutral(values: viewModel.genresList),
+                ),
+              if (viewModel.keywords.isNotEmpty)
+                MediaDetailSlot.box(
+                  // TMDB keywords, and they are labelled as such. The old
+                  // heading said "Tags", which in this domain names a real
+                  // Radarr/Sonarr concept the app also surfaces — so it asserted
+                  // something false about the user's server.
+                  label: 'Keywords',
+                  child: MediaChipSection.neutral(values: viewModel.keywords),
+                ),
+            ],
+            related: [
+              if (viewModel.cast.isNotEmpty)
+                MediaDetailSlot.rail(
+                  label: 'Cast',
+                  // The rail takes the resolved gutter so its first face aligns
+                  // to the content column while the row bleeds past it.
+                  builder: (padding) =>
+                      DiscoverCastList(cast: viewModel.cast, padding: padding),
+                ),
+              if (viewModel.hasCollection)
+                MediaDetailSlot.box(
+                  label: 'Collection',
+                  child: DiscoverCollectionBanner(
+                    collection: viewModel.collection!,
+                  ),
+                ),
+              MediaDetailSlot.box(
+                label: 'Where to watch',
                 child: DiscoverWatchProviders(
                   providers: watchProviders,
                   region: region,
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-          ],
-          slivers: [
-            if (viewModel.hasSeasons)
-              _DetailSectionSliver(
-                child: DiscoverSeasonsList(
-                  seasons: viewModel.seasons,
-                  mediaInfo: viewModel.mediaInfo,
-                ),
-              ),
-            if (viewModel.cast.isNotEmpty)
-              SliverToBoxAdapter(child: DiscoverCastList(cast: viewModel.cast)),
-            if (viewModel.hasCollection)
-              _DetailSectionSliver(
-                child: DiscoverCollectionBanner(
-                  collection: viewModel.collection!,
-                ),
-              ),
-            if (viewModel.keywords.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _DiscoverKeywordsSection(keywords: viewModel.keywords),
-              ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -232,14 +278,28 @@ class DiscoverDetailScreen extends ConsumerWidget {
       return lookupRatings
           // A 0.0 with no votes is "not rated yet", not a score of zero.
           .where((rating) => rating.value > 0 || rating.votes > 0)
-          .map(
-            (rating) => RatingChip(
-              value: rating.value.toStringAsFixed(1),
+          .map((rating) {
+            // These ratings come from a Radarr/Sonarr lookup, so they arrive
+            // badged `MC` / `RO` / `TR` exactly as they do on the library pages.
+            // One label per source, resolved the same way there, so the same
+            // score is named identically on both pages.
+            final label = ratingSourceLabel(
+              icon: rating.icon,
+              name: rating.name,
+            );
+            final display = ratingDisplayFor(
+              icon: rating.icon,
+              name: rating.name,
+              value: rating.value,
+            );
+            return RatingChip(
+              value: display.value,
+              denominator: display.denominator,
               votes: rating.votes,
-              sourceName: rating.name,
-              sourceIcon: rating.icon,
-            ),
-          )
+              sourceName: label,
+              sourceIcon: label,
+            );
+          })
           .toList(growable: false);
     }
 
@@ -251,120 +311,13 @@ class DiscoverDetailScreen extends ConsumerWidget {
     return [
       RatingChip(
         value: voteAverage.toStringAsFixed(1),
+        // TMDB's own scale, stated for the same reason every other pill states
+        // its own: this number is a 0–10 and the row it sits in is not uniform.
+        denominator: '/10',
         votes: viewModel.voteCount ?? 0,
         sourceName: 'TMDB',
         sourceIcon: 'TMDB',
       ),
     ];
-  }
-}
-
-class _DiscoverDetailErrorState extends StatelessWidget {
-  final Object error;
-
-  const _DiscoverDetailErrorState({required this.error});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Material(
-      color: colorScheme.surface,
-      child: CustomScrollView(
-        slivers: [
-          SliverAppBar(pinned: true, backgroundColor: colorScheme.surface),
-          SliverFillRemaining(child: Center(child: Text('Error: $error'))),
-        ],
-      ),
-    );
-  }
-}
-
-class _DiscoverKeywordsSection extends StatelessWidget {
-  final List<String> keywords;
-
-  const _DiscoverKeywordsSection({required this.keywords});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          MediaDetailSectionHeader(
-            title: 'Tags',
-            accent: ServiceKey.seerr.accent,
-          ),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: keywords
-                .map(
-                  (keyword) => Chip(
-                    label: Text(keyword),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                )
-                .toList(growable: false),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailSectionSliver extends StatelessWidget {
-  final Widget child;
-
-  const _DetailSectionSliver({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          0,
-          AppSpacing.xl,
-          AppSpacing.md,
-        ),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _CertificationChip extends StatelessWidget {
-  final String text;
-
-  const _CertificationChip({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        border: Border.all(color: colorScheme.outline),
-        borderRadius: AppRadius.borderRadiusSm,
-      ),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: colorScheme.onSurface,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
   }
 }

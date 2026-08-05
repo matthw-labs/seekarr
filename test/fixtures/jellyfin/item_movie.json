@@ -1,0 +1,97 @@
+{
+  "Name": "Arrival",
+  "OriginalTitle": "Arrival",
+  "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+  "Id": "3ca7ff1e0d9b4e2f8a6c5b4d3e2f1a09",
+  "Etag": "9f8e7d6c5b4a39281706f5e4d3c2b1a0",
+  "DateCreated": "2026-03-02T18:44:09.1234567Z",
+  "CanDelete": true,
+  "CanDownload": true,
+  "Container": "mkv",
+  "SortName": "arrival",
+  "PremiereDate": "2016-11-11T00:00:00.0000000Z",
+  "ProductionYear": 2016,
+  "OfficialRating": "PG-13",
+  "CommunityRating": 7.9,
+  "RunTimeTicks": 72000000000,
+  "PlayAccess": "Full",
+  "IsFolder": false,
+  "Type": "Movie",
+  "Overview": "A linguist is recruited to communicate with visitors whose language has no arrow of time.",
+  "Genres": ["Drama", "Science Fiction", "Mystery"],
+  "ProviderIds": { "Tmdb": "329865", "Imdb": "tt2543164" },
+  "MediaSources": [
+    {
+      "Protocol": "File",
+      "Id": "7b3d9f5a1c7e3b9d5f1a7c3e9b5d1f07",
+      "Path": "/data/movies/Arrival (2016)/Arrival.2016.1080p.mkv",
+      "Type": "Default",
+      "Container": "mkv",
+      "Size": 14509654016,
+      "Name": "Arrival.2016.1080p",
+      "IsRemote": false,
+      "RunTimeTicks": 72000000000,
+      "SupportsTranscoding": true,
+      "SupportsDirectStream": true,
+      "SupportsDirectPlay": true,
+      "Bitrate": 16121837,
+      "MediaStreams": [
+        {
+          "Codec": "h264",
+          "Language": "eng",
+          "DisplayTitle": "1080p H264",
+          "IsInterlaced": false,
+          "Height": 1080,
+          "Width": 1920,
+          "BitRate": 14500000,
+          "BitDepth": 8,
+          "Type": "Video",
+          "Index": 0
+        },
+        {
+          "Codec": "dts",
+          "Language": "eng",
+          "DisplayTitle": "DTS-HD MA 5.1",
+          "Channels": 6,
+          "SampleRate": 48000,
+          "BitRate": 1509000,
+          "Type": "Audio",
+          "Index": 1,
+          "IsDefault": true
+        }
+      ]
+    }
+  ],
+  "People": [
+    {
+      "Name": "Amy Adams",
+      "Id": "ab12cd34ef56ab78cd90ef12ab34cd56",
+      "Role": "Louise Banks",
+      "Type": "Actor",
+      "PrimaryImageTag": "56cd34ab12ef90cd78ab56ef34cd12ab"
+    },
+    {
+      "Name": "Denis Villeneuve",
+      "Id": "12ab34cd56ef78ab90cd12ef34ab56cd",
+      "Type": "Director"
+    }
+  ],
+  "PrimaryImageAspectRatio": 0.6666666666666666,
+  "ImageTags": {
+    "Primary": "1f2e3d4c5b6a70819283a4b5c6d7e8f9",
+    "Logo": "8899aabbccddeeff0011223344556677"
+  },
+  "BackdropImageTags": ["9a8b7c6d5e4f30211f2e3d4c5b6a7089"],
+  "UserData": {
+    "PlaybackPositionTicks": 18000000000,
+    "PlayCount": 0,
+    "IsFavorite": false,
+    "Played": false,
+    "Key": "329865",
+    "ItemId": "3ca7ff1e0d9b4e2f8a6c5b4d3e2f1a09"
+  },
+  "MediaType": "Video",
+  "Width": 1920,
+  "Height": 1080,
+  "LocationType": "FileSystem"
+}

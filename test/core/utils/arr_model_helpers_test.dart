@@ -27,15 +27,38 @@ void main() {
       expect(ratings[1].icon, 'IMDb');
     });
 
-    test('parses unknown multi-source keys using uppercase fallback', () {
+    test('names the two keys that used to fall through to two letters', () {
+      // `rottenTomatoes` and `trakt` are the keys Radarr and Sonarr actually
+      // send. Neither had a case, so both took the default branch and became the
+      // first two letters of the key: `RO` and `TR`, with names `ROTTENTOMATOES`
+      // and `TRAKT`. Fixed here at source rather than only compensated for in
+      // `rating_display.dart` at paint time.
       final ratings = parseArrRatings({
-        'letterboxd': {'value': 3.8, 'votes': 12},
+        'rottenTomatoes': {'value': 57, 'votes': 0},
+        'trakt': {'value': 7.1, 'votes': 900},
       });
 
-      expect(ratings, hasLength(1));
-      expect(ratings.single.name, 'LETTERBOXD');
-      expect(ratings.single.icon, 'LE');
+      expect(ratings, hasLength(2));
+      expect(ratings[0].name, 'Rotten Tomatoes');
+      expect(ratings[0].icon, 'RT');
+      expect(ratings[1].name, 'Trakt');
+      expect(ratings[1].icon, 'Trakt');
     });
+
+    test(
+      'leaves an unknown multi-source key spelled as the service sent it',
+      () {
+        final ratings = parseArrRatings({
+          'letterboxd': {'value': 3.8, 'votes': 12},
+        });
+
+        expect(ratings, hasLength(1));
+        // Was `toUpperCase()`, which put `ROTTENTOMATOES` on screen for the one
+        // real key that fell through. An unknown source is shown, not shouted.
+        expect(ratings.single.name, 'letterboxd');
+        expect(ratings.single.icon, 'LE');
+      },
+    );
 
     test('skips multi-source entries with null values', () {
       final ratings = parseArrRatings({
@@ -62,7 +85,11 @@ void main() {
 
       expect(ratings, hasLength(1));
       expect(ratings.single.icon, 'TVDB');
-      expect(ratings.single.name, '145000 voti');
+      // The badge, not the vote count. `name` is what `RatingChip` speaks, and
+      // it used to announce "145000 voti rating 7.2" — Italian, in an
+      // English-only app, where a source name belongs.
+      expect(ratings.single.name, 'TVDB');
+      expect(ratings.single.votes, 145000);
       expect(ratings.single.value, 8.4);
     });
 
@@ -73,7 +100,7 @@ void main() {
       }, singleSourceIcon: 'MB');
 
       expect(ratings.single.icon, 'MB');
-      expect(ratings.single.name, '145000 voti');
+      expect(ratings.single.name, 'MB');
     });
 
     test('parses single-source ratings with custom name', () {
@@ -95,7 +122,8 @@ void main() {
       final ratings = parseArrRatings({'value': 8.4});
 
       expect(ratings.single.votes, 0);
-      expect(ratings.single.name, '0 voti');
+      // A missing vote count no longer becomes the pill's spoken name.
+      expect(ratings.single.name, 'TVDB');
     });
 
     test('can disable single-source parsing', () {

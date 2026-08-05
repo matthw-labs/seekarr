@@ -156,7 +156,9 @@ void main() {
         });
 
         expect(series.ratings, hasLength(1));
-        expect(series.ratings.single.name, '145000 voti');
+        // The badge, not the vote count: `name` is the pill's spoken label.
+        expect(series.ratings.single.name, 'TVDB');
+        expect(series.ratings.single.votes, 145000);
         expect(series.ratings.single.icon, 'TVDB');
         expect(series.ratings.single.value, 8.4);
       });

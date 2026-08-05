@@ -54,23 +54,35 @@ String servicesUnconfiguredCellLabel({required int count}) {
   return 'Set up $count more $noun';
 }
 
-/// What a collapsed domain band announces, after its name.
+/// The × that acknowledges an outage notice.
 ///
-/// A folded band replaces its cells with a strip of identity marks, where an
-/// unreachable service reads as an unlit tile. That is invisible to a screen
-/// reader, so the health the strip carries visually is stated here instead —
-/// otherwise folding a band would quietly cost a blind user the information it
-/// was folded to compact.
-String serviceDomainBandValue({
-  required int serviceCount,
-  required List<String> offlineServiceTitles,
-}) {
+/// Names the outage rather than the gesture, for the same reason the
+/// more-services × does: the row holds a Retry and a dismiss, and "Dismiss"
+/// alone leaves a screen-reader user to guess which of the two they are on —
+/// where one re-checks the connection and the other hides the notice.
+String servicesDismissAlertLabel(List<String> offlineServiceTitles) =>
+    'Dismiss: ${servicesAlertBandMessage(offlineServiceTitles)}';
+
+/// The × beside that hint.
+///
+/// Names what disappears, not the gesture. "Dismiss" alone, on a row whose
+/// sibling node is already called "Set up 8 more services", leaves a screen
+/// reader user to infer which of the two things on the row it acts on — and
+/// the answer matters, because one navigates and one is permanent.
+String servicesDismissMoreServicesLabel({required int count}) =>
+    'Dismiss the $count remaining services hint';
+
+/// What a folded domain band announces, after its name.
+///
+/// Just the size of the group. A folded band used to replace its cells with a
+/// strip of bare glyphs, so this had to carry the health those unlit tiles
+/// showed silently; the compact cards that replaced the strip are labelled
+/// nodes of their own, each announcing its own service, reachability and
+/// figure. Repeating "Lidarr isn't answering" on the header as well would make
+/// a screen reader say it twice on the way into the band.
+String serviceDomainBandValue({required int serviceCount}) {
   final noun = serviceCount == 1 ? 'service' : 'services';
-  return joinSpokenParts([
-    '$serviceCount $noun',
-    if (offlineServiceTitles.isNotEmpty)
-      servicesAlertBandMessage(offlineServiceTitles),
-  ]);
+  return '$serviceCount $noun';
 }
 
 /// The alert band's sentence, used **both** on screen and by the screen reader.

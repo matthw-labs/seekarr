@@ -44,6 +44,10 @@ String _healthEndpoint(ServiceKey service) {
       return '/api/v1/system/status';
     case ServiceKey.readarr:
       return '/api/v1/system/status';
+    case ServiceKey.jellyfin:
+      return '/System/Info/Public';
+    case ServiceKey.plex:
+      return '/identity';
     case ServiceKey.truenas:
     case ServiceKey.dockge:
     case ServiceKey.sabnzbd:

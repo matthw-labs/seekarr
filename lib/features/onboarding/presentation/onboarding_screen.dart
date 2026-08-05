@@ -27,6 +27,12 @@ import 'package:seekarr/features/truenas/domain/truenas_version.dart';
 // the point of use, and anything with an app-wide equivalent (the brand indigo,
 // the success green, the font family, animation durations, the pill radius)
 // defers to the shared token so the two can never drift apart.
+//
+// The local palette is *colour only*. Type comes off the shared ramp
+// (`Theme.of(context).textTheme`), so the size, weight, leading and tracking of
+// every string here are the app's — a locally authored `fontSize` was how this
+// screen ended up with eight sizes and twelve hand-computed `letterSpacing`
+// values that no other screen shared. The colours below are applied on top.
 const _bg = Color(0xFF07080D);
 const _border = Color(0xFF283247);
 const _fg = Color(0xFFF3F6FF);
@@ -506,16 +512,17 @@ class _StepLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontFamily: AppTheme.fontFamily,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.08 * 11,
-        color: _muted2,
-      ),
-    );
+    // The one sanctioned overline on the screen: a single kicker introducing the
+    // step, so it takes the shared eyebrow voice (11pt, w700, +1.4 tracking)
+    // rather than a locally tracked label.
+    //
+    // Deliberately *not* uppercased, against the Eyebrow Rule's usual pairing.
+    // The rule wants uppercase because +1.4 tracking is the air caps need at
+    // 11pt; here the string is a sentence with a number in it ("Step 2 of 3"),
+    // it is the only text telling a screen reader where it is in the flow, and
+    // nine widget tests navigate by finding it. Shouting it buys a hair of
+    // optical consistency and costs the flow's one landmark.
+    return Text(text, style: AppTheme.eyebrow(_muted2));
   }
 }
 
@@ -549,6 +556,7 @@ class _WelcomeStep extends StatelessWidget {
 class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       decoration: BoxDecoration(
         borderRadius: _radiusPanel,
@@ -583,38 +591,33 @@ class _HeroCard extends StatelessWidget {
               ],
             ),
             alignment: Alignment.center,
-            child: const Text(
+            // The logotype, not a heading: `titleLarge` (22) is the role whose
+            // cap-height fills a 44pt tile the way the mark is drawn.
+            child: Text(
               'S',
-              style: TextStyle(
-                fontFamily: AppTheme.fontFamily,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: _fg,
-                letterSpacing: -0.03 * 20,
-              ),
+              style: textTheme.titleLarge!
+                  .weight(FontWeight.w800)
+                  .copyWith(color: _fg),
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          // `displaySmall` (36), not the step-heading role the other two steps
+          // use: this is the product's opening claim, alone inside a framed
+          // panel with nothing to compete with, and it is a display line rather
+          // than a heading over content. It is also the closest role to the 34pt
+          // it was authored at, so the first impression keeps its scale.
+          Text(
             'Your whole homelab, managed from one place.',
-            style: TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              fontSize: 34,
-              fontWeight: FontWeight.w800,
-              color: _fg,
-              letterSpacing: -0.05 * 34,
-              height: 0.98,
-            ),
+            style: textTheme.displaySmall!
+                .weight(FontWeight.w800)
+                .copyWith(color: _fg),
           ),
           const SizedBox(height: 12),
-          const Text(
+          // Prose, at the widest measure on the screen — `bodyLarge`, whose 1.55
+          // leading is the value this paragraph was already hand-setting.
+          Text(
             'Seekarr is the control surface for the services you run yourself — media, downloads and infrastructure — in one UI, from wherever you are.',
-            style: TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              fontSize: 14,
-              color: _muted,
-              height: 1.55,
-            ),
+            style: textTheme.bodyLarge!.copyWith(color: _muted),
           ),
           const SizedBox(height: 22),
           // Stack preview — compact rows
@@ -668,6 +671,7 @@ class _StackRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Row(
       children: [
         _ServiceDot(color: color),
@@ -676,24 +680,17 @@ class _StackRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Row primary / supporting line: the same pair of roles the
+              // service cards and the summary rows use, so all three lists of
+              // services on this screen read at one scale.
               Text(
                 name,
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: _fg,
-                ),
+                style: textTheme.titleSmall!
+                    .weight(FontWeight.w700)
+                    .copyWith(color: _fg),
               ),
               const SizedBox(height: 3),
-              Text(
-                sub,
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 12,
-                  color: _muted2,
-                ),
-              ),
+              Text(sub, style: textTheme.bodySmall!.copyWith(color: _muted2)),
             ],
           ),
         ),
@@ -769,6 +766,7 @@ class _ServicesStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: _screenPad,
       child: Column(
@@ -776,8 +774,8 @@ class _ServicesStep extends StatelessWidget {
         children: [
           const _ProgressBar(step: 1),
           const SizedBox(height: 18),
-          // The heading scrolls with the list. Pinned above it, a 34pt headline
-          // and its paragraph grew past the whole screen at an accessibility
+          // The heading scrolls with the list. Pinned above it, the headline and
+          // its paragraph grew past the whole screen at an accessibility
           // reading size — 812px of overflow on a 4.7" phone — because only the
           // list below them could scroll.
           Expanded(
@@ -791,26 +789,22 @@ class _ServicesStep extends StatelessWidget {
                   // already cut the visible area to a sliver.
                   if (!compactHeader) ...[
                     const SizedBox(height: 8),
-                    const Text(
+                    // `headlineMedium` (28), not the hero's `displaySmall`: this
+                    // is a screen-level heading introducing a long scrolling
+                    // form, and it is exactly the line that documented 812px of
+                    // overflow at an accessibility reading size. The heading role
+                    // says "you are here"; the display role is reserved for the
+                    // opening claim on step 1.
+                    Text(
                       'Connect the services you already host.',
-                      style: TextStyle(
-                        fontFamily: AppTheme.fontFamily,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w800,
-                        color: _fg,
-                        letterSpacing: -0.05 * 34,
-                        height: 0.98,
-                      ),
+                      style: textTheme.headlineMedium!
+                          .weight(FontWeight.w800)
+                          .copyWith(color: _fg),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'Every service depends on its own self-hosted instance. Seekarr helps you manage them with one unified UI, from wherever you are.',
-                      style: TextStyle(
-                        fontFamily: AppTheme.fontFamily,
-                        fontSize: 14,
-                        color: _muted,
-                        height: 1.55,
-                      ),
+                      style: textTheme.bodyLarge!.copyWith(color: _muted),
                     ),
                   ],
                   const SizedBox(height: 16),
@@ -898,6 +892,7 @@ class _OnboardingDomainSectionState extends State<_OnboardingDomainSection> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       children: [
         Semantics(
@@ -931,15 +926,15 @@ class _OnboardingDomainSectionState extends State<_OnboardingDomainSection> {
                   ),
                   const SizedBox(width: 6),
                   Expanded(
+                    // Not the eyebrow voice: there is one of these per domain,
+                    // and a tracked overline repeated down a step reads as
+                    // noise rather than as a kicker. `labelSmall` in the dim
+                    // tone, which is what the uppercase group headers become.
                     child: Text(
                       widget.label.toUpperCase(),
-                      style: const TextStyle(
-                        fontFamily: AppTheme.fontFamily,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.08 * 11,
-                        color: _muted2,
-                      ),
+                      style: textTheme.labelSmall!
+                          .weight(FontWeight.w700)
+                          .copyWith(color: _muted2),
                     ),
                   ),
                   if (widget.enabledCount > 0)
@@ -952,15 +947,14 @@ class _OnboardingDomainSectionState extends State<_OnboardingDomainSection> {
                         borderRadius: AppRadius.borderRadiusFull,
                         color: const Color(0x1F22C55E),
                       ),
+                      // A count that changes as toggles flip, so it is tabular:
+                      // the badge stops resizing under the number.
                       child: Text(
                         '${widget.enabledCount} on',
-                        style: const TextStyle(
-                          fontFamily: AppTheme.fontFamily,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.06 * 10,
-                          color: Color(0xFFBFE9CA),
-                        ),
+                        style: textTheme.labelSmall!
+                            .weight(FontWeight.w800)
+                            .tabular
+                            .copyWith(color: const Color(0xFFBFE9CA)),
                       ),
                     ),
                 ],
@@ -1022,6 +1016,7 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return AnimatedContainer(
       duration: AppAnimation.durationSm,
       decoration: BoxDecoration(
@@ -1060,23 +1055,19 @@ class _ServiceCard extends StatelessWidget {
                       children: [
                         Text(
                           serviceKey.title,
-                          style: const TextStyle(
-                            fontFamily: AppTheme.fontFamily,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: _fg,
-                          ),
+                          style: textTheme.titleSmall!
+                              .weight(FontWeight.w700)
+                              .copyWith(color: _fg),
                         ),
                         const SizedBox(height: 2),
+                        // A state line, not prose: `labelSmall` keeps it at the
+                        // 11pt it was authored at and at label leading, which is
+                        // what a fixed-height row wants.
                         Text(
                           // "Not enabled on this setup" read as an external
                           // constraint rather than the user's own choice.
                           isEnabled ? 'Enabled' : 'Off — tap to connect',
-                          style: const TextStyle(
-                            fontFamily: AppTheme.fontFamily,
-                            fontSize: 11,
-                            color: _muted,
-                          ),
+                          style: textTheme.labelSmall!.copyWith(color: _muted),
                         ),
                       ],
                     ),
@@ -1222,6 +1213,11 @@ class _ServiceConfigState extends State<_ServiceConfig> {
     final verifyReason = widget.verifyReason;
     final verifying = widget.verifying;
     final onVerify = widget.onVerify;
+    final textTheme = Theme.of(context).textTheme;
+    // Every note in this panel is a sentence of explanation, so they share one
+    // role: `bodySmall`, the smallest running-text role (the 11pt they were
+    // authored at is below the ramp's floor for prose).
+    final noteStyle = textTheme.bodySmall!;
 
     return Column(
       children: [
@@ -1238,22 +1234,14 @@ class _ServiceConfigState extends State<_ServiceConfig> {
             children: [
               Text(
                 '${serviceKey.title} configuration',
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: _fg,
-                ),
+                style: textTheme.titleSmall!
+                    .weight(FontWeight.w700)
+                    .copyWith(color: _fg),
               ),
               const SizedBox(height: 4),
               Text(
                 'Point Seekarr to your ${serviceKey.title} instance and confirm it answers correctly.',
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 12,
-                  color: _muted,
-                  height: 1.5,
-                ),
+                style: noteStyle.copyWith(color: _muted),
               ),
               const SizedBox(height: 12),
               _ConfigField(label: 'Base URL', controller: urlCtrl, isUrl: true),
@@ -1283,54 +1271,34 @@ class _ServiceConfigState extends State<_ServiceConfig> {
                 const SizedBox(height: 10),
                 Text(
                   'Leave credentials empty if your ${serviceKey.title} instance does not require authentication.',
-                  style: const TextStyle(
-                    fontFamily: AppTheme.fontFamily,
-                    fontSize: 11,
-                    color: _muted,
-                    height: 1.5,
-                  ),
+                  style: noteStyle.copyWith(color: _muted),
                 ),
               ],
               if (serviceKey == ServiceKey.readarr) ...[
                 const SizedBox(height: 10),
                 // The settings screen says this; setup — where the choice is
                 // actually made — said nothing.
-                const Text(
+                Text(
                   'Readarr development has stopped upstream. Existing instances '
                   'keep working against its last released API, but expect no '
                   'new server-side fixes.',
-                  style: TextStyle(
-                    fontFamily: AppTheme.fontFamily,
-                    fontSize: 11,
-                    color: _muted,
-                    height: 1.5,
-                  ),
+                  style: noteStyle.copyWith(color: _muted),
                 ),
               ],
               if (serviceKey == ServiceKey.truenas) ...[
                 const SizedBox(height: 10),
                 Text(
                   'Requires TrueNAS SCALE $kTrueNasMinVersion or newer.',
-                  style: const TextStyle(
-                    fontFamily: AppTheme.fontFamily,
-                    fontSize: 11,
-                    color: _muted,
-                    height: 1.5,
-                  ),
+                  style: noteStyle.copyWith(color: _muted),
                 ),
               ],
               if (serviceKey == ServiceKey.unraid) ...[
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Enable the Unraid API first (Settings → Management Access → '
                   'Developer Options → GraphQL sandbox) and create an API key. '
                   'The endpoint stays silent until it is enabled.',
-                  style: TextStyle(
-                    fontFamily: AppTheme.fontFamily,
-                    fontSize: 11,
-                    color: _muted,
-                    height: 1.5,
-                  ),
+                  style: noteStyle.copyWith(color: _muted),
                 ),
               ],
               if (verifyStatus == ServiceConnectionStatus.notConfigured) ...[
@@ -1339,24 +1307,14 @@ class _ServiceConfigState extends State<_ServiceConfig> {
                   serviceKey.usesApiKey
                       ? 'Enter the base URL and the API key, then verify.'
                       : 'Enter the base URL, then verify.',
-                  style: const TextStyle(
-                    fontFamily: AppTheme.fontFamily,
-                    fontSize: 11,
-                    color: AppColors.warning,
-                    height: 1.5,
-                  ),
+                  style: noteStyle.copyWith(color: AppColors.warning),
                 ),
               ],
               if (verifyStatus == ServiceConnectionStatus.disconnected) ...[
                 const SizedBox(height: 10),
                 Text(
                   connectionFailureMessage(serviceKey, verifyReason),
-                  style: const TextStyle(
-                    fontFamily: AppTheme.fontFamily,
-                    fontSize: 11,
-                    color: Color(0xFFFCA5A5),
-                    height: 1.5,
-                  ),
+                  style: noteStyle.copyWith(color: const Color(0xFFFCA5A5)),
                 ),
               ],
               const SizedBox(height: 12),
@@ -1470,10 +1428,7 @@ class _ConfigFieldState extends State<_ConfigField> {
                 Expanded(
                   child: Text(
                     _error ?? _warning!,
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontSize: 11,
-                      height: 1.35,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       color: _error != null
                           ? AppColors.error
                           : AppColors.warning,
@@ -1493,6 +1448,11 @@ class _ConfigFieldState extends State<_ConfigField> {
     final isUrl = widget.isUrl;
     final isPassword = widget.isPassword;
     final hint = widget.hint;
+    final textTheme = Theme.of(context).textTheme;
+    // The value the user types is running text, so it comes off `bodyMedium`;
+    // the placeholder takes the same role so the line does not jump size when
+    // the field goes from empty to filled.
+    final valueStyle = textTheme.bodyMedium!;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
@@ -1508,15 +1468,14 @@ class _ConfigFieldState extends State<_ConfigField> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // One per field, so — like the domain headers — an uppercase
+          // `labelSmall` rather than the eyebrow voice. 11pt is also the ramp's
+          // floor: 10pt has no role.
           Text(
             label.toUpperCase(),
-            style: const TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.08 * 10,
-              color: _muted2,
-            ),
+            style: textTheme.labelSmall!
+                .weight(FontWeight.w700)
+                .copyWith(color: _muted2),
           ),
           const SizedBox(height: 6),
           Row(
@@ -1535,12 +1494,7 @@ class _ConfigFieldState extends State<_ConfigField> {
                   // otherwise rewrites `--` and quotes inside a typed address.
                   smartDashesType: SmartDashesType.disabled,
                   smartQuotesType: SmartQuotesType.disabled,
-                  style: const TextStyle(
-                    fontFamily: AppTheme.fontFamily,
-                    fontSize: 13,
-                    color: Color(0xFFDDE4FA),
-                    height: 1.2,
-                  ),
+                  style: valueStyle.copyWith(color: const Color(0xFFDDE4FA)),
                   decoration: InputDecoration(
                     // https by default: the clients normalise a scheme-less host
                     // to TLS, and the old http:// placeholder taught the
@@ -1548,11 +1502,7 @@ class _ConfigFieldState extends State<_ConfigField> {
                     hintText: isUrl
                         ? 'https://your-server:port'
                         : (hint ?? 'Enter API key'),
-                    hintStyle: const TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontSize: 13,
-                      color: _muted2,
-                    ),
+                    hintStyle: valueStyle.copyWith(color: _muted2),
                     filled: true,
                     fillColor: Colors.transparent,
                     isDense: false,
@@ -1631,15 +1581,13 @@ class _VerifyButton extends StatelessWidget {
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2, color: _muted),
               )
-            : const Text(
+            : Text(
                 'Verify service',
-                style: TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.02 * 13,
-                  color: _fg,
-                ),
+                // A button label, so `labelLarge` — the same role the app's own
+                // button themes use, and the one the step footer's buttons take.
+                style: Theme.of(context).textTheme.labelLarge!
+                    .weight(FontWeight.w700)
+                    .copyWith(color: _fg),
               ),
       ),
     );
@@ -1687,13 +1635,9 @@ class _VerifyStatusBadge extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         label,
-        style: TextStyle(
-          fontFamily: AppTheme.fontFamily,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.08 * 10,
-          color: foreground,
-        ),
+        style: Theme.of(context).textTheme.labelSmall!
+            .weight(FontWeight.w800)
+            .copyWith(color: foreground),
       ),
     );
   }
@@ -1752,15 +1696,13 @@ class _ReadyStatusChip extends StatelessWidget {
         borderRadius: AppRadius.borderRadiusFull,
         color: background,
       ),
+      // ONLINE / OFFLINE: already-uppercase status text, one per row, so it is a
+      // badge label rather than an overline.
       child: Text(
         label,
-        style: TextStyle(
-          fontFamily: AppTheme.fontFamily,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.08 * 10,
-          color: foreground,
-        ),
+        style: Theme.of(context).textTheme.labelSmall!
+            .weight(FontWeight.w800)
+            .copyWith(color: foreground),
       ),
     );
   }
@@ -1786,6 +1728,7 @@ class _ReadyStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: _screenPad,
       child: Column(
@@ -1796,7 +1739,7 @@ class _ReadyStep extends StatelessWidget {
           // Heading and card scroll together, and only the footer is pinned.
           //
           // Both halves of this used to be fixed: nine connected services
-          // overflowed by 151px and pushed "Let's go" off the screen, and a 34pt
+          // overflowed by 151px and pushed "Let's go" off the screen, and the
           // headline at an accessibility reading size did the same on its own.
           Expanded(
             child: SingleChildScrollView(
@@ -1805,18 +1748,15 @@ class _ReadyStep extends StatelessWidget {
                 children: [
                   const _StepLabel('Step 3 of 3'),
                   const SizedBox(height: 8),
+                  // Same step-heading role as step 2, for the same reason: a
+                  // screen-level heading over a scrolling summary.
                   Text(
                     configuredServices.isEmpty
                         ? 'Ready when you are.'
                         : "You're all set.",
-                    style: const TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      color: _fg,
-                      letterSpacing: -0.05 * 34,
-                      height: 0.98,
-                    ),
+                    style: textTheme.headlineMedium!
+                        .weight(FontWeight.w800)
+                        .copyWith(color: _fg),
                   ),
                   const SizedBox(height: 12),
                   // Congratulating someone on connecting nothing read as a bug.
@@ -1829,12 +1769,7 @@ class _ReadyStep extends StatelessWidget {
                               'time in Settings.'
                         : 'Your connected services are available and you can '
                               'start using the app right away.',
-                    style: const TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontSize: 14,
-                      color: _muted,
-                      height: 1.55,
-                    ),
+                    style: textTheme.bodyLarge!.copyWith(color: _muted),
                   ),
                   const SizedBox(height: 24),
                   Container(
@@ -1847,22 +1782,20 @@ class _ReadyStep extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Connected services',
-                          style: TextStyle(
-                            fontFamily: AppTheme.fontFamily,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: _fg,
-                          ),
+                          style: textTheme.titleSmall!
+                              .weight(FontWeight.w700)
+                              .copyWith(color: _fg),
                         ),
                         const SizedBox(height: 16),
                         if (configuredServices.isEmpty)
-                          const Text(
+                          // The panel's whole content in the empty case, so it
+                          // carries the message rather than annotating a field:
+                          // `bodyMedium`, a step above the panel notes.
+                          Text(
                             'No services configured — you can add them later in Settings.',
-                            style: TextStyle(
-                              fontFamily: AppTheme.fontFamily,
-                              fontSize: 13,
+                            style: textTheme.bodyMedium!.copyWith(
                               color: _muted,
                             ),
                           )
@@ -1889,12 +1822,9 @@ class _ReadyStep extends StatelessWidget {
                                         children: [
                                           Text(
                                             k.title,
-                                            style: const TextStyle(
-                                              fontFamily: AppTheme.fontFamily,
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w700,
-                                              color: _fg,
-                                            ),
+                                            style: textTheme.titleSmall!
+                                                .weight(FontWeight.w700)
+                                                .copyWith(color: _fg),
                                           ),
                                           const SizedBox(height: 3),
                                           Text(
@@ -1902,11 +1832,8 @@ class _ReadyStep extends StatelessWidget {
                                               checking: isChecking,
                                               status: verifyStatus[k],
                                             ),
-                                            style: const TextStyle(
-                                              fontFamily: AppTheme.fontFamily,
-                                              fontSize: 12,
-                                              color: _muted2,
-                                            ),
+                                            style: textTheme.bodySmall!
+                                                .copyWith(color: _muted2),
                                           ),
                                         ],
                                       ),
@@ -1974,7 +1901,23 @@ class _StepFooter extends StatelessWidget {
   }
 }
 
+/// The style every button label on this screen shares.
+///
+/// `labelLarge` is the role the app's own `filledButtonTheme` and
+/// `outlinedButtonTheme` use, at the w700 these buttons were authored with. It is
+/// also the line [_buttonHeight] budgets for.
+TextStyle _buttonLabelStyle(BuildContext context) =>
+    Theme.of(context).textTheme.labelLarge!.weight(FontWeight.w700);
+
 /// Height for a step's buttons, grown by however much their label grew.
+///
+/// `textHeight` is one line of the label role, and it is unchanged at 17 by the
+/// ramp's new leading. A button label is a *single* line, and the app installs
+/// `DefaultTextHeightBehavior(applyHeightToFirstAscent: false,
+/// applyHeightToLastDescent: false)` at its root — so the role's 1.22 governs the
+/// gaps *between* lines while a one-line block keeps Inter's natural metrics.
+/// Measured: `labelLarge` lays out at exactly 17.0pt for one line, before and
+/// after. No box constant in the app needed re-deriving for that reason.
 double _buttonHeight(BuildContext context) =>
     TextScaleMetrics.boxHeight(context, base: 48, textHeight: 17);
 
@@ -1983,13 +1926,6 @@ class _PrimaryButton extends StatelessWidget {
   const _PrimaryButton({required this.label, required this.onPressed});
   final String label;
   final VoidCallback onPressed;
-
-  static const _labelStyle = TextStyle(
-    fontFamily: AppTheme.fontFamily,
-    fontSize: 14,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.02 * 14,
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -2004,7 +1940,7 @@ class _PrimaryButton extends StatelessWidget {
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusLg),
         ),
-        child: Text(label, style: _labelStyle),
+        child: Text(label, style: _buttonLabelStyle(context)),
       ),
     );
   }
@@ -2029,15 +1965,7 @@ class _SecondaryButton extends StatelessWidget {
             borderRadius: BorderRadius.all(Radius.circular(16)),
           ),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontFamily: AppTheme.fontFamily,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.02 * 14,
-          ),
-        ),
+        child: Text(label, style: _buttonLabelStyle(context)),
       ),
     );
   }
@@ -2060,13 +1988,6 @@ class _AsyncButton extends StatefulWidget {
 class _AsyncButtonState extends State<_AsyncButton> {
   bool _loading = false;
 
-  static const _labelStyle = TextStyle(
-    fontFamily: AppTheme.fontFamily,
-    fontSize: 14,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.02 * 14,
-  );
-
   static const _shape = RoundedRectangleBorder(
     borderRadius: BorderRadius.all(Radius.circular(16)),
   );
@@ -2082,7 +2003,7 @@ class _AsyncButtonState extends State<_AsyncButton> {
               color: Colors.white,
             ),
           )
-        : Text(widget.label, style: _labelStyle);
+        : Text(widget.label, style: _buttonLabelStyle(context));
 
     final onTap = _loading
         ? null

@@ -25,9 +25,7 @@ class RequestsSection extends StatelessWidget {
       children: [
         Text(
           'Requests',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: theme.textTheme.titleMedium?.weight(FontWeight.bold),
         ),
         const SizedBox(height: AppSpacing.md),
         if (requests.isEmpty)
@@ -213,10 +211,9 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: theme.textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: Colors.black,
-        ),
+        style: theme.textTheme.labelSmall
+            ?.weight(FontWeight.bold)
+            .copyWith(color: Colors.black),
       ),
     );
   }
@@ -268,10 +265,9 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         displayStatus.label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
+        style: theme.textTheme.labelSmall
+            ?.weight(FontWeight.bold)
+            .copyWith(color: Colors.white),
       ),
     );
   }
@@ -304,9 +300,7 @@ class MediaSection extends StatelessWidget {
       children: [
         Text(
           'Media',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: theme.textTheme.titleMedium?.weight(FontWeight.bold),
         ),
         const SizedBox(height: AppSpacing.md),
         SizedBox(
@@ -370,9 +364,7 @@ class AdvancedSection extends StatelessWidget {
       children: [
         Text(
           'Advanced',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: theme.textTheme.titleMedium?.weight(FontWeight.bold),
         ),
         const SizedBox(height: AppSpacing.md),
         SizedBox(

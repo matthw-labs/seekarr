@@ -44,7 +44,7 @@ class TorrentSelectionBar extends ConsumerWidget {
               const Spacer(),
               Text(
                 '${selectedHashes.length} selected',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall!.tabular,
               ),
               const Spacer(),
               TextButton.icon(

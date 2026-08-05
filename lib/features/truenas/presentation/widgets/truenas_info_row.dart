@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 
 /// A compact label/value row for detail screens. [value] falls back to `—`.
 class TrueNasInfoRow extends StatelessWidget {
@@ -37,10 +38,13 @@ class TrueNasInfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               value?.isNotEmpty == true ? value! : '—',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: valueColor,
-              ),
+              // This one row carries most of TrueNAS' readouts — capacity,
+              // free, used %, uptime, temperatures — so the digits are locked
+              // to a single advance width here rather than at each call site.
+              style: theme.textTheme.bodyMedium!
+                  .weight(FontWeight.w600)
+                  .tabular
+                  .copyWith(color: valueColor),
             ),
           ),
         ],

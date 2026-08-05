@@ -47,6 +47,9 @@ import 'package:seekarr/features/readarr/presentation/readarr_screen.dart';
 import 'package:seekarr/features/readarr/presentation/readarr_library_screen.dart';
 import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_screen.dart';
 import 'package:seekarr/features/nzbget/presentation/nzbget_screen.dart';
+import 'package:seekarr/features/stream/presentation/stream_dashboard_screen.dart';
+import 'package:seekarr/features/stream/presentation/stream_item_screen.dart';
+import 'package:seekarr/features/stream/presentation/stream_library_screen.dart';
 import 'package:seekarr/features/unraid/presentation/unraid_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_series_detail_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_wanted_screen.dart';
@@ -466,9 +469,13 @@ GoRoute _bazarrRoutes({required String path}) {
           final wanted = RouteUtils.safeExtra<BazarrWantedItem>(state);
           return RouteUtils.cupertinoPage(
             key: state.pageKey,
+            // No `heroTag`: the Bazarr lead is a figure plate, not a poster,
+            // so there is no source counterpart on a Bazarr row to fly from and
+            // an orphan flight would fade in from nothing. The route still
+            // accepts the query param (global search builds one for every
+            // service uniformly); nothing reads it.
             child: BazarrSeriesDetailScreen(
               sonarrSeriesId: id,
-              heroTag: state.uri.queryParameters['heroTag'],
               initialWanted: wanted,
             ),
           );
@@ -483,11 +490,8 @@ GoRoute _bazarrRoutes({required String path}) {
           final wanted = RouteUtils.safeExtra<BazarrWantedItem>(state);
           return RouteUtils.cupertinoPage(
             key: state.pageKey,
-            child: BazarrMovieDetailScreen(
-              radarrId: id,
-              heroTag: state.uri.queryParameters['heroTag'],
-              initialWanted: wanted,
-            ),
+            // See the series route above: no Hero source, so no `heroTag`.
+            child: BazarrMovieDetailScreen(radarrId: id, initialWanted: wanted),
           );
         },
       ),
@@ -649,6 +653,69 @@ GoRoute _unraidRoutes({required String path}) {
         ),
       ),
     ),
+  );
+}
+
+/// Dashboard, library browse and item detail for a media server.
+///
+/// One builder serves both Jellyfin and Plex: the Stream surfaces are written
+/// against `StreamServerClient`, so the only per-service input is the [service]
+/// key itself.
+///
+/// **The nested routes resolve from their path parameters alone.** `library/:id`
+/// takes the display name as an optional `?title=` query so a caller that already
+/// knows it can spare the destination a fetch, but a cold deep link works without
+/// it. `item/:id` is a single recursive route covering film, show, season, episode,
+/// album and track, because a Jellyfin `BaseItemDto` and a Plex `Metadata` describe
+/// all of them with the same fields — where the arrs needed three screens.
+///
+/// Ids travel as path segments rather than through `_libraryDetailPage`, whose
+/// `RouteUtils.safeIntParam` cannot represent a Jellyfin GUID or a Plex
+/// `ratingKey`. They are guarded for emptiness here rather than dereferenced with
+/// `!` or defaulted to `''`, which is the pattern the older string-id routes
+/// (`torrent/:hash`, `stack/:name`) left unguarded.
+GoRoute _streamRoutes({required ServiceKey service, required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: StreamDashboardScreen(
+        service: service,
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
+      ),
+    ),
+    routes: [
+      GoRoute(
+        path: 'library/:id',
+        redirect: (context, state) =>
+            (state.pathParameters['id']?.trim().isEmpty ?? true)
+            ? '/services/${service.routeParam}'
+            : null,
+        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          child: StreamLibraryScreen(
+            service: service,
+            libraryId: state.pathParameters['id']!,
+            libraryTitle: state.uri.queryParameters['title'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: 'item/:id',
+        redirect: (context, state) =>
+            (state.pathParameters['id']?.trim().isEmpty ?? true)
+            ? '/services/${service.routeParam}'
+            : null,
+        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          child: StreamItemScreen(
+            service: service,
+            itemId: state.pathParameters['id']!,
+          ),
+        ),
+      ),
+    ],
   );
 }
 
@@ -885,6 +952,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               _sabnzbdRoutes(path: 'sabnzbd'),
               _nzbgetRoutes(path: 'nzbget'),
               _unraidRoutes(path: 'unraid'),
+              _streamRoutes(service: ServiceKey.jellyfin, path: 'jellyfin'),
+              _streamRoutes(service: ServiceKey.plex, path: 'plex'),
             ],
           ),
           GoRoute(

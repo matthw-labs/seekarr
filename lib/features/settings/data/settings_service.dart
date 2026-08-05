@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -138,6 +139,18 @@ class SettingsService {
       legacyApiKey: '',
       secureApiKey: 'secure_unraid_api_key',
     ),
+    ServiceKey.jellyfin: _ServiceStorageKeys(
+      url: 'jellyfin_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_jellyfin_api_key',
+      userId: 'jellyfin_user_id',
+    ),
+    ServiceKey.plex: _ServiceStorageKeys(
+      url: 'plex_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_plex_token',
+      clientId: 'plex_client_id',
+    ),
   };
 
   final SharedPreferences _prefs;
@@ -222,6 +235,15 @@ class SettingsService {
       if (storageKeys.certFingerprint != null) {
         await _prefs.remove(storageKeys.certFingerprint!);
       }
+      if (storageKeys.userId != null) {
+        await _prefs.remove(storageKeys.userId!);
+      }
+      // The client id goes too. It is not a credential, but leaving it behind
+      // would tie a freshly set-up install to the device row the old one
+      // registered on the user's Plex server.
+      if (storageKeys.clientId != null) {
+        await _prefs.remove(storageKeys.clientId!);
+      }
     }
 
     await _prefs.remove(_kRegion);
@@ -244,6 +266,9 @@ class SettingsService {
     final truenasKeys = _serviceStorageKeys[ServiceKey.truenas]!;
     final truenasCertFingerprint = await _loadCertFingerprint(truenasKeys);
     final dockgeCertFingerprint = await _loadCertFingerprint(dockgeKeys);
+    final jellyfinKeys = _serviceStorageKeys[ServiceKey.jellyfin]!;
+    final jellyfinUserId = _prefs.getString(jellyfinKeys.userId!) ?? '';
+    final plexClientId = await _loadOrCreatePlexClientId();
 
     return SettingsModel(
       seerrUrl: serviceSettings[ServiceKey.seerr]!.$1,
@@ -275,6 +300,12 @@ class SettingsService {
       nzbgetPassword: nzbgetPassword,
       unraidUrl: serviceSettings[ServiceKey.unraid]!.$1,
       unraidApiKey: serviceSettings[ServiceKey.unraid]!.$2,
+      jellyfinUrl: serviceSettings[ServiceKey.jellyfin]!.$1,
+      jellyfinApiKey: serviceSettings[ServiceKey.jellyfin]!.$2,
+      jellyfinUserId: jellyfinUserId,
+      plexUrl: serviceSettings[ServiceKey.plex]!.$1,
+      plexToken: serviceSettings[ServiceKey.plex]!.$2,
+      plexClientId: plexClientId,
       truenasCertFingerprint: truenasCertFingerprint,
       dockgeCertFingerprint: dockgeCertFingerprint,
       region: _loadRegion(),
@@ -321,6 +352,57 @@ class SettingsService {
       ServiceKey.dockge,
       settings.dockgeCertFingerprint,
     );
+
+    final jellyfinKeys = _serviceStorageKeys[ServiceKey.jellyfin]!;
+    if (settings.jellyfinUserId.isNotEmpty) {
+      await _prefs.setString(jellyfinKeys.userId!, settings.jellyfinUserId);
+    } else {
+      await _prefs.remove(jellyfinKeys.userId!);
+    }
+
+    // Deliberately *not* written from `settings`. The client id is owned by
+    // `_loadOrCreatePlexClientId`, which mints it once; honouring an incoming
+    // empty value here — which every `SettingsModel()` default carries — would
+    // clear it on the next unrelated save and hand the user's Plex server a new
+    // device row on the following load.
+    if (settings.plexClientId.isNotEmpty) {
+      final plexKeys = _serviceStorageKeys[ServiceKey.plex]!;
+      await _prefs.setString(plexKeys.clientId!, settings.plexClientId);
+    }
+  }
+
+  /// Reads the persisted `X-Plex-Client-Identifier`, minting one on first use.
+  ///
+  /// Write-on-read is unusual but correct here and already precedented in this
+  /// file by [_loadCertFingerprint]'s prefs→secure migration. The alternative —
+  /// generating at connect time — leaves a window where two concurrent requests
+  /// each mint their own id, and Plex would record both as separate devices.
+  ///
+  /// Shaped as a v4 UUID because that is what every Plex client sends, but built
+  /// from [Random.secure] rather than a `uuid` dependency: the project does not
+  /// take new packages without approval, and nothing here needs more than 122
+  /// random bits.
+  Future<String> _loadOrCreatePlexClientId() async {
+    final key = _serviceStorageKeys[ServiceKey.plex]!.clientId!;
+    final existing = _prefs.getString(key)?.trim() ?? '';
+    if (existing.isNotEmpty) return existing;
+
+    final generated = _randomUuidV4();
+    await _prefs.setString(key, generated);
+    return generated;
+  }
+
+  static String _randomUuidV4() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 1
+    final hex = bytes
+        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+        '${hex.substring(12, 16)}-${hex.substring(16, 20)}-'
+        '${hex.substring(20)}';
   }
 
   /// Persists a trust-on-first-use certificate fingerprint.
@@ -472,6 +554,19 @@ class _ServiceStorageKeys {
   /// Not a secret, so kept in SharedPreferences rather than secure storage.
   final String? certFingerprint;
 
+  /// Prefs key for the chosen viewer's user id (Jellyfin).
+  ///
+  /// A selection, not a credential: it says whose watch state the library reads
+  /// through. Changes whenever the user picks a different household member.
+  final String? userId;
+
+  /// Prefs key for the persisted per-install client identifier (Plex).
+  ///
+  /// Machine-generated exactly once and then immutable — the opposite lifecycle
+  /// to [userId]. Regenerating it registers a new device against the user's
+  /// server, so it must survive every launch, update and settings edit.
+  final String? clientId;
+
   const _ServiceStorageKeys({
     required this.url,
     required this.legacyApiKey,
@@ -481,5 +576,7 @@ class _ServiceStorageKeys {
     this.legacySecureApiKey,
     this.username,
     this.certFingerprint,
+    this.userId,
+    this.clientId,
   });
 }

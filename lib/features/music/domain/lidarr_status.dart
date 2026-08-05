@@ -1,6 +1,7 @@
 import 'package:seekarr/core/status/arr_queue_snapshot.dart';
 import 'package:seekarr/features/music/domain/models/lidarr_album.dart';
 import 'package:seekarr/features/music/domain/models/lidarr_artist.dart';
+import 'package:seekarr/features/music/domain/models/lidarr_track.dart';
 
 /// Resolves the badge status for a Lidarr artist.
 MediaStatusInfo lidarrArtistStatus(
@@ -58,5 +59,25 @@ MediaAvailability lidarrAlbumAvailability(LidarrAlbum album) {
   return availabilityFromCounts(
     fileCount: album.trackFileCount,
     totalCount: tracks,
+  );
+}
+
+/// The album's manifest gap in words: `10 of 12 tracks`.
+String? lidarrAlbumSummary(LidarrAlbum album) {
+  if (album.trackCount <= 0) return null;
+  return '${album.trackFileCount} of ${album.trackCount} tracks';
+}
+
+/// Resolves the status of one track.
+///
+/// A track row used to convey `hasFile` with a 7pt circle filled
+/// `colorScheme.primary` — the same eight lines the episode row carried, in a
+/// file with no `Semantics` at all. Resolving it here is what lets the row draw
+/// a tone-aware badge and speak the state.
+MediaStatusInfo lidarrTrackStatus(LidarrTrack track) {
+  return MediaStatusInfo(
+    availability: track.hasFile
+        ? MediaAvailability.available
+        : MediaAvailability.missing,
   );
 }

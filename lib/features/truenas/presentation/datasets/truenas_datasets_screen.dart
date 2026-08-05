@@ -98,9 +98,7 @@ class _DatasetNode extends StatelessWidget {
         Expanded(
           child: Text(
             depth == 0 ? dataset.id : dataset.shortName,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
           ),
         ),
         IconButton(
@@ -124,7 +122,7 @@ class _DatasetNode extends StatelessWidget {
         visualDensity: VisualDensity.compact,
         minVerticalPadding: 2,
         title: tileTitle,
-        subtitle: Text(subtitle, style: theme.textTheme.labelSmall),
+        subtitle: Text(subtitle, style: theme.textTheme.labelSmall!.tabular),
         onTap: () => context.push(ServiceRoutes.truenasDataset(dataset.id)),
       );
     }
@@ -140,7 +138,7 @@ class _DatasetNode extends StatelessWidget {
         collapsedShape: const Border(),
         initiallyExpanded: depth == 0,
         title: tileTitle,
-        subtitle: Text(subtitle, style: theme.textTheme.labelSmall),
+        subtitle: Text(subtitle, style: theme.textTheme.labelSmall!.tabular),
         children: [
           for (final child in dataset.children)
             _DatasetNode(dataset: child, depth: depth + 1),

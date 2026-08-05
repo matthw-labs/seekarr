@@ -103,9 +103,7 @@ class _PoolCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     pool.name,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
                   ),
                 ),
                 Text(
@@ -137,7 +135,7 @@ class _PoolCard extends StatelessWidget {
               Text(
                 '${(used * 100).round()}% used'
                 '${pool.sizeBytes != null ? ' · ${formatSize(pool.allocatedBytes ?? 0)} / ${formatSize(pool.sizeBytes!)}' : ''}',
-                style: theme.textTheme.labelSmall?.copyWith(
+                style: theme.textTheme.labelSmall!.tabular.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),

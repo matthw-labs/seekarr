@@ -16,6 +16,7 @@ import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/core/widgets/media_poster_card.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/features/services/domain/seerr_request_filter.dart';
@@ -155,10 +156,13 @@ class _FilterChipRow extends StatelessWidget {
             selected: isSelected,
             showCheckmark: false,
             onSelected: (_) => onSelected(filter),
-            labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: isSelected ? ServiceTheme.foregroundOn(accent) : accent,
-              fontWeight: FontWeight.w700,
-            ),
+            labelStyle: Theme.of(context).textTheme.labelMedium
+                ?.weight(FontWeight.w700)
+                .copyWith(
+                  color: isSelected
+                      ? ServiceTheme.foregroundOn(accent)
+                      : accent,
+                ),
             selectedColor: accent,
             backgroundColor: accent.withValues(alpha: 0.10),
             side: BorderSide(color: isSelected ? accent : Colors.transparent),
@@ -224,6 +228,8 @@ class _RequestListRow extends ConsumerWidget {
                     )
                   : Hero(
                       tag: heroTag,
+                      transitionOnUserGestures:
+                          MediaPosterCard.flightOnUserGestures,
                       child: ContentCard(imageUrl: posterUrl),
                     ),
             ),
@@ -238,9 +244,9 @@ class _RequestListRow extends ConsumerWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.weight(FontWeight.w700),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -274,10 +280,8 @@ class _RequestListRow extends ConsumerWidget {
                   const SizedBox(height: 2),
                   Text(
                     _formatRequestDate(request.createdAt),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall?.tabular
+                        .copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -391,11 +395,9 @@ class _RequesterAvatar extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         initials.isEmpty ? '?' : initials,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: ServiceKey.seerr.accent,
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
-        ),
+        style: Theme.of(context).textTheme.labelSmall
+            ?.weight(FontWeight.w800)
+            .copyWith(color: ServiceKey.seerr.accent),
       ),
     );
   }
@@ -417,12 +419,13 @@ class _SmallPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       child: Text(
         label.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
-          fontSize: 9,
-        ),
+        // Uppercase but *not* `AppTheme.eyebrow`: this pill repeats once per
+        // request row, and the eyebrow earns its tracking by being the single
+        // kicker over a region. So it stays on the label ramp and takes the
+        // tracking the ramp derives for 11pt.
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.weight(FontWeight.w800).copyWith(color: color),
       ),
     );
   }

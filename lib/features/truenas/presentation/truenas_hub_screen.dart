@@ -227,11 +227,9 @@ class _SectionTile extends StatelessWidget {
                     ),
                     child: Text(
                       'BETA',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppColors.warning,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 9,
-                      ),
+                      style: theme.textTheme.labelSmall!
+                          .weight(FontWeight.w700)
+                          .copyWith(color: AppColors.warning),
                     ),
                   ),
               ],
@@ -239,9 +237,7 @@ class _SectionTile extends StatelessWidget {
             const Spacer(),
             Text(
               section.title,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
             ),
             const SizedBox(height: 2),
             Text(

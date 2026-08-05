@@ -200,9 +200,7 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(
-        context,
-      ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+      style: Theme.of(context).textTheme.labelLarge!.weight(FontWeight.w700),
     );
   }
 }
@@ -222,14 +220,23 @@ class _CodeField extends StatelessWidget {
       autocorrect: false,
       enableSuggestions: false,
       keyboardType: TextInputType.multiline,
-      style: const TextStyle(
-        fontFamily: 'monospace',
-        fontSize: 12.5,
-        height: 1.4,
-      ),
+      // The YAML editor lives or dies on columns lining up, so it goes through
+      // `.mono` (a real family with fallbacks) rather than the 'monospace'
+      // alias, which resolves to nothing on iOS/macOS. `bodySmall` already
+      // carries the generous 1.40 leading that makes indented compose files
+      // scannable.
+      //
+      // The colour is pinned to the dark-theme foreground because the panel
+      // below it is pinned dark in *both* themes. Left theme-derived, this field
+      // resolved to light-theme `onSurface` (#111827) on a #0A0B11 fill —
+      // **1.11:1**, i.e. a compose editor whose contents were invisible in light
+      // mode. Against the same fill the dark tone measures 17.55:1.
+      style: Theme.of(
+        context,
+      ).textTheme.bodySmall!.mono.copyWith(color: AppColors.onSurfaceDark),
       decoration: InputDecoration(
         filled: true,
-        fillColor: const Color(0xFF0A0B11),
+        fillColor: AppColors.surfaceDark,
         contentPadding: const EdgeInsets.all(14),
         border: OutlineInputBorder(
           borderRadius: AppRadius.borderRadiusMd,

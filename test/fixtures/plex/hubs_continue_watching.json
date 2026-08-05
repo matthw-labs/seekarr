@@ -1,0 +1,74 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "allowSync": false,
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": "continueWatching",
+    "librarySectionTitle": "Continue Watching",
+    "Hub": [
+      {
+        "hubIdentifier": "home.continue",
+        "hubKey": "/hubs/continueWatching/items",
+        "key": "/hubs/continueWatching/items",
+        "more": false,
+        "size": 3,
+        "style": "hero",
+        "title": "Continue Watching",
+        "type": "mixed",
+        "Metadata": [
+          {
+            "addedAt": 1735689600,
+            "art": "/library/metadata/20418/art/1748102400",
+            "duration": 9114000,
+            "guid": "plex://movie/5d776b59ad5437001f79c6f8",
+            "key": "/library/metadata/20418",
+            "librarySectionID": 1,
+            "librarySectionKey": "/library/sections/1",
+            "librarySectionTitle": "Movies",
+            "ratingKey": "20418",
+            "source": "server://9c8b7a6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b/com.plexapp.plugins.library",
+            "summary": "A team of explorers travel through a wormhole in space.",
+            "thumb": "/library/metadata/20418/thumb/1748102400",
+            "title": "Interstellar",
+            "type": "movie",
+            "updatedAt": 1748102400,
+            "viewOffset": 2278500,
+            "year": 2014
+          },
+          {
+            "addedAt": 1751000000,
+            "art": "https://metadata-static.plex.tv/6/gracenote/6f8a1b/art.jpg",
+            "duration": 6600000,
+            "guid": "plex://movie/5d9776a5ad5437001f7a1b22",
+            "key": "/library/metadata/5d9776a5ad5437001f7a1b22",
+            "originallyAvailableAt": "2024-09-20",
+            "ratingKey": "5d9776a5ad5437001f7a1b22",
+            "source": "provider://tv.plex.provider.metadata",
+            "summary": "A studio film Plex is advertising, which does not exist on this server.",
+            "thumb": "https://metadata-static.plex.tv/6/gracenote/6f8a1b/thumb.jpg",
+            "title": "Cloud Only Feature",
+            "type": "movie",
+            "updatedAt": 1751000000,
+            "year": 2024
+          },
+          {
+            "addedAt": 1751100000,
+            "duration": 3600000,
+            "grandparentTitle": "A Streaming Exclusive",
+            "guid": "plex://episode/62aa1e6c9d3e1b002d1f0c44",
+            "index": 1,
+            "key": "https://vod.provider.plex.tv/library/metadata/62aa1e6c",
+            "parentIndex": 1,
+            "ratingKey": "62aa1e6c9d3e1b002d1f0c44",
+            "summary": "A provider row that omits `source` and gives itself away with an absolute key.",
+            "thumb": "/library/metadata/62aa1e6c/thumb/1751100000",
+            "title": "Pilot",
+            "type": "episode",
+            "updatedAt": 1751100000,
+            "year": 2025
+          }
+        ]
+      }
+    ]
+  }
+}

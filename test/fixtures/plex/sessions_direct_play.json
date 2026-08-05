@@ -1,0 +1,90 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "Metadata": [
+      {
+        "addedAt": 1735689600,
+        "art": "/library/metadata/20418/art/1748102400",
+        "audienceRating": 8.3,
+        "audienceRatingImage": "rottentomatoes://image.rating.upright",
+        "contentRating": "PG-13",
+        "duration": 9114000,
+        "guid": "plex://movie/5d776b59ad5437001f79c6f8",
+        "key": "/library/metadata/20418",
+        "librarySectionID": 1,
+        "librarySectionKey": "/library/sections/1",
+        "librarySectionTitle": "Movies",
+        "originallyAvailableAt": "2014-11-05",
+        "originalTitle": "Interstellar",
+        "rating": 8.7,
+        "ratingKey": "20418",
+        "sessionKey": "417",
+        "studio": "Legendary Pictures",
+        "summary": "A team of explorers travel through a wormhole in space.",
+        "tagline": "Mankind was born on Earth. It was never meant to die here.",
+        "thumb": "/library/metadata/20418/thumb/1748102400",
+        "title": "Interstellar",
+        "type": "movie",
+        "updatedAt": 1748102400,
+        "viewOffset": 2278500,
+        "year": 2014,
+        "Media": [
+          {
+            "audioChannels": 6,
+            "audioCodec": "eac3",
+            "bitrate": 14320,
+            "container": "mkv",
+            "duration": 9114000,
+            "height": 2160,
+            "id": "88431",
+            "selected": true,
+            "videoCodec": "hevc",
+            "videoFrameRate": "24p",
+            "videoProfile": "main 10",
+            "videoResolution": "4k",
+            "width": 3840,
+            "Part": [
+              {
+                "container": "mkv",
+                "duration": 9114000,
+                "file": "/mnt/tank/media/movies/Interstellar (2014)/Interstellar.2014.2160p.mkv",
+                "id": "91204",
+                "key": "/library/parts/91204/1735689600/file.mkv",
+                "size": 16321504422,
+                "decision": "directplay",
+                "videoProfile": "main 10"
+              }
+            ]
+          }
+        ],
+        "User": {
+          "id": "1",
+          "thumb": "https://plex.tv/users/2f1a0b9c8d7e6f5a/avatar?c=1735689600",
+          "title": "matt"
+        },
+        "Player": {
+          "address": "192.168.1.42",
+          "device": "Apple TV",
+          "machineIdentifier": "4c9e1f0a2b3d4e5f6a7b8c9d",
+          "model": "appletv",
+          "platform": "tvOS",
+          "platformVersion": "18.4",
+          "product": "Infuse",
+          "profile": "Generic",
+          "state": "playing",
+          "title": "Living Room",
+          "version": "7.8.3",
+          "local": true,
+          "relayed": false,
+          "secure": true,
+          "userID": 1
+        },
+        "Session": {
+          "id": "u7k2m9x4qp1zvb3n",
+          "bandwidth": 4200,
+          "location": "lan"
+        }
+      }
+    ]
+  }
+}

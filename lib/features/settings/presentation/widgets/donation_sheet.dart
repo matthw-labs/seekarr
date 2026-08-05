@@ -246,10 +246,9 @@ class _DonationSheetState extends State<DonationSheet> {
             )
           : Text(
               product.price,
-              style: textTheme.bodyMedium?.copyWith(
-                color: AppColors.lidarr,
-                fontWeight: FontWeight.w600,
-              ),
+              style: textTheme.bodyMedium!
+                  .weight(FontWeight.w600)
+                  .copyWith(color: AppColors.lidarr),
             ),
       onTap: _purchasing ? null : () => _startPurchase(product),
     );
@@ -293,7 +292,7 @@ class _DonationSheetState extends State<DonationSheet> {
           const SizedBox(height: AppSpacing.md),
           Text(
             'Thank you!',
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            style: textTheme.titleLarge!.weight(FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(

@@ -57,6 +57,40 @@ class SettingsModel {
   final String nzbgetPassword;
   final String unraidUrl;
   final String unraidApiKey;
+  final String jellyfinUrl;
+  final String jellyfinApiKey;
+  final String plexUrl;
+
+  /// The user's own `X-Plex-Token`, pasted by hand.
+  ///
+  /// Named for what Plex calls it rather than squeezed into an `apiKey` field,
+  /// though it occupies the generic credential slot in [_serviceSettingsAccess]
+  /// exactly as `qbittorrentPassword` does. Seekarr never mints this: every
+  /// documented way to obtain a Plex token is a plex.tv call, and reaching for
+  /// one would break the product's first principle. A pasted token is validated
+  /// by the user's own server.
+  final String plexToken;
+
+  /// Opaque per-install identifier sent as `X-Plex-Client-Identifier`.
+  ///
+  /// Generated once and then persisted forever — **not** per launch. Plex
+  /// registers a new "device" against the user's server for every distinct
+  /// identifier it sees, so a value regenerated on startup would litter their
+  /// admin panel with a permanent row per app launch. Not a secret, so it lives
+  /// in plain [SharedPreferences] beside the URL.
+  final String plexClientId;
+
+  /// Which Jellyfin user's watch state the library is read through.
+  ///
+  /// Required rather than optional, and the reason is structural: a Jellyfin API
+  /// key authenticates as Administrator with **no user attached** (an empty
+  /// `UserId` claim), so it can see every session but cannot answer "have I
+  /// watched this". Resume positions, next-up and unplayed filters are all
+  /// user-scoped, so the library has to be entered through a person chosen from
+  /// `/Users`. Plex has no equivalent field because its token *is* the user and
+  /// `/library/*` takes no impersonation parameter — that asymmetry is a real
+  /// property of the two APIs, not a gap here.
+  final String jellyfinUserId;
 
   /// SHA-256 fingerprint of a self-signed/untrusted TLS certificate the user
   /// explicitly chose to trust for this server (trust-on-first-use). Empty
@@ -150,6 +184,23 @@ class SettingsModel {
           update: (settings, {url, apiKey}) =>
               settings.copyWith(unraidUrl: url, unraidApiKey: apiKey),
         ),
+        ServiceKey.jellyfin: _ServiceSettingsAccess(
+          url: (settings) => settings.jellyfinUrl,
+          apiKey: (settings) => settings.jellyfinApiKey,
+          update: (settings, {url, apiKey}) =>
+              settings.copyWith(jellyfinUrl: url, jellyfinApiKey: apiKey),
+        ),
+        // The token takes the generic credential slot, the same way
+        // `qbittorrentPassword` does — `plexClientId` and `jellyfinUserId` stay
+        // off this map on purpose, because `update` is hard-wired to
+        // `{url, apiKey}` and every third value in this codebase (both cert
+        // fingerprints) is already handled outside it.
+        ServiceKey.plex: _ServiceSettingsAccess(
+          url: (settings) => settings.plexUrl,
+          apiKey: (settings) => settings.plexToken,
+          update: (settings, {url, apiKey}) =>
+              settings.copyWith(plexUrl: url, plexToken: apiKey),
+        ),
       };
 
   static String normalizeRegion(String? region) {
@@ -187,6 +238,12 @@ class SettingsModel {
     this.nzbgetPassword = '',
     this.unraidUrl = '',
     this.unraidApiKey = '',
+    this.jellyfinUrl = '',
+    this.jellyfinApiKey = '',
+    this.jellyfinUserId = '',
+    this.plexUrl = '',
+    this.plexToken = '',
+    this.plexClientId = '',
     this.truenasCertFingerprint = '',
     this.dockgeCertFingerprint = '',
     this.region = 'US',
@@ -223,6 +280,12 @@ class SettingsModel {
     String? nzbgetPassword,
     String? unraidUrl,
     String? unraidApiKey,
+    String? jellyfinUrl,
+    String? jellyfinApiKey,
+    String? jellyfinUserId,
+    String? plexUrl,
+    String? plexToken,
+    String? plexClientId,
     String? truenasCertFingerprint,
     String? dockgeCertFingerprint,
     String? region,
@@ -258,6 +321,12 @@ class SettingsModel {
       nzbgetPassword: nzbgetPassword ?? this.nzbgetPassword,
       unraidUrl: unraidUrl ?? this.unraidUrl,
       unraidApiKey: unraidApiKey ?? this.unraidApiKey,
+      jellyfinUrl: jellyfinUrl ?? this.jellyfinUrl,
+      jellyfinApiKey: jellyfinApiKey ?? this.jellyfinApiKey,
+      jellyfinUserId: jellyfinUserId ?? this.jellyfinUserId,
+      plexUrl: plexUrl ?? this.plexUrl,
+      plexToken: plexToken ?? this.plexToken,
+      plexClientId: plexClientId ?? this.plexClientId,
       truenasCertFingerprint:
           truenasCertFingerprint ?? this.truenasCertFingerprint,
       dockgeCertFingerprint:

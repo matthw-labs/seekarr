@@ -91,7 +91,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Error:'), findsOneWidget);
+      // The headline names what failed; the exception stays on screen as the
+      // demoted detail line, not as the message.
+      expect(find.text("Couldn't load Sonarr"), findsOneWidget);
       expect(find.textContaining('Network error'), findsOneWidget);
     });
 
@@ -108,7 +110,7 @@ void main() {
       expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
     });
 
-    testWidgets('renders series detail content with seasons when loaded', (
+    testWidgets('renders series detail content in canonical region order', (
       tester,
     ) async {
       await _pumpSeriesDetail(
@@ -118,7 +120,25 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Breaking Bad'), findsAtLeastNWidgets(1));
-      expect(find.byType(MediaDetailHeroSummaryCard), findsOneWidget);
+      expect(find.byType(MediaDetailHeroSummary), findsOneWidget);
+
+      // The seasons are region 3, so they arrive before the prose and the
+      // catalogue rather than sixth.
+      expect(find.text('SEASONS'), findsOneWidget);
+      expect(find.byType(SeriesSeasonsList), findsOneWidget);
+
+      await _scrollUntilVisible(
+        tester,
+        find.text('A chemistry teacher turns to crime.'),
+      );
+      expect(find.text('A chemistry teacher turns to crime.'), findsOneWidget);
+
+      await _scrollUntilVisible(tester, find.text('DETAILS'));
+      expect(find.byType(MediaInfoCard), findsOneWidget);
+
+      // Genres appear exactly once, under a heading that is true. The hero chip
+      // slot carries the manifest counter instead.
+      await _scrollUntilVisible(tester, find.text('GENRES'));
       expect(find.byType(GenreChip), findsNWidgets(2));
       expect(
         find.descendant(
@@ -127,14 +147,78 @@ void main() {
         ),
         findsNothing,
       );
-      expect(find.text('A chemistry teacher turns to crime.'), findsOneWidget);
+      expect(find.text('TAGS'), findsNothing);
+    });
 
-      await _scrollUntilVisible(tester, find.text('Seasons'));
+    testWidgets('the canonical region order puts seasons above the catalogue', (
+      tester,
+    ) async {
+      await _pumpSeriesDetail(
+        tester,
+        detailBuilder: (ref, seriesId) async => _series(),
+      );
+      await tester.pumpAndSettle();
 
-      expect(find.text('Seasons'), findsOneWidget);
-      expect(find.byType(SeriesSeasonsList), findsOneWidget);
-      expect(find.text('Tags'), findsOneWidget);
-      expect(find.byType(MediaInfoCard), findsOneWidget);
+      final labels = tester
+          .widgetList<MediaDetailSectionLabel>(
+            find.byType(MediaDetailSectionLabel, skipOffstage: false),
+          )
+          .map((label) => label.label)
+          .toList();
+
+      expect(labels.first, 'Seasons');
+      expect(
+        labels.indexOf('Overview'),
+        greaterThan(labels.indexOf('Seasons')),
+      );
+      expect(labels.indexOf('Genres'), greaterThan(labels.indexOf('Details')));
+    });
+
+    testWidgets('a pull re-runs both loads the retry button re-runs', (
+      tester,
+    ) async {
+      var detailLoads = 0;
+      var episodeLoads = 0;
+
+      await _pumpSeriesDetail(
+        tester,
+        detailBuilder: (ref, seriesId) async {
+          detailLoads++;
+          return _series();
+        },
+        episodesBuilder: (ref, seriesId) async {
+          episodeLoads++;
+          return _episodes();
+        },
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+
+      await tester.fling(
+        find.byType(CustomScrollView),
+        const Offset(0, 320),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(detailLoads, 2);
+      expect(episodeLoads, 2);
+    });
+
+    testWidgets('the hero chip slot carries the manifest counter', (
+      tester,
+    ) async {
+      await _pumpSeriesDetail(
+        tester,
+        detailBuilder: (ref, seriesId) async => _series(),
+      );
+      await tester.pumpAndSettle();
+
+      // One meaning for the chip slot on every variant: how much of what the
+      // service tracks actually arrived.
+      expect(find.text('7/7 episodes'), findsOneWidget);
+      expect(find.text('1 season'), findsOneWidget);
     });
 
     testWidgets('uses initialSeries while provider is still loading', (
@@ -161,7 +245,7 @@ void main() {
       await _scrollUntilVisible(tester, find.text('Season 1'));
 
       expect(find.text('Season 1'), findsOneWidget);
-      expect(find.text('7 / 7 Episodes'), findsOneWidget);
+      expect(find.textContaining('7 of 7 episodes'), findsOneWidget);
     });
 
     testWidgets('shows episodes for the selected season pill', (tester) async {
@@ -215,20 +299,18 @@ void main() {
 
       expect(requestedSeries, isFalse);
       expect(requestedEpisodes, isFalse);
-      expect(find.text('Add Series'), findsOneWidget);
-      expect(find.text('Interactive'), findsNothing);
-      expect(find.text('Seasons'), findsNothing);
-
-      await tester.tap(find.text('Add Series'));
-      await tester.pumpAndSettle();
-
+      // The dead full-width CTA is gone: with no add path the capability falls
+      // through to a sentence instead of a button that apologises when pressed.
+      expect(find.text('Add Series'), findsNothing);
+      expect(find.byType(MediaDetailUnavailableSection), findsOneWidget);
       expect(
-        find.text('Add Series is not available yet from this view.'),
+        find.textContaining('Sonarr is not tracking this series'),
         findsOneWidget,
       );
+      expect(find.text('SEASONS'), findsNothing);
     });
 
-    testWidgets('shows monitor action for unmonitored library series', (
+    testWidgets('monitoring an unmonitored-but-complete series is in the sheet', (
       tester,
     ) async {
       final sonarrService = _TrackingSonarrService();
@@ -240,18 +322,25 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Monitor'), findsOneWidget);
-      expect(find.text('Interactive'), findsOneWidget);
+      // Everything expected is already on disk, so nothing is promoted at all —
+      // not another search that could churn the library, and not a monitor
+      // toggle nobody opened the page for.
+      expect(find.text('Monitor'), findsNothing);
+
+      await tester.tap(
+        find.widgetWithIcon(OutlinedButton, Icons.more_horiz_rounded),
+      );
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Monitor'));
       await tester.pumpAndSettle();
 
       expect(sonarrService.updatedSeriesId, 1);
       expect(sonarrService.updatedMonitored, isTrue);
-      expect(find.text('Series monitored'), findsOneWidget);
+      expect(find.text('Sonarr is monitoring this series'), findsOneWidget);
     });
 
-    testWidgets('shows unmonitor action for monitored library series', (
+    testWidgets('unmonitoring a monitored series lives in the overflow sheet', (
       tester,
     ) async {
       final sonarrService = _TrackingSonarrService();
@@ -263,15 +352,54 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Unmonitor'), findsOneWidget);
-      expect(find.text('Interactive'), findsOneWidget);
+      // "Unmonitor" used to be the loudest element on an available monitored
+      // series. It is no longer promoted at all.
+      expect(find.text('Unmonitor'), findsNothing);
+      expect(find.text('Stop monitoring'), findsNothing);
 
-      await tester.tap(find.text('Unmonitor'));
+      await tester.tap(
+        find.widgetWithIcon(OutlinedButton, Icons.more_horiz_rounded),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Stop monitoring'));
       await tester.pumpAndSettle();
 
       expect(sonarrService.updatedSeriesId, 1);
       expect(sonarrService.updatedMonitored, isFalse);
-      expect(find.text('Series unmonitored'), findsOneWidget);
+      expect(
+        find.text('Sonarr has stopped monitoring this series'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a whole-series search says what it just set off', (
+      tester,
+    ) async {
+      final sonarrService = _SearchingSonarrService();
+
+      await _pumpSeriesDetail(
+        tester,
+        detailBuilder: (ref, seriesId) async => _series(),
+        sonarrService: sonarrService,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.widgetWithIcon(OutlinedButton, Icons.more_horiz_rounded),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Auto search'));
+      await tester.pumpAndSettle();
+
+      expect(sonarrService.searchedSeriesId, 1);
+      // "Search started for entire series" left the cost unstated. This one
+      // search runs against every monitored episode the show has, which is the
+      // fact a self-hoster on a metered connection needs.
+      expect(
+        find.text('Sonarr is searching for every monitored episode'),
+        findsOneWidget,
+      );
     });
   });
 }
@@ -333,5 +461,15 @@ class _TrackingSonarrService extends FakeSonarrService {
   Future<void> updateSeriesMonitored(int seriesId, bool monitored) async {
     updatedSeriesId = seriesId;
     updatedMonitored = monitored;
+  }
+}
+
+/// Accepts the search command offline so the confirmation copy can be asserted.
+class _SearchingSonarrService extends FakeSonarrService {
+  int? searchedSeriesId;
+
+  @override
+  Future<void> searchSeries(int seriesId) async {
+    searchedSeriesId = seriesId;
   }
 }

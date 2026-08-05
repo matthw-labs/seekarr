@@ -8,6 +8,10 @@ import 'package:seekarr/features/dockge/domain/models/dockge_stack.dart';
 import 'package:seekarr/features/dockge/presentation/dockge_provider.dart';
 import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
+import 'package:seekarr/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:seekarr/features/plex/presentation/plex_provider.dart';
+import 'package:seekarr/features/stream/domain/models/stream_library.dart';
+import 'package:seekarr/features/stream/domain/models/stream_session.dart';
 import 'package:seekarr/features/movies/presentation/movies_provider.dart';
 import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -60,6 +64,16 @@ final serviceKpiProvider = FutureProvider.autoDispose
           return _nzbgetKpis(ref);
         case ServiceKey.unraid:
           return _unraidKpis(ref);
+        case ServiceKey.jellyfin:
+          return _streamKpis(
+            ref.watch(jellyfinSessionsProvider.future),
+            ref.watch(jellyfinLibrariesProvider.future),
+          );
+        case ServiceKey.plex:
+          return _streamKpis(
+            ref.watch(plexSessionsProvider.future),
+            ref.watch(plexLibrariesProvider.future),
+          );
       }
     });
 
@@ -84,6 +98,66 @@ int _statInt(Map<String, dynamic>? stats, String key) =>
     (stats?[key] as num?)?.toInt() ?? 0;
 
 Color? _warnIf(bool condition) => condition ? AppColors.warning : null;
+
+/// Flags a metric as *activity* rather than as a problem.
+///
+/// The tone a flagged KPI resolves to is decided by `resolveServiceSignal` from
+/// the KPI's **label**, not from this colour — `_activityLabels` is what makes
+/// `Streams` read as `StatusTone.info`. This exists so the peek's own icon agrees
+/// with the matrix cell instead of painting an amber glyph beside a blue phrase.
+Color? _infoIf(bool condition) => condition ? AppColors.info : null;
+
+/// The shared KPI set for a media server, identical for Jellyfin and Plex.
+///
+/// Three metrics, and the order is load-bearing in two ways that
+/// `resolveServiceSignal` depends on.
+///
+/// **`Streams` is first, so it is the resting fallback.** With nothing flagged
+/// the matrix cell shows `kpis.first`, and `0 streams` is both true and live —
+/// unlike a library total, which DESIGN.md rightly calls the least live thing you
+/// could put on a control-room screen.
+///
+/// **`Streams` is only flagged while nothing is transcoding.** The cell shows the
+/// *first* flagged KPI, so gating it this way lets the more urgent fact win
+/// without teaching the resolver about precedence: idle reads `0 streams` in
+/// neutral, a healthy stream reads `2 streaming` in info blue, and the moment the
+/// box starts re-encoding it reads `1 transcode` in warning amber. One rule, three
+/// correct readings, no special-casing in the shared resolver.
+///
+/// **There is no aggregate bitrate metric, deliberately.** Neither server reports
+/// measured outbound throughput: Jellyfin only carries a bitrate while
+/// transcoding, and Plex's `Session.bandwidth` is a reservation. Summing those
+/// would add two different units together and present the result as the box's
+/// egress — a fabricated number. Per-session bitrate is shown on the board, where
+/// `StreamSession.bitrateIsNominal` can say what it actually is.
+Future<List<ServiceKpi>> _streamKpis(
+  Future<List<StreamSession>> sessionsFuture,
+  Future<List<StreamLibrary>> librariesFuture,
+) async {
+  final sessions = await sessionsFuture;
+  final libraries = await librariesFuture;
+  final transcodes = sessions.where((s) => s.playMethod.isTranscode).length;
+
+  return [
+    ServiceKpi(
+      label: 'Streams',
+      value: '${sessions.length}',
+      icon: Icons.play_circle_outline_rounded,
+      accent: _infoIf(sessions.isNotEmpty && transcodes == 0),
+    ),
+    ServiceKpi(
+      label: 'Transcodes',
+      value: '$transcodes',
+      icon: Icons.memory_rounded,
+      accent: _warnIf(transcodes > 0),
+    ),
+    ServiceKpi(
+      label: 'Libraries',
+      value: '${libraries.length}',
+      icon: Icons.video_library_outlined,
+    ),
+  ];
+}
 
 Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
   final movies = await ref.watch(moviesProvider.future);

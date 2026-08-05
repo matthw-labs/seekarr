@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:seekarr/core/theme.dart';
+
 /// One named series for [LineAreaChart].
 class ChartSeries {
   final String label;
@@ -49,7 +51,12 @@ class LineAreaChart extends StatelessWidget {
                     gridColor: colorScheme.outlineVariant.withValues(
                       alpha: 0.4,
                     ),
-                    labelColor: colorScheme.onSurfaceVariant,
+                    // Axis labels are re-laid-out on every poll, so they are
+                    // tabular: proportional digits make the whole axis wobble
+                    // as the readings change width.
+                    labelStyle: theme.textTheme.labelSmall!.tabular.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     valueFormatter: valueFormatter,
                     textDirection: Directionality.of(context),
                   ),
@@ -94,14 +101,14 @@ class LineAreaChart extends StatelessWidget {
 class _LineChartPainter extends CustomPainter {
   final List<ChartSeries> series;
   final Color gridColor;
-  final Color labelColor;
+  final TextStyle labelStyle;
   final String Function(double value)? valueFormatter;
   final TextDirection textDirection;
 
   _LineChartPainter({
     required this.series,
     required this.gridColor,
-    required this.labelColor,
+    required this.labelStyle,
     required this.valueFormatter,
     required this.textDirection,
   });
@@ -141,10 +148,7 @@ class _LineChartPainter extends CustomPainter {
       final value = maxY - rangeY * i / 4;
       final label = valueFormatter?.call(value) ?? value.toStringAsFixed(0);
       final tp = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: TextStyle(color: labelColor, fontSize: 10),
-        ),
+        text: TextSpan(text: label, style: labelStyle),
         textDirection: textDirection,
       )..layout(maxWidth: leftPad - 4);
       tp.paint(canvas, Offset(leftPad - tp.width - 4, y - tp.height / 2));
@@ -174,7 +178,7 @@ class _LineChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(_LineChartPainter old) =>
       old.gridColor != gridColor ||
-      old.labelColor != labelColor ||
+      old.labelStyle != labelStyle ||
       !_seriesEquals(old.series, series);
 
   /// Content comparison of two series lists: reference equality would repaint

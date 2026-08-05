@@ -66,7 +66,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Error:'), findsOneWidget);
+      // The headline names what failed; the exception stays on screen as the
+      // demoted detail line, not as the message.
+      expect(find.text("Couldn't load Lidarr"), findsOneWidget);
       expect(find.textContaining('Network error'), findsOneWidget);
     });
 
@@ -83,7 +85,7 @@ void main() {
       expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
     });
 
-    testWidgets('renders artist detail content with albums when loaded', (
+    testWidgets('renders artist detail content in canonical region order', (
       tester,
     ) async {
       await _pumpMusicDetail(
@@ -93,22 +95,86 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Radiohead'), findsAtLeastNWidgets(1));
-      expect(find.byType(MediaDetailHeroSummaryCard), findsOneWidget);
+      expect(find.byType(MediaDetailHeroSummary), findsOneWidget);
+
+      // Albums are region 3 — the manifest — so they land immediately under the
+      // deck rather than dead last after the genre chips.
+      await _scrollUntilVisible(
+        tester,
+        find.widgetWithText(MediaDetailSectionLabel, 'ALBUMS'),
+      );
+      expect(find.byType(MusicAlbumsList), findsOneWidget);
+      expect(find.text('OK Computer'), findsOneWidget);
+
+      await _scrollUntilVisible(tester, find.text('An English rock band.'));
       expect(find.text('An English rock band.'), findsOneWidget);
-
-      await _scrollUntilVisible(tester, find.text('Tags'));
-
-      expect(find.text('Tags'), findsOneWidget);
 
       await _scrollUntilVisible(
         tester,
-        find.widgetWithText(MediaDetailSectionHeader, 'Albums'),
+        find.widgetWithText(MediaDetailSectionLabel, 'DETAILS'),
       );
-
-      expect(find.byType(MusicAlbumsList), findsOneWidget);
-      expect(find.text('OK Computer'), findsOneWidget);
-      expect(find.byType(MusicAlbumsList), findsOneWidget);
       expect(find.byType(MediaInfoCard), findsOneWidget);
+
+      // Genres are labelled as genres. 'Tags' would name a real Lidarr concept
+      // that these are not.
+      await _scrollUntilVisible(
+        tester,
+        find.widgetWithText(MediaDetailSectionLabel, 'GENRES'),
+      );
+      expect(find.text('TAGS'), findsNothing);
+    });
+
+    testWidgets('the canonical region order is albums before genres', (
+      tester,
+    ) async {
+      await _pumpMusicDetail(
+        tester,
+        detailBuilder: (ref, artistId) async => _artist(),
+      );
+      await tester.pumpAndSettle();
+
+      final labels = tester
+          .widgetList<MediaDetailSectionLabel>(
+            find.byType(MediaDetailSectionLabel, skipOffstage: false),
+          )
+          .map((label) => label.label)
+          .toList();
+
+      // The order is a structural guarantee of the spine, not a per-caller
+      // declaration: albums (region 3) can no longer follow genres (region 5).
+      expect(labels, ['Albums', 'Overview', 'Details', 'Genres']);
+    });
+
+    testWidgets('a pull re-runs both loads the retry button re-runs', (
+      tester,
+    ) async {
+      var artistLoads = 0;
+      var albumLoads = 0;
+
+      await _pumpMusicDetail(
+        tester,
+        detailBuilder: (ref, artistId) async {
+          artistLoads++;
+          return _artist();
+        },
+        albumsBuilder: (ref, artistId) async {
+          albumLoads++;
+          return _albums();
+        },
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+
+      await tester.fling(
+        find.byType(CustomScrollView),
+        const Offset(0, 320),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(artistLoads, 2);
+      expect(albumLoads, 2);
     });
 
     testWidgets('uses initialArtist while provider is still loading', (
@@ -138,9 +204,7 @@ void main() {
       expect(find.byType(TagChip), findsAtLeastNWidgets(2));
     });
 
-    testWidgets('shows albums loading indicator while albums are loading', (
-      tester,
-    ) async {
+    testWidgets('shimmers album rows while albums are loading', (tester) async {
       await _pumpMusicDetail(
         tester,
         detailBuilder: (ref, artistId) async => _artist(),
@@ -153,14 +217,72 @@ void main() {
 
       await _scrollUntilVisible(
         tester,
-        find.widgetWithText(MediaDetailSectionHeader, 'Albums'),
+        find.widgetWithText(MediaDetailSectionLabel, 'ALBUMS'),
         settle: false,
       );
 
-      expect(find.byType(CircularProgressIndicator), findsWidgets);
+      // The project's loading vocabulary: rows in the shape of the list that is
+      // coming, not a spinner that says "wait" without saying for what.
+      expect(find.byType(ShimmerList), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
-    testWidgets('shows add artist action and hides albums for lookup miss', (
+    testWidgets('a failed album load names Lidarr and offers a retry', (
+      tester,
+    ) async {
+      var albumLoads = 0;
+
+      await _pumpMusicDetail(
+        tester,
+        detailBuilder: (ref, artistId) async => _artist(),
+        albumsBuilder: (ref, artistId) {
+          albumLoads++;
+          return Future<List<LidarrAlbum>>.error(
+            Exception('Connection refused'),
+          );
+        },
+      );
+      await tester.pumpAndSettle();
+
+      await _scrollUntilVisible(
+        tester,
+        find.widgetWithText(MediaDetailSectionLabel, 'ALBUMS'),
+      );
+
+      expect(find.byType(AppErrorState), findsOneWidget);
+      expect(find.text("Couldn't load Lidarr"), findsOneWidget);
+      expect(albumLoads, 1);
+
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+
+      // The section recovers in place instead of being a dead end on the one
+      // list that is the reason to open an artist.
+      expect(albumLoads, 2);
+    });
+
+    testWidgets('a failed artist load can be retried in place', (tester) async {
+      var artistLoads = 0;
+
+      await _pumpMusicDetail(
+        tester,
+        detailBuilder: (ref, artistId) {
+          artistLoads++;
+          return Future<LidarrArtist?>.error(Exception('Connection refused'));
+        },
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppErrorState), findsOneWidget);
+      expect(artistLoads, 1);
+
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+
+      expect(artistLoads, 2);
+    });
+
+    testWidgets('an artist Lidarr does not track gets a sentence, not a CTA', (
       tester,
     ) async {
       var requestedArtist = false;
@@ -192,25 +314,23 @@ void main() {
 
       expect(requestedArtist, isFalse);
       expect(requestedAlbums, isFalse);
-      expect(find.text('Add Artist'), findsOneWidget);
-      expect(find.text('Interactive'), findsNothing);
+      // The full-width accent CTA whose only behaviour was a snackbar saying it
+      // is not available can no longer be built: there is no add path from this
+      // view, so the capability falls through to a sentence.
+      expect(find.text('Add Artist'), findsNothing);
+      expect(find.byType(MediaDetailUnavailableSection), findsOneWidget);
       expect(
-        find.widgetWithText(MediaDetailSectionHeader, 'Albums'),
-        findsNothing,
-      );
-
-      await tester.tap(find.text('Add Artist'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('Add Artist is not available yet from this view.'),
+        find.textContaining('Lidarr is not tracking this artist'),
         findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(MediaDetailSectionLabel, 'ALBUMS'),
+        findsNothing,
       );
     });
 
-    testWidgets('shows monitor action for unmonitored library artists', (
-      tester,
-    ) async {
+    testWidgets('an unmonitored artist promotes Monitor, because that is why '
+        'nothing is happening', (tester) async {
       final lidarrService = _TrackingLidarrService();
 
       await _pumpMusicDetail(
@@ -220,18 +340,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Monitor'), findsOneWidget);
-      expect(find.text('Interactive'), findsOneWidget);
-
       await tester.tap(find.text('Monitor'));
       await tester.pumpAndSettle();
 
       expect(lidarrService.updatedArtistId, 1);
       expect(lidarrService.updatedMonitored, isTrue);
-      expect(find.text('Artist monitored'), findsOneWidget);
+      expect(find.text('Lidarr is monitoring this artist'), findsOneWidget);
     });
 
-    testWidgets('shows unmonitor action for monitored library artists', (
+    testWidgets('unmonitoring a monitored artist lives in the overflow sheet', (
       tester,
     ) async {
       final lidarrService = _TrackingLidarrService();
@@ -243,15 +360,26 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Unmonitor'), findsOneWidget);
-      expect(find.text('Interactive'), findsOneWidget);
+      // Monitoring a copy the user already has is a persistent binary, not the
+      // page's promoted verb: "Unmonitor" is no longer the loudest control on
+      // the screen.
+      expect(find.text('Unmonitor'), findsNothing);
+      expect(find.text('Stop monitoring'), findsNothing);
 
-      await tester.tap(find.text('Unmonitor'));
+      await tester.tap(
+        find.widgetWithIcon(OutlinedButton, Icons.more_horiz_rounded),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Stop monitoring'));
       await tester.pumpAndSettle();
 
       expect(lidarrService.updatedArtistId, 1);
       expect(lidarrService.updatedMonitored, isFalse);
-      expect(find.text('Artist unmonitored'), findsOneWidget);
+      expect(
+        find.text('Lidarr has stopped monitoring this artist'),
+        findsOneWidget,
+      );
     });
   });
 }
@@ -284,6 +412,10 @@ Future<void> _pumpMusicDetail(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
+      // Riverpod 3 re-runs a failed provider on its own backoff schedule, which
+      // would make load counts non-deterministic. Switched off so the tests
+      // measure only what the retry button does.
+      retry: (retryCount, error) => null,
       overrides: [
         currentSettingsProvider.overrideWith(
           (ref) => const SettingsModel(

@@ -230,14 +230,17 @@ class TorrentSortRow extends ConsumerWidget {
                           children: [
                             Text(
                               sort.label,
-                              style: textTheme.labelSmall?.copyWith(
-                                color: sort == currentSort
-                                    ? accent
-                                    : colorScheme.onSurfaceVariant,
-                                fontWeight: sort == currentSort
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                              ),
+                              style: textTheme.labelSmall!
+                                  .weight(
+                                    sort == currentSort
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  )
+                                  .copyWith(
+                                    color: sort == currentSort
+                                        ? accent
+                                        : colorScheme.onSurfaceVariant,
+                                  ),
                             ),
                             if (sort == currentSort) ...[
                               const SizedBox(width: 2),
@@ -302,10 +305,9 @@ class _FilterChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: textTheme.labelSmall?.copyWith(
-            color: active ? accent : colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-          ),
+          style: textTheme.labelSmall!
+              .weight(FontWeight.w700)
+              .copyWith(color: active ? accent : colorScheme.onSurfaceVariant),
         ),
       ),
     );
@@ -344,10 +346,11 @@ class _FilterPill extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: textTheme.labelSmall?.copyWith(
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-            fontWeight: FontWeight.w400,
-          ),
+          style: textTheme.labelSmall!
+              .weight(FontWeight.w400)
+              .copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
         ),
       );
     }
@@ -361,10 +364,8 @@ class _FilterPill extends StatelessWidget {
           value: '',
           child: Text(
             'All',
-            style: textTheme.bodySmall?.copyWith(
-              fontWeight: selectedLabel == null
-                  ? FontWeight.w700
-                  : FontWeight.w400,
+            style: textTheme.bodySmall!.weight(
+              selectedLabel == null ? FontWeight.w700 : FontWeight.w400,
             ),
           ),
         ),
@@ -373,10 +374,8 @@ class _FilterPill extends StatelessWidget {
             value: o,
             child: Text(
               o,
-              style: textTheme.bodySmall?.copyWith(
-                fontWeight: o == selectedLabel
-                    ? FontWeight.w700
-                    : FontWeight.w400,
+              style: textTheme.bodySmall!.weight(
+                o == selectedLabel ? FontWeight.w700 : FontWeight.w400,
               ),
             ),
           ),
@@ -405,10 +404,11 @@ class _FilterPill extends StatelessWidget {
               children: [
                 Text(
                   displayLabel,
-                  style: textTheme.labelSmall?.copyWith(
-                    color: active ? accent : colorScheme.onSurfaceVariant,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                  ),
+                  style: textTheme.labelSmall!
+                      .weight(active ? FontWeight.w700 : FontWeight.w500)
+                      .copyWith(
+                        color: active ? accent : colorScheme.onSurfaceVariant,
+                      ),
                 ),
                 const SizedBox(width: 2),
                 Icon(

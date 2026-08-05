@@ -30,6 +30,12 @@ class MediaPosterCard extends StatelessWidget {
     this.borderRadius,
   });
 
+  /// Whether poster Heroes also fly during the interactive swipe-back
+  /// gesture (iOS Photos behaviour). Shared by every Hero source that flies
+  /// into a detail page, so the whole flight family toggles in one place —
+  /// flip to false if the interactive flight proves flaky on device.
+  static const bool flightOnUserGestures = true;
+
   static const _fallbackIconSize = 48.0;
 
   @override
@@ -65,29 +71,63 @@ class MediaPosterCard extends StatelessWidget {
         ? ClipOval(child: image)
         : ClipRRect(borderRadius: effectiveBorderRadius, child: image);
 
-    Widget heroChild = DecoratedBox(
-      decoration: BoxDecoration(
-        shape: circular ? BoxShape.circle : BoxShape.rectangle,
-        borderRadius: circular ? null : effectiveBorderRadius,
-        // Match ContentCard's resting elevation so the shared-element flight
-        // doesn't "pop" a different shadow mid-transition.
-        boxShadow: AppElevation.level2(colorScheme),
-      ),
-      child: clippedImage,
-    );
-
-    if (hasImage) {
-      heroChild = Stack(
-        fit: StackFit.expand,
-        children: [
-          heroChild,
-          Opacity(opacity: 0, child: fallback()),
-        ],
+    Widget content(List<BoxShadow> shadow) {
+      Widget child = DecoratedBox(
+        decoration: BoxDecoration(
+          shape: circular ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: circular ? null : effectiveBorderRadius,
+          boxShadow: shadow,
+        ),
+        child: clippedImage,
       );
+      if (hasImage) {
+        child = Stack(
+          fit: StackFit.expand,
+          children: [
+            child,
+            Opacity(opacity: 0, child: fallback()),
+          ],
+        );
+      }
+      return child;
     }
+
+    // Match ContentCard's resting elevation so the shared-element flight
+    // doesn't "pop" a different shadow mid-transition.
+    final heroChild = content(AppElevation.level2(colorScheme));
 
     return Hero(
       tag: heroTag,
+      transitionOnUserGestures: flightOnUserGestures,
+      flightShuttleBuilder:
+          (flightContext, animation, direction, fromContext, toContext) {
+            if (MediaQuery.disableAnimationsOf(flightContext)) {
+              return Material(
+                type: MaterialType.transparency,
+                child: heroChild,
+              );
+            }
+            // "Pick up / set down": the shadow deepens to level3 mid-flight
+            // and settles back to level2, so the poster reads as physically
+            // lifted off one surface and placed on the other. Symmetric, so
+            // push and pop flights both work.
+            return AnimatedBuilder(
+              animation: animation,
+              builder: (context, _) {
+                final lift = 1 - (2 * animation.value - 1).abs();
+                final scheme = Theme.of(flightContext).colorScheme;
+                final shadow = BoxShadow.lerpList(
+                  AppElevation.level2(scheme),
+                  AppElevation.level3(scheme),
+                  Curves.easeOut.transform(lift),
+                )!;
+                return Material(
+                  type: MaterialType.transparency,
+                  child: content(shadow),
+                );
+              },
+            );
+          },
       child: Material(type: MaterialType.transparency, child: heroChild),
     );
   }

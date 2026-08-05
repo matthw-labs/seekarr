@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
 
 /// A single, premium empty-state widget used across the app.
 ///
@@ -66,9 +67,9 @@ class AppEmptyState extends StatelessWidget {
           title,
           style:
               (compact
-                      ? theme.textTheme.titleSmall
-                      : theme.textTheme.titleMedium)
-                  ?.copyWith(fontWeight: FontWeight.w700),
+                      ? theme.textTheme.titleSmall!
+                      : theme.textTheme.titleMedium!)
+                  .weight(FontWeight.w700),
           textAlign: TextAlign.center,
         ),
         if (message != null) ...[

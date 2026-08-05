@@ -105,8 +105,9 @@ class _AppCard extends ConsumerWidget {
                       Flexible(
                         child: Text(
                           app.title,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleSmall!.weight(FontWeight.w700),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -204,11 +205,9 @@ class _UpgradeBadge extends StatelessWidget {
       ),
       child: Text(
         'UPDATE',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: AppColors.info,
-          fontWeight: FontWeight.w700,
-          fontSize: 9,
-        ),
+        style: Theme.of(context).textTheme.labelSmall!
+            .weight(FontWeight.w700)
+            .copyWith(color: AppColors.info),
       ),
     );
   }

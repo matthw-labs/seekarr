@@ -13,7 +13,7 @@ void main() {
 
       // Should render SizedBox.shrink()
       expect(find.byType(FileInfoSection), findsOneWidget);
-      expect(find.text('File'), findsNothing);
+      expect(find.text('Library path'), findsNothing);
     });
 
     testWidgets('renders path when provided', (tester) async {
@@ -23,7 +23,7 @@ void main() {
         ),
       );
 
-      expect(find.text('File'), findsOneWidget);
+      expect(find.text('File'), findsNothing);
       expect(find.text('Library path'), findsOneWidget);
       expect(find.text('/movies/Avatar'), findsOneWidget);
       expect(find.byIcon(Icons.storage_rounded), findsOneWidget);
@@ -38,7 +38,7 @@ void main() {
         ),
       );
 
-      expect(find.text('File'), findsOneWidget);
+      expect(find.text('File'), findsNothing);
       expect(find.text('Avatar.2009.1080p.mkv'), findsOneWidget);
       expect(find.byIcon(Icons.storage_rounded), findsOneWidget);
     });
@@ -55,10 +55,28 @@ void main() {
         ),
       );
 
-      expect(find.text('File'), findsOneWidget);
+      expect(find.text('File'), findsNothing);
       expect(find.text('/movies/Avatar'), findsOneWidget);
       expect(find.text('Avatar.2009.1080p.mkv'), findsOneWidget);
       expect(find.byIcon(Icons.storage_rounded), findsOneWidget);
+    });
+
+    testWidgets('tints the storage glyph with the page accent', (tester) async {
+      const radarrAmber = Color(0xFFF59E0B);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: FileInfoSection(path: '/movies', accent: radarrAmber),
+          ),
+        ),
+      );
+
+      // One accent per screen: the glyph used to be `colorScheme.primary`
+      // indigo, which is a second accent on an amber or violet page.
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.storage_rounded)).color,
+        radarrAmber,
+      );
     });
 
     testWidgets('handles long paths with ellipsis', (tester) async {
@@ -72,7 +90,7 @@ void main() {
         ),
       );
 
-      expect(find.text('File'), findsOneWidget);
+      expect(find.text('File'), findsNothing);
       expect(find.text('Library path'), findsOneWidget);
       expect(find.byType(FileInfoSection), findsOneWidget);
     });

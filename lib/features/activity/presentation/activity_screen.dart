@@ -662,18 +662,17 @@ class _ServiceGroupHeader extends StatelessWidget {
                   Expanded(
                     child: Text(
                       service.title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                      style: theme.textTheme.titleLarge?.weight(
+                        FontWeight.bold,
                       ),
                     ),
                   ),
                   Text(
                     '$count',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: service.accent,
-                      fontWeight: FontWeight.w800,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                    style: theme.textTheme.labelMedium
+                        ?.weight(FontWeight.w800)
+                        .tabular
+                        .copyWith(color: service.accent),
                   ),
                 ],
               ),
@@ -735,9 +734,7 @@ class _StackHealthStrip extends StatelessWidget {
                     failed.length == 1
                         ? '$names did not respond'
                         : '${failed.length} services did not respond',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: theme.textTheme.titleSmall?.weight(FontWeight.w700),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
@@ -911,12 +908,17 @@ class _ServiceTile extends StatelessWidget {
                         const SizedBox(width: AppSpacing.xs),
                         Text(
                           countLabel,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: colorScheme.onSurface,
-                            height: 1.1,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                          // `height` stays overridden: `titleMedium` carries a
+                          // 1.32 reading leading, and this is a numeral stacked
+                          // on a label inside a 84pt chip, where that buys
+                          // nothing and costs the chip's height.
+                          style: theme.textTheme.titleMedium
+                              ?.weight(FontWeight.w800)
+                              .tabular
+                              .copyWith(
+                                color: colorScheme.onSurface,
+                                height: 1.1,
+                              ),
                         ),
                       ],
                     ),
@@ -924,9 +926,18 @@ class _ServiceTile extends StatelessWidget {
                     Text(
                       label.toUpperCase(),
                       maxLines: 1,
-                      style: AppTheme.eyebrow(
-                        selected ? tone : colorScheme.onSurfaceVariant,
-                      ),
+                      // Off `AppTheme.eyebrow` and onto the label ramp: there is
+                      // one of these per chip in a strip of them, and the Eyebrow
+                      // Rule stops at repetition — a kicker that appears eight
+                      // times across one scroll is not introducing anything. The
+                      // selected/unselected tone is unchanged.
+                      style: theme.textTheme.labelSmall
+                          ?.weight(FontWeight.w700)
+                          .copyWith(
+                            color: selected
+                                ? tone
+                                : colorScheme.onSurfaceVariant,
+                          ),
                     ),
                   ],
                 ),

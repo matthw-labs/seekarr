@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/models/rating_source.dart';
+import 'package:seekarr/core/utils/rating_display.dart';
 import 'package:seekarr/core/widgets/rating_chip.dart';
 
 /// Displays a horizontal wrap of [RatingChip] widgets from a list of
@@ -31,8 +32,18 @@ class RatingChipsRow extends StatelessWidget {
       spacing: AppSpacing.xs,
       runSpacing: AppSpacing.xs,
       children: scored.map((rating) {
+        // Each source on its own scale. `toStringAsFixed(1)` for everything is
+        // what rendered Metacritic's 53 as `53.0` and Rotten Tomatoes' 57 as
+        // `57.0` — a decimal place on an integer scale is most of why five pills
+        // read as five comparable numbers.
+        final display = ratingDisplayFor(
+          icon: rating.icon,
+          name: rating.name,
+          value: rating.value,
+        );
         return RatingChip(
-          value: rating.value.toStringAsFixed(1),
+          value: display.value,
+          denominator: display.denominator,
           votes: rating.votes,
           sourceName: rating.name,
           sourceIcon: rating.icon,

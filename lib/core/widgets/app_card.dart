@@ -4,6 +4,8 @@ import 'package:seekarr/core/app_gradients.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/widgets/pressable_scale.dart';
 
 /// Variants for AppCard appearance following Material Design 3.
 enum AppCardVariant {
@@ -20,6 +22,29 @@ enum AppCardVariant {
   surfaceOutlined,
 }
 
+/// How a tappable card acknowledges a press.
+///
+/// Deliberately a parameter rather than a set of named constructors, which is
+/// the house style for card *variants*. Feedback is orthogonal to appearance —
+/// expressing the pair as constructors means a `filled`/`outlined`/
+/// `surfaceOutlined`/`elevated` cross product, eight names for two decisions.
+enum AppCardPressFeedback {
+  /// Material's ink ripple, painted above the card's own background.
+  ///
+  /// The default, and right for a card with room for a splash to read as a
+  /// touch spreading across a surface.
+  ink,
+
+  /// The card dips under the thumb — [PressableScale]'s 0.97 and a light
+  /// haptic — and paints no ink at all.
+  ///
+  /// For cards too small for the first reading to survive: a ripple that
+  /// *floods* its container is how a chip signals selection, not how a surface
+  /// signals a touch. The threshold is about the ripple relative to the box,
+  /// so it tracks the same judgment as DESIGN.md's Pill-for-Metadata Rule.
+  scale,
+}
+
 /// A versatile card component following Material Design 3 guidelines.
 ///
 /// Provides three variants: filled, outlined, and elevated.
@@ -33,6 +58,9 @@ class AppCard extends StatelessWidget {
 
   /// Optional callback when the card is tapped
   final VoidCallback? onTap;
+
+  /// How a press is acknowledged. Ignored when [onTap] is null.
+  final AppCardPressFeedback pressFeedback;
 
   /// Optional padding override (defaults to AppSpacing.lg)
   final EdgeInsetsGeometry? padding;
@@ -48,6 +76,16 @@ class AppCard extends StatelessWidget {
 
   /// When set, paints a soft accent glow inside the card (signature surfaces).
   final Color? accentColor;
+
+  /// Strength and origin of that glow.
+  ///
+  /// The defaults are the signature-card treatment: a strong wash from the top
+  /// right, on the one card that owns the screen. A card in a *grid* wants a
+  /// fraction of it and usually a different corner — the stack matrix lights
+  /// each cell from the top left at 0.08, because thirteen cells at full
+  /// strength stop reading as identity and start reading as decoration.
+  final double accentGlowAlpha;
+  final Alignment accentGlowCenter;
 
   /// The accessible name of the card.
   ///
@@ -96,11 +134,14 @@ class AppCard extends StatelessWidget {
     required this.child,
     this.variant = AppCardVariant.filled,
     this.onTap,
+    this.pressFeedback = AppCardPressFeedback.ink,
     this.padding,
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
     this.accentColor,
+    this.accentGlowAlpha = 0.22,
+    this.accentGlowCenter = Alignment.topRight,
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
@@ -112,11 +153,14 @@ class AppCard extends StatelessWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.pressFeedback = AppCardPressFeedback.ink,
     this.padding,
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
     this.accentColor,
+    this.accentGlowAlpha = 0.22,
+    this.accentGlowCenter = Alignment.topRight,
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
@@ -128,11 +172,14 @@ class AppCard extends StatelessWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.pressFeedback = AppCardPressFeedback.ink,
     this.padding,
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
     this.accentColor,
+    this.accentGlowAlpha = 0.22,
+    this.accentGlowCenter = Alignment.topRight,
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
@@ -144,11 +191,14 @@ class AppCard extends StatelessWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.pressFeedback = AppCardPressFeedback.ink,
     this.padding,
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
     this.accentColor,
+    this.accentGlowAlpha = 0.22,
+    this.accentGlowCenter = Alignment.topRight,
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
@@ -160,11 +210,14 @@ class AppCard extends StatelessWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.pressFeedback = AppCardPressFeedback.ink,
     this.padding,
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
     this.accentColor,
+    this.accentGlowAlpha = 0.22,
+    this.accentGlowCenter = Alignment.topRight,
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
@@ -207,7 +260,11 @@ class AppCard extends StatelessWidget {
 
     // Optional accent glow painted behind the content for signature cards.
     final glow = accentColor != null
-        ? AppGradients.serviceGlow(accentColor!)
+        ? AppGradients.serviceGlow(
+            accentColor!,
+            center: accentGlowCenter,
+            alpha: accentGlowAlpha,
+          )
         : null;
 
     Widget wrapWithGlow(Widget padded) {
@@ -224,6 +281,12 @@ class AppCard extends StatelessWidget {
 
     if (onTap != null) {
       // Place background on Material so InkWell ripple paints on top.
+      //
+      // The `Material` carries the outline as its `shape` in *both* feedback
+      // modes, and that is load-bearing beyond the ripple: a shape's stroke
+      // costs no layout, where the untappable branch's `BoxDecoration.border`
+      // insets its child 1px per side. Keeping the Material means a card does
+      // not change interior height when it gains or loses an `onTap`.
       final shape = RoundedRectangleBorder(
         borderRadius: effectiveBorderRadius,
         side:
@@ -239,31 +302,56 @@ class AppCard extends StatelessWidget {
             : BorderSide.none,
       );
 
+      final padded = wrapWithGlow(
+        Padding(padding: effectivePadding, child: child),
+      );
+      final scaled = pressFeedback == AppCardPressFeedback.scale;
+
       final material = Material(
         color: bgColor,
         shape: shape,
         clipBehavior: glow != null ? Clip.antiAlias : Clip.none,
-        child: InkWell(
-          onTap: onTap,
-          customBorder: shape,
-          // The name and the tap action are published by _spoken; without this
-          // the ink response adds a second, unnamed actionable node.
-          excludeFromSemantics: semanticLabel != null,
-          child: wrapWithGlow(Padding(padding: effectivePadding, child: child)),
-        ),
+        // No ink at all under `scale`: an `InkWell` here would splash *and*
+        // dip, and the splash is the half being rejected.
+        child: scaled
+            ? padded
+            : InkWell(
+                onTap: onTap,
+                customBorder: shape,
+                // The name and the tap action are published by _spoken;
+                // without this the ink response adds a second, unnamed
+                // actionable node.
+                excludeFromSemantics: semanticLabel != null,
+                child: padded,
+              ),
       );
 
       // Explicit token shadows sit under the Material so tappable elevated
       // cards match the non-tappable ones.
-      if (shadows == null) return _spoken(material);
-      return _spoken(
-        DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: effectiveBorderRadius,
-            boxShadow: shadows,
-          ),
-          child: material,
-        ),
+      final Widget body = shadows == null
+          ? material
+          : DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: effectiveBorderRadius,
+                boxShadow: shadows,
+              ),
+              child: material,
+            );
+
+      // Under `scale`, `PressableScale` is the whole gesture layer *and* the
+      // semantics node — it publishes the button role, the name and the tap
+      // action itself, so `_spoken` must not also wrap one or the card becomes
+      // two nested actionable nodes. It sits outside the shadow so the card
+      // dips as one object, shadow included.
+      if (!scaled) return _spoken(body);
+      return PressableScale(
+        onTap: onTap,
+        semanticLabel: semanticLabel,
+        semanticValue: semanticValue,
+        semanticHint: semanticHint,
+        excludeChildSemantics: excludeChildSemantics,
+        borderRadius: effectiveBorderRadius,
+        child: body,
       );
     }
 
@@ -428,9 +516,7 @@ class SettingsCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodyLarge!.weight(FontWeight.w600),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),

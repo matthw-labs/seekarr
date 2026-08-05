@@ -77,7 +77,10 @@ class FloatingNavBarMetrics {
   /// Derived from the tallest thing inside it — the selection pill — so the row
   /// can never overflow the surface.
   static double barHeightFor(BuildContext context) {
-    final pillHeight = _NavBarItem.pillHeightFor(effectiveTextScaler(context));
+    final pillHeight = _NavBarItem.pillHeightFor(
+      effectiveTextScaler(context),
+      _NavBarItem.labelStyleOf(context),
+    );
     final needed = pillHeight + (surfacePadding * 2);
     return needed > barHeight ? needed : barHeight;
   }
@@ -253,6 +256,9 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
     // accessibility scale turn it into a full-height panel.
     final textScaler = FloatingNavBarMetrics.effectiveTextScaler(context);
     final barHeight = FloatingNavBarMetrics.barHeightFor(context);
+    // Resolved once and threaded down: the pill's width and height are measured
+    // from this exact style before the label is painted with it.
+    final labelStyle = _NavBarItem.labelStyleOf(context);
     final isDark = colorScheme.brightness == Brightness.dark;
     final glassColor =
         theme.extension<SeekarrThemeColors>()?.glassSurface ??
@@ -284,6 +290,7 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
                 (_NavBarLayoutMetrics.preferredInnerWidth(
                           widget.destinations,
                           textScaler,
+                          labelStyle,
                         ) +
                         (_barHorizontalPadding * 2))
                     .clamp(0.0, constraints.maxWidth)
@@ -329,12 +336,14 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
                                 selectedIndex: widget.selectedIndex,
                                 selectedExtraShare: _selectedExtraShare,
                                 textScaler: textScaler,
+                                labelStyle: labelStyle,
                               );
                               final indicatorWidth = selectedDestination == null
                                   ? 0.0
                                   : _NavBarItem.preferredSelectedWidthFor(
                                           selectedDestination,
                                           textScaler,
+                                          labelStyle,
                                         )
                                         .clamp(
                                           0.0,
@@ -441,6 +450,7 @@ class _NavBarIndicator extends StatelessWidget {
     final activeBorder = accentColor.withValues(alpha: 0.27);
     final pillHeight = _NavBarItem.pillHeightFor(
       FloatingNavBarMetrics.effectiveTextScaler(context),
+      _NavBarItem.labelStyleOf(context),
     ).clamp(0.0, barHeight);
 
     return Stack(
@@ -484,6 +494,7 @@ class _NavBarLayoutMetrics {
   static double preferredInnerWidth(
     List<FloatingNavDestination> destinations,
     TextScaler scaler,
+    TextStyle labelStyle,
   ) {
     final count = destinations.length;
     if (count == 0) return 0.0;
@@ -494,6 +505,7 @@ class _NavBarLayoutMetrics {
         final width = _NavBarItem.preferredSelectedWidthFor(
           destination,
           scaler,
+          labelStyle,
         ).clamp(_NavBarItem.minSelectedWidth, double.infinity).toDouble();
         return width > currentMax ? width : currentMax;
       },
@@ -524,6 +536,7 @@ class _NavBarLayoutMetrics {
     required int selectedIndex,
     required double selectedExtraShare,
     required TextScaler textScaler,
+    required TextStyle labelStyle,
   }) {
     final count = destinations.length;
     final gap = count > 1
@@ -554,6 +567,7 @@ class _NavBarLayoutMetrics {
     itemWidths[selectedIndex] = _NavBarItem.preferredSelectedWidthFor(
       destinations[selectedIndex],
       textScaler,
+      labelStyle,
     ).clamp(_NavBarItem.minSelectedWidth, double.infinity).toDouble();
 
     var delta = itemAreaWidth - _sum(itemWidths);
@@ -646,8 +660,6 @@ class _NavBarItem extends StatelessWidget {
   /// pills so "this one is active" reads the same in both places.
   static const double itemRadius = AppRadius.pill;
   static const double _labelGap = 6.0;
-  static const double _selectedLabelFontSize = 12.0;
-  static const double _labelLineHeight = 1.3;
   static const double _selectedWidthSlack = 6.0;
   static const double minSelectedWidth = 84.0;
 
@@ -677,9 +689,24 @@ class _NavBarItem extends StatelessWidget {
   /// overflow them before the label ever grew.
   static const double iconSize = _iconSize;
 
+  /// The selected destination's label style: `labelMedium` at w700.
+  ///
+  /// Nav is chrome in a fixed-height pill, which is exactly what the label roles
+  /// are for, and `labelMedium` is the 12pt rung this bar has always drawn at.
+  ///
+  /// It lives in one place because the bar *measures its own label*: both
+  /// [pillHeightFor] and [preferredSelectedWidthFor] lay this style out to
+  /// derive the pill's geometry, and [build] then paints with it. Measuring one
+  /// style and painting another is how a bar that fits becomes a bar that
+  /// overflows, so the geometry reads its size and leading off the role rather
+  /// than off a private literal that could drift from the ramp.
+  static TextStyle labelStyleOf(BuildContext context) =>
+      Theme.of(context).textTheme.labelMedium!.weight(FontWeight.w700);
+
   /// Height of the selection pill at the current reading size.
-  static double pillHeightFor(TextScaler scaler) {
-    final scaledLabel = scaler.scale(_selectedLabelFontSize) * _labelLineHeight;
+  static double pillHeightFor(TextScaler scaler, TextStyle labelStyle) {
+    final scaledLabel =
+        scaler.scale(labelStyle.fontSize ?? 12) * (labelStyle.height ?? 1.0);
     final tallest = scaledLabel > iconSize ? scaledLabel : iconSize;
     final needed = tallest + (AppSpacing.sm * 2);
     return needed > _pillHeight ? needed : _pillHeight;
@@ -688,21 +715,15 @@ class _NavBarItem extends StatelessWidget {
   /// Width the selected pill wants at the current reading size.
   ///
   /// [scaler] must be threaded in: measuring at 1.0x while the label renders
-  /// scaled is what made the bar overflow at accessibility text sizes.
+  /// scaled is what made the bar overflow at accessibility text sizes. So must
+  /// [labelStyle], for the same reason — see [labelStyleOf].
   static double preferredSelectedWidthFor(
     FloatingNavDestination destination,
     TextScaler scaler,
+    TextStyle labelStyle,
   ) {
     final painter = TextPainter(
-      text: TextSpan(
-        text: destination.label,
-        style: const TextStyle(
-          fontFamily: AppTheme.fontFamily,
-          fontSize: _selectedLabelFontSize,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.12,
-        ),
-      ),
+      text: TextSpan(text: destination.label, style: labelStyle),
       textDirection: TextDirection.ltr,
       textScaler: scaler,
       maxLines: 1,
@@ -814,13 +835,10 @@ class _NavBarItem extends StatelessWidget {
                                 padding: const EdgeInsets.only(left: _labelGap),
                                 child: AnimatedDefaultTextStyle(
                                   duration: AppAnimation.durationSm,
-                                  style: TextStyle(
-                                    fontFamily: AppTheme.fontFamily,
-                                    fontSize: _selectedLabelFontSize,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.12,
-                                    color: itemColor,
-                                  ),
+                                  // The same style the pill was measured with.
+                                  style: labelStyleOf(
+                                    context,
+                                  ).copyWith(color: itemColor),
                                   child: Text(
                                     destination.label,
                                     maxLines: 1,

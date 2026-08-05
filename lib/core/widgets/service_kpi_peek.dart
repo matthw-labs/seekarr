@@ -42,6 +42,13 @@ class ServiceKpiPeek extends StatelessWidget {
   Widget build(BuildContext context) {
     // The card is all text (a value line and a label line), so the rail has to
     // follow the reading size or both get clipped.
+    //
+    // `textHeight` is the share of [_height] that is text, and it survived the
+    // type ramp's new per-role leading untouched: the root
+    // `DefaultTextHeightBehavior` keeps a text block's outer edges on Inter's
+    // natural metrics, so leading only opens the gaps *between* lines and a
+    // single line measures exactly what it always did. Both lines here are
+    // single lines. Re-derive this only if the card gains wrapping text.
     final railHeight = TextScaleMetrics.boxHeight(
       context,
       base: _height,
@@ -49,6 +56,7 @@ class ServiceKpiPeek extends StatelessWidget {
     );
     return kpis.when(
       loading: () => _rail(
+        context: context,
         height: railHeight,
         children: List.generate(4, (_) => const _KpiSkeletonCard()),
       ),
@@ -56,6 +64,7 @@ class ServiceKpiPeek extends StatelessWidget {
       data: (items) {
         if (items.isEmpty) return const SizedBox.shrink();
         return _rail(
+          context: context,
           height: railHeight,
           children: [
             for (final kpi in items) _KpiCard(kpi: kpi, fallbackAccent: accent),
@@ -65,15 +74,30 @@ class ServiceKpiPeek extends StatelessWidget {
     );
   }
 
-  Widget _rail({required List<Widget> children, required double height}) {
+  Widget _rail({
+    required BuildContext context,
+    required List<Widget> children,
+    required double height,
+  }) {
     return SizedBox(
       height: height,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: padding,
-        itemCount: children.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (_, index) => children[index],
+      // The grown box and the clamped scaler are one mechanism. [boxHeight]
+      // stops growing at `TextScaleMetrics.defaultMaxScaleFactor`, so the cards
+      // have to *paint* at that same ceiling — otherwise the rail is frozen at
+      // 1.6x while the text keeps growing, which measured a real
+      // `RenderFlex overflowed by 32 pixels` at a 3.0x reading size on every
+      // service dashboard.
+      child: MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: padding,
+          itemCount: children.length,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+          itemBuilder: (_, index) => children[index],
+        ),
       ),
     );
   }
@@ -116,12 +140,10 @@ class _KpiCard extends StatelessWidget {
               Text(
                 kpi.value,
                 maxLines: 1,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: colorScheme.onSurface,
-                  height: 1.1,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+                style: theme.textTheme.titleMedium!
+                    .weight(FontWeight.w800)
+                    .tabular
+                    .copyWith(color: colorScheme.onSurface, height: 1.1),
               ),
             ],
           ),

@@ -1,0 +1,52 @@
+{
+  "Name": "Severance",
+  "OriginalTitle": "Severance",
+  "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b",
+  "Id": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+  "Etag": "aabbccddeeff00112233445566778899",
+  "DateCreated": "2025-02-18T07:12:44.1234567Z",
+  "CanDelete": false,
+  "CanDownload": false,
+  "PremiereDate": "2022-02-18T00:00:00.0000000Z",
+  "ProductionYear": 2022,
+  "OfficialRating": "TV-MA",
+  "CommunityRating": 8.7,
+  "RunTimeTicks": 24000000000,
+  "PlayAccess": "Full",
+  "IsFolder": true,
+  "Type": "Series",
+  "Overview": "Employees at Lumon Industries undergo a procedure that severs work memories from personal ones.",
+  "Taglines": ["The work is mysterious and important."],
+  "Genres": ["Drama", "Mystery", "Sci-Fi & Fantasy"],
+  "Studios": [{ "Name": "Apple TV+", "Id": "b2c4d6e8f0a12345b2c4d6e8f0a12345" }],
+  "People": [
+    {
+      "Name": "Adam Scott",
+      "Id": "cc11dd22ee33ff445566778899aabbcc",
+      "Role": "Mark Scout",
+      "Type": "Actor",
+      "PrimaryImageTag": "ff00ee11dd22cc33bb44aa5566778899"
+    }
+  ],
+  "ProviderIds": { "Tvdb": "371980", "Tmdb": "95396", "Imdb": "tt11280740" },
+  "ChildCount": 2,
+  "RecursiveItemCount": 19,
+  "Status": "Continuing",
+  "AirDays": [],
+  "PrimaryImageAspectRatio": 0.6666666666666666,
+  "ImageTags": {
+    "Primary": "77aa11bb22cc33dd44ee55ff66009988",
+    "Logo": "1234567890abcdef1234567890abcdef"
+  },
+  "BackdropImageTags": ["fedcba0987654321fedcba0987654321"],
+  "UserData": {
+    "UnplayedItemCount": 6,
+    "PlaybackPositionTicks": 0,
+    "PlayCount": 0,
+    "IsFavorite": true,
+    "Played": false,
+    "Key": "371980"
+  },
+  "LocationType": "FileSystem",
+  "MediaType": "Unknown"
+}

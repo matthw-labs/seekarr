@@ -194,9 +194,9 @@ class _InfoCard extends StatelessWidget {
                     ),
                     Text(
                       row.$2,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium!.weight(FontWeight.w700),
                     ),
                   ],
                 ),
@@ -292,9 +292,11 @@ class _StatTile extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               value,
+              // Query/grab/failure counts and the response time all refresh in
+              // place, so the digits get a fixed advance.
               style: Theme.of(
                 context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ).textTheme.titleSmall!.weight(FontWeight.w800).tabular,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -323,9 +325,7 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Text(
         text,
-        style: Theme.of(
-          context,
-        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+        style: Theme.of(context).textTheme.titleSmall!.weight(FontWeight.w800),
       ),
     );
   }
@@ -403,9 +403,9 @@ class _HistoryRow extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleSmall!.weight(FontWeight.w600),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -430,11 +430,9 @@ class _HistoryRow extends StatelessWidget {
               ),
               child: Text(
                 event.label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: event.color,
-                  letterSpacing: 0.4,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!
+                    .weight(FontWeight.w800)
+                    .copyWith(color: event.color),
               ),
             ),
           ],

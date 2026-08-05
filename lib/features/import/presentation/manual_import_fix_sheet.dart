@@ -8,6 +8,7 @@ import 'package:seekarr/core/app_elevation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/service_theme.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/import/domain/manual_import_models.dart';
 import 'package:seekarr/features/import/presentation/manual_import_provider.dart';
@@ -605,9 +606,7 @@ class _SheetHeader extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: theme.textTheme.titleMedium!.weight(FontWeight.w800),
                 ),
                 // Wraps in full. Assigning an identity means reading the file
                 // name for the clues the service could not parse — the year,
@@ -669,10 +668,10 @@ class _AppliesToStrip extends StatelessWidget {
             if (items.length > visible)
               Text(
                 '+${items.length - visible} more',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: theme.textTheme.labelSmall!
+                    .weight(FontWeight.w700)
+                    .tabular
+                    .copyWith(color: colorScheme.onSurfaceVariant),
               ),
           ],
         ),
@@ -875,7 +874,7 @@ class _BulkMap<T> extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(
                   context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ).textTheme.titleSmall!.weight(FontWeight.w700),
               ),
               const SizedBox(height: AppSpacing.sm),
               DropdownButtonFormField<T>(
@@ -963,9 +962,7 @@ class _ResultTile extends StatelessWidget {
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
         ),
         subtitle: subtitle == null
             ? null

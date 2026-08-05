@@ -80,7 +80,7 @@ class _DetailBody extends ConsumerWidget {
             'Services',
             style: Theme.of(
               context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ).textTheme.titleSmall!.weight(FontWeight.w700),
           ),
           const SizedBox(height: 8),
           servicesAsync.when(
@@ -116,10 +116,9 @@ class _StatusHeader extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           status.label,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: status.color,
-          ),
+          style: Theme.of(context).textTheme.titleMedium!
+              .weight(FontWeight.w700)
+              .copyWith(color: status.color),
         ),
       ],
     );
@@ -282,10 +281,9 @@ class _ActionChip extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!
+                    .weight(FontWeight.w800)
+                    .copyWith(color: color),
               ),
             ],
           ),
@@ -328,9 +326,9 @@ class _ServiceStatusList extends StatelessWidget {
                 Expanded(
                   child: Text(
                     service.serviceName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium!.weight(FontWeight.w600),
                   ),
                 ),
                 Container(
@@ -344,10 +342,9 @@ class _ServiceStatusList extends StatelessWidget {
                   ),
                   child: Text(
                     service.statusLabel,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: color,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!
+                        .weight(FontWeight.w800)
+                        .copyWith(color: color),
                   ),
                 ),
               ],
@@ -469,7 +466,7 @@ class _TerminalLogState extends ConsumerState<_TerminalLog> {
           'Terminal',
           style: Theme.of(
             context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ).textTheme.titleSmall!.weight(FontWeight.w700),
         ),
         const SizedBox(height: 8),
         Container(
@@ -484,21 +481,30 @@ class _TerminalLogState extends ConsumerState<_TerminalLog> {
             ),
           ),
           child: text.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
                     'No output yet. Run an action to see logs.',
-                    style: TextStyle(color: Color(0xFF647089), fontSize: 12),
+                    // Pinned dark like the log body beside it: this panel is
+                    // dark in both themes, and the theme-derived dim tone
+                    // measured 3.73:1 on it in light mode. The dark dim tone
+                    // clears AA at 5.30:1.
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: AppColors.onSurfaceDimDark,
+                    ),
                   ),
                 )
               : SingleChildScrollView(
                   controller: _scroll,
                   child: SelectableText(
                     text,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11.5,
-                      height: 1.35,
-                      color: Color(0xFFB4BCCB),
+                    // Container logs are read in columns, so this goes through
+                    // `.mono` rather than the 'monospace' alias that silently
+                    // falls back to a proportional face on iOS/macOS.
+                    // `bodySmall`'s 1.40 leading is what keeps a dense tail
+                    // scannable. The panel behind it is permanently dark, so
+                    // the foreground stays on the dark-theme variant tone.
+                    style: Theme.of(context).textTheme.bodySmall!.mono.copyWith(
+                      color: AppColors.onSurfaceVariantDark,
                     ),
                   ),
                 ),

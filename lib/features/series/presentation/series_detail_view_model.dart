@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
+import 'package:seekarr/features/series/domain/models/sonarr_season.dart';
 import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
 
 class SeriesDetailViewModel {
@@ -23,7 +24,14 @@ class SeriesDetailViewModel {
   final List<RatingSource> ratings;
   final String? path;
   final int? qualityProfileId;
-  final List<dynamic> seasons;
+
+  /// Seasons, already narrowed out of Sonarr's raw nested JSON.
+  ///
+  /// The view model is the layer that owns the conversion: a widget that
+  /// receives `List<dynamic>` has to guess at the shape, and two widgets
+  /// guessing differently is how the season pill and the season panel came to
+  /// read different fields.
+  final List<SonarrSeason> seasons;
   final int? seasonCount;
   final int? episodeCount;
   final String? seriesType;
@@ -156,8 +164,9 @@ class SeriesDetailViewModel {
 
   List<MediaFact> _buildAirDateFacts() => [
     if (_hasText(firstAired))
-      MediaFact('First Aired', formatIsoDate(firstAired!)),
-    if (_hasText(lastAired)) MediaFact('Last Aired', formatIsoDate(lastAired!)),
+      MediaFact('First Aired', formatMediumDate(firstAired!)),
+    if (_hasText(lastAired))
+      MediaFact('Last Aired', formatMediumDate(lastAired!)),
   ];
 
   bool _hasText(String? value) => value != null && value.isNotEmpty;
@@ -183,6 +192,10 @@ class SeriesDetailViewModel {
     final seasonCount = (stats?['seasonCount'] as num?)?.toInt();
     final episodeCount = (stats?['episodeCount'] as num?)?.toInt();
     final isInLibrary = series.id > 0 && series.path?.isNotEmpty == true;
+    // `formatRuntimeMinutes` answers '' for a runtime the service does not
+    // have, and the metadata line only drops nulls — so the empty string has
+    // to become one here.
+    final runtime = formatRuntimeMinutes(series.runtime);
 
     return SeriesDetailViewModel(
       title: series.title,
@@ -198,13 +211,13 @@ class SeriesDetailViewModel {
       isMonitored: series.monitored,
       episodeFileCount: episodeFileCount,
       year: series.year > 0 ? series.year.toString() : '',
-      runtimeStr: series.runtime > 0 ? '${series.runtime} min' : null,
+      runtimeStr: runtime.isEmpty ? null : runtime,
       network: series.network,
       genres: series.genres,
       ratings: series.ratings,
       path: series.path,
       qualityProfileId: series.qualityProfileId,
-      seasons: series.seasons,
+      seasons: series.seasonList,
       seasonCount: seasonCount,
       episodeCount: episodeCount,
       seriesType: series.seriesType,

@@ -1,0 +1,67 @@
+[
+  {
+    "PlayState": {
+      "CanSeek": false,
+      "IsPaused": false,
+      "IsMuted": false,
+      "RepeatMode": "RepeatNone",
+      "PlaybackOrder": "Default"
+    },
+    "AdditionalUsers": [],
+    "Capabilities": {
+      "PlayableMediaTypes": ["Audio", "Video"],
+      "SupportedCommands": ["Play", "Pause", "Stop", "Seek"],
+      "SupportsMediaControl": true,
+      "SupportsPersistentIdentifier": true
+    },
+    "RemoteEndPoint": "192.168.1.42",
+    "PlayableMediaTypes": ["Audio", "Video"],
+    "Id": "3f9a1c7e5b2d48f0a6c3e9b1d7f5a2c4",
+    "UserId": "8c4f2a1e9b7d4c3a8f5e2d1c9b8a7f6e",
+    "UserName": "matt",
+    "Client": "Jellyfin Web",
+    "LastActivityDate": "2026-08-03T07:51:19.1029384Z",
+    "LastPlaybackCheckIn": "2026-08-02T21:40:11.0000000Z",
+    "DeviceName": "Firefox",
+    "DeviceId": "TW96aWxsYS81LjAgKE1hY2ludG9zaA",
+    "ApplicationVersion": "10.11.11",
+    "IsActive": true,
+    "SupportsMediaControl": true,
+    "SupportsRemoteControl": true,
+    "NowPlayingItem": null,
+    "HasCustomDeviceName": false,
+    "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b"
+  },
+  {
+    "PlayState": {
+      "CanSeek": false,
+      "IsPaused": false,
+      "IsMuted": false,
+      "RepeatMode": "RepeatNone",
+      "PlaybackOrder": "Default"
+    },
+    "AdditionalUsers": [],
+    "Capabilities": {
+      "PlayableMediaTypes": ["Audio", "Video"],
+      "SupportedCommands": ["Play", "Pause", "Stop"],
+      "SupportsMediaControl": false,
+      "SupportsPersistentIdentifier": true
+    },
+    "RemoteEndPoint": "192.168.1.77",
+    "PlayableMediaTypes": ["Audio", "Video"],
+    "Id": "d81b6c4a2e9f47538a1c0b5d3e7f9a26",
+    "UserId": "1d3b5f7a9c2e4680bdf13579ace02468",
+    "UserName": "flatmate",
+    "Client": "Infuse-Library",
+    "LastActivityDate": "2026-08-03T07:12:02.4400000Z",
+    "DeviceName": "Apple TV",
+    "DeviceId": "0d7f3a91-4b2c-4d8e-9f10-2a3b4c5d6e7f",
+    "DeviceType": "TV",
+    "ApplicationVersion": "7.8.6",
+    "IsActive": true,
+    "SupportsMediaControl": false,
+    "SupportsRemoteControl": false,
+    "HasCustomDeviceName": false,
+    "ServerId": "9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b"
+  }
+]

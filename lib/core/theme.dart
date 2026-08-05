@@ -1,19 +1,96 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:seekarr/core/app_radius.dart';
 
 /// Builds a [TextStyle] backed by the bundled Inter variable font.
+///
+/// Every style goes through here so three things are impossible to forget:
+/// the `wght` axis (see [AppTheme.interVariations] — a bare [FontWeight] does
+/// not reach it), the optical size, and Inter's own tracking.
 TextStyle _inter({
   Color? color,
-  double? fontSize,
-  FontWeight? fontWeight,
+  required double fontSize,
+  required FontWeight fontWeight,
+  required double height,
+  required Brightness brightness,
   double? letterSpacing,
+  List<FontFeature>? fontFeatures,
 }) {
   return TextStyle(
     fontFamily: AppTheme.fontFamily,
     color: color,
     fontSize: fontSize,
     fontWeight: fontWeight,
-    letterSpacing: letterSpacing,
+    fontVariations: AppTheme.interVariations(fontWeight, fontSize),
+    height: height,
+    letterSpacing:
+        letterSpacing ?? AppTheme.interTracking(fontSize, brightness),
+    fontFeatures: fontFeatures,
+  );
+}
+
+/// Type-level helpers that have to reach Inter's variable axes.
+///
+/// These exist because [TextStyle.copyWith] is a trap on a variable font: it
+/// will happily change [TextStyle.fontWeight] and leave `fontVariations`
+/// pointing at the old weight, so the text keeps rendering at the weight it
+/// had. Re-weight through [weight] instead.
+extension SeekarrTextStyle on TextStyle {
+  /// Re-weights this style so the change actually reaches Inter's `wght` axis.
+  ///
+  /// The bundled Inter is a single variable face registered at weight 400.
+  /// Flutter resolves `fontWeight: FontWeight.w800` against that one face,
+  /// finds it, and never touches the axis — so the glyphs stay Regular and the
+  /// only difference is whatever synthetic emboldening Skia decides to add.
+  /// Measured: `w400` through `w900` all lay out to the identical advance
+  /// width, while an explicit `wght` variation does not.
+  ///
+  /// The optical size is carried over rather than recomputed, so re-weighting a
+  /// display style does not quietly hand it back the text-size drawing.
+  TextStyle weight(FontWeight weight) {
+    double? opticalSize;
+    final variations = fontVariations;
+    if (variations != null) {
+      for (final variation in variations) {
+        if (variation.axis == 'opsz') {
+          opticalSize = variation.value;
+          break;
+        }
+      }
+    }
+    return copyWith(
+      fontWeight: weight,
+      fontVariations: [
+        FontVariation('wght', weight.value.toDouble()),
+        FontVariation(
+          'opsz',
+          opticalSize ?? AppTheme.opticalSize(fontSize ?? 14),
+        ),
+      ],
+    );
+  }
+
+  /// Locks digits to a single advance width.
+  ///
+  /// The Tabular Rule: anything that updates in place — a transfer rate, a
+  /// percentage, a queue count — jitters as it counts with proportional digits.
+  TextStyle get tabular =>
+      copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
+
+  /// Switches a style onto the monospaced family, for code, logs and data.
+  ///
+  /// Keeps the size, colour and line height it already had — a fingerprint or a
+  /// log line still belongs to the role it was set in, it just needs columns
+  /// that line up. See [AppTheme.monoFontFamily] for why this is not a literal.
+  TextStyle get mono => copyWith(
+    fontFamily: AppTheme.monoFontFamily,
+    fontFamilyFallback: AppTheme.monoFontFamilyFallback,
+    // Inter's axes mean nothing to the platform mono face, and a mono face is
+    // already spaced on a fixed advance — tracking it fights the grid.
+    fontVariations: const [],
+    letterSpacing: 0,
+    fontFeatures: const [FontFeature.slashedZero()],
   );
 }
 
@@ -39,6 +116,26 @@ class AppColors {
   static const Color sabnzbd = Color(0xFFF0A800); // SABnzbd amber/gold
   static const Color nzbget = Color(0xFF0F9D58); // NZBGet green
   static const Color unraid = Color(0xFFFF8C2B); // Unraid orange
+  static const Color jellyfin = Color(0xFFAA5CC3); // Jellyfin purple
+
+  /// Plex bronze — deliberately **not** Plex's brand gold `#E5A00D`.
+  ///
+  /// The brand value is unusable here, and measurably so. In CIE Lab it sits
+  /// ΔE 5 from [sabnzbd] and ΔE 8 from [warning] — and [warning] and [radarr]
+  /// are already the same byte value — so brand gold would have been the fourth
+  /// amber in a five-way tie that includes the alarm tone. Two consequences,
+  /// both fatal: the 8pt source dot on the merged Recently Added rail could not
+  /// distinguish a Plex item from a Radarr or SABnzbd one, and the Stream
+  /// dashboard's whole focal moment — a transcoding session lighting its reason
+  /// in [warning] — would have been invisible against a room lit by the Plex
+  /// accent itself.
+  ///
+  /// This value keeps the brand's hue family (34° against the brand's 41°, so it
+  /// still reads as Plex gold) while clearing ΔE 18 from every existing amber
+  /// and 20 from the alarm tone. It resolves to 5.05:1 as a label over its own
+  /// 14% tint in dark; light theme still goes through `ServiceTheme.onTint`,
+  /// which brand gold also required (it measured 1.84:1 there).
+  static const Color plex = Color(0xFFC97A16);
 
   // === NAV SECTION ACCENTS ===
   //
@@ -227,14 +324,113 @@ class AppTheme {
   /// Bundled app font family declared in pubspec.yaml.
   static const String fontFamily = 'Inter';
 
+  /// Family for code, logs, hashes and anything read in columns.
+  ///
+  /// **Not** the string `'monospace'`, which is the mistake this token exists to
+  /// stop repeating. `'monospace'` is an Android family alias; CoreText has no
+  /// family by that name, so on iOS and macOS Flutter finds nothing and falls
+  /// back to the proportional system face. That silently rendered Dockge's YAML
+  /// editor, its container logs, TrueNAS' JSON diagnostics and — worst — the
+  /// certificate fingerprint a user is asked to *compare by eye* in a
+  /// proportional font on two of the three targets, which is also a per-OS
+  /// divergence the brand explicitly forbids.
+  ///
+  /// Menlo leads because it is the mono face reliably present on both Apple
+  /// platforms; the fallbacks pick the job up everywhere else, ending at the
+  /// Android alias.
+  static const String monoFontFamily = 'Menlo';
+
+  /// Fallbacks for [monoFontFamily], in resolution order.
+  static const List<String> monoFontFamilyFallback = <String>[
+    'SF Mono',
+    'Roboto Mono',
+    'Droid Sans Mono',
+    'Consolas',
+    'monospace',
+  ];
+
+  // === VARIABLE AXES ===
+  //
+  // The bundled Inter.ttf is a variable font exposing `wght` (100–900) and
+  // `opsz` (14–32). Both are addressed explicitly: Flutter drives neither from
+  // a plain `TextStyle`.
+
+  /// Lower bound of Inter's optical-size axis — the text-reading drawing.
+  static const double _opticalSizeMin = 14;
+
+  /// Upper bound of Inter's optical-size axis — the display drawing.
+  static const double _opticalSizeMax = 32;
+
+  /// The optical size Inter should be *drawn* at for text rendered at [fontSize].
+  ///
+  /// Inter's `opsz` axis is not a size, it is a drawing: at 14 the letterforms
+  /// are opened up and lightly contrasted for small text, at 32 they tighten and
+  /// gain contrast for headlines. The app bundles the axis and, until now, spent
+  /// every string on the 14pt drawing — so a 57pt title was set in a face
+  /// designed to survive being 14pt. Tracking the authored size is the whole
+  /// point of the axis.
+  static double opticalSize(double fontSize) =>
+      fontSize.clamp(_opticalSizeMin, _opticalSizeMax);
+
+  /// The `wght` + `opsz` pair for Inter at a given weight and size.
+  static List<FontVariation> interVariations(
+    FontWeight weight,
+    double fontSize,
+  ) => <FontVariation>[
+    FontVariation('wght', weight.value.toDouble()),
+    FontVariation('opsz', opticalSize(fontSize)),
+  ];
+
+  // === TRACKING ===
+
+  /// Inter's own tracking, in logical pixels, for text at [fontSize].
+  ///
+  /// The ramp used to carry Material's Baseline tracking table — `+0.5` on
+  /// `bodyLarge`, `+0.25` on `bodyMedium`, `+0.5` on the labels. Those values
+  /// are specified for Roboto, a narrower face with tighter default fit; on
+  /// Inter they read spacey, and the display end of the same ramp had already
+  /// been hand-tuned negative, so the ladder was half-designed and half
+  /// inherited.
+  ///
+  /// This is instead Inter's published dynamic-metrics curve — tracking in em as
+  /// `-0.0223 + 0.185·e^(-0.1745·size)` — which lands near zero at reading sizes
+  /// and around -0.022em at display sizes. It replaces fifteen literals with the
+  /// curve they were approximating.
+  ///
+  /// [brightness] adds a hair of positive tracking on the dark theme only.
+  /// Light-on-dark type blooms optically and its counters close up; the standard
+  /// compensation is a little more air, tapering away by the headline sizes where
+  /// the effect stops mattering. Both themes still end up tighter than the
+  /// Roboto values they replace, so nothing gets wider than it was.
+  static double interTracking(double fontSize, Brightness brightness) {
+    final double em =
+        -0.0223 +
+        0.185 * math.exp(-0.1745 * fontSize) +
+        (brightness == Brightness.dark ? _darkTrackingDelta(fontSize) : 0);
+    return em * fontSize;
+  }
+
+  /// Dark-theme optical compensation, in em: +0.006 up to 16pt, gone by 24pt.
+  static double _darkTrackingDelta(double fontSize) {
+    const double maxDelta = 0.006;
+    final double taper = ((24 - fontSize) / 8).clamp(0.0, 1.0);
+    return maxDelta * taper;
+  }
+
   /// Standardised "eyebrow" / overline style: small, uppercase-tracked label
   /// used above section titles and on onboarding steps. Pair with
   /// `Text(label.toUpperCase(), style: AppTheme.eyebrow(...))`.
+  ///
+  /// The one style whose tracking is authored rather than derived: it is meant
+  /// to be a distinct voice, and +1.4 is what uppercasing at 11pt needs to stop
+  /// reading as a cramped acronym. Kept off [interTracking] deliberately.
   static TextStyle eyebrow(Color color) => _inter(
     color: color,
     fontSize: 11,
     fontWeight: FontWeight.w700,
+    height: 1.2,
     letterSpacing: 1.4,
+    brightness: Brightness.dark,
   );
 
   // === DARK THEME (Primary) ===
@@ -272,6 +468,19 @@ class AppTheme {
     required Color bottomSheetBackground,
     required Color dialogBackground,
   }) {
+    final TextTheme textTheme = _buildTextTheme(
+      brightness == Brightness.dark
+          ? ThemeData.dark().textTheme
+          : ThemeData.light().textTheme,
+      brightness,
+    );
+    // Component text comes off the ramp rather than re-declaring sizes: the
+    // app-bar title *is* titleLarge at a heavier weight, a button label *is*
+    // labelLarge. Restating `fontSize: 22` here is how a component drifts out of
+    // the ladder it is supposed to belong to.
+    final TextStyle labelLarge = textTheme.labelLarge!;
+    final TextStyle labelMedium = textTheme.labelMedium!;
+
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
@@ -282,11 +491,7 @@ class AppTheme {
           colorScheme: colorScheme,
         ),
       ],
-      textTheme: _buildTextTheme(
-        brightness == Brightness.dark
-            ? ThemeData.dark().textTheme
-            : ThemeData.light().textTheme,
-      ),
+      textTheme: textTheme,
       scaffoldBackgroundColor: colorScheme.surface,
 
       // AppBar
@@ -295,11 +500,9 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: _inter(
-          color: colorScheme.onSurface,
-          fontSize: 22,
-          fontWeight: FontWeight.w800,
-        ),
+        titleTextStyle: textTheme.titleLarge!
+            .weight(FontWeight.w800)
+            .copyWith(color: colorScheme.onSurface),
         iconTheme: IconThemeData(color: colorScheme.onSurface),
       ),
 
@@ -309,17 +512,11 @@ class AppTheme {
         indicatorColor: colorScheme.primaryContainer,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return _inter(
-              color: colorScheme.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            );
+            return labelMedium
+                .weight(FontWeight.w600)
+                .copyWith(color: colorScheme.primary);
           }
-          return _inter(
-            color: colorScheme.onSurfaceVariant,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          );
+          return labelMedium.copyWith(color: colorScheme.onSurfaceVariant);
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -339,7 +536,7 @@ class AppTheme {
       // Chip
       chipTheme: ChipThemeData(
         backgroundColor: colorScheme.surfaceContainerHighest,
-        labelStyle: _inter(color: colorScheme.onSurfaceVariant, fontSize: 12),
+        labelStyle: labelMedium.copyWith(color: colorScheme.onSurfaceVariant),
         side: BorderSide.none,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusSm),
       ),
@@ -349,7 +546,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          textStyle: _inter(fontSize: 14, fontWeight: FontWeight.w700),
+          textStyle: labelLarge.weight(FontWeight.w700),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         ),
@@ -359,7 +556,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          textStyle: _inter(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle: labelLarge.weight(FontWeight.w600),
           side: BorderSide(color: colorScheme.outline),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -370,7 +567,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          textStyle: _inter(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle: labelLarge.weight(FontWeight.w600),
         ),
       ),
 
@@ -402,7 +599,9 @@ class AppTheme {
           horizontal: 16,
           vertical: 12,
         ),
-        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        hintStyle: textTheme.bodyMedium!.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
       ),
 
       // BottomSheet
@@ -430,7 +629,9 @@ class AppTheme {
       // SnackBar
       snackBarTheme: SnackBarThemeData(
         backgroundColor: colorScheme.inverseSurface,
-        contentTextStyle: _inter(color: colorScheme.onInverseSurface),
+        contentTextStyle: textTheme.bodyMedium!.copyWith(
+          color: colorScheme.onInverseSurface,
+        ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
       ),
@@ -446,8 +647,8 @@ class AppTheme {
         labelColor: colorScheme.primary,
         unselectedLabelColor: colorScheme.onSurfaceVariant,
         indicatorColor: colorScheme.primary,
-        labelStyle: _inter(fontSize: 14, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: _inter(fontSize: 14, fontWeight: FontWeight.w500),
+        labelStyle: labelLarge.weight(FontWeight.w600),
+        unselectedLabelStyle: labelLarge,
       ),
 
       // ProgressIndicator
@@ -552,90 +753,71 @@ class AppTheme {
 
   // === TEXT THEME ===
 
-  static TextTheme _buildTextTheme(TextTheme base) {
+  /// The type ramp.
+  ///
+  /// Sizes and weights are unchanged; what is new is that the weights actually
+  /// render (see [SeekarrTextStyle.weight]), that tracking comes from Inter's
+  /// own curve rather than Roboto's table ([interTracking]), and that line
+  /// height is a decision per role instead of the font file's default.
+  ///
+  /// On that last point: every style in the app used to inherit Inter's own
+  /// 1.21 (ascender 1984 + descender 494 over a 2048 em), from the 57pt display
+  /// down to 12pt metadata. One ratio across a 5:1 size range cannot be right at
+  /// both ends — it is loose for a headline and cramped for a paragraph. So the
+  /// ladder now tightens as it climbs and opens as it falls:
+  ///
+  /// - **Display and headline** tighten toward the 1.10 floor. Large type needs
+  ///   less leading, not proportionally more. The floor is not taste: an
+  ///   accented capital reaches ~0.89em above its baseline and a descender
+  ///   ~0.21em below, so below 1.10 the acute on one line starts touching the
+  ///   `y` on the line above. Media titles arrive from TMDB in every language,
+  ///   so that case is real; 1.06 was tried and the collision is visible.
+  /// - **Body** opens to 1.45–1.55. This is where prose lives — overviews,
+  ///   descriptions, empty-state copy — and light-on-dark text at a wide measure
+  ///   wants the most air of anything here. `bodyLarge` is the widest measure and
+  ///   gets the most.
+  /// - **Labels stay at ~1.22**, near the old default, because labels are chrome:
+  ///   they sit in fixed-height pills, badges and cells where extra leading buys
+  ///   nothing and costs layout.
+  static TextTheme _buildTextTheme(TextTheme base, Brightness brightness) {
+    TextStyle style({
+      required double size,
+      required FontWeight weight,
+      required double height,
+    }) => _inter(
+      fontSize: size,
+      fontWeight: weight,
+      height: height,
+      brightness: brightness,
+    );
+
     return base
         .apply(fontFamily: fontFamily)
         .copyWith(
-          // Display — editorial: heavier weight, tight negative tracking
-          displayLarge: _inter(
-            fontSize: 57,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1.0,
+          // Display — editorial: heaviest weights, tightest leading.
+          displayLarge: style(size: 57, weight: FontWeight.w800, height: 1.10),
+          displayMedium: style(size: 45, weight: FontWeight.w800, height: 1.10),
+          displaySmall: style(size: 36, weight: FontWeight.w700, height: 1.10),
+          // Headline — screen-level headings.
+          headlineLarge: style(size: 32, weight: FontWeight.w800, height: 1.15),
+          headlineMedium: style(
+            size: 28,
+            weight: FontWeight.w700,
+            height: 1.18,
           ),
-          displayMedium: _inter(
-            fontSize: 45,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.75,
-          ),
-          displaySmall: _inter(
-            fontSize: 36,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-          // Headline
-          headlineLarge: _inter(
-            fontSize: 32,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
-          headlineMedium: _inter(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.4,
-          ),
-          headlineSmall: _inter(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.3,
-          ),
-          // Title
-          titleLarge: _inter(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.2,
-          ),
-          titleMedium: _inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.15,
-          ),
-          titleSmall: _inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.1,
-          ),
-          // Body
-          bodyLarge: _inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            letterSpacing: 0.5,
-          ),
-          bodyMedium: _inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            letterSpacing: 0.25,
-          ),
-          bodySmall: _inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w400,
-            letterSpacing: 0.4,
-          ),
-          // Label
-          labelLarge: _inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.1,
-          ),
-          labelMedium: _inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.5,
-          ),
-          labelSmall: _inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.5,
-          ),
+          headlineSmall: style(size: 24, weight: FontWeight.w700, height: 1.20),
+          // Title — section headers, card titles, row primaries, KPI values.
+          titleLarge: style(size: 22, weight: FontWeight.w700, height: 1.25),
+          titleMedium: style(size: 16, weight: FontWeight.w600, height: 1.32),
+          titleSmall: style(size: 14, weight: FontWeight.w600, height: 1.34),
+          // Body — running text. The only roles set for reading, not for chrome.
+          bodyLarge: style(size: 16, weight: FontWeight.w400, height: 1.55),
+          bodyMedium: style(size: 14, weight: FontWeight.w400, height: 1.45),
+          bodySmall: style(size: 12, weight: FontWeight.w400, height: 1.40),
+          // Label — chips, badges, nav, dense metadata. Chrome: leading stays put.
+          labelLarge: style(size: 14, weight: FontWeight.w500, height: 1.22),
+          labelMedium: style(size: 12, weight: FontWeight.w500, height: 1.22),
+          labelSmall: style(size: 11, weight: FontWeight.w500, height: 1.22),
         );
   }
 }

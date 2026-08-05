@@ -27,16 +27,24 @@ export 'section_header.dart';
 export 'media_grid.dart';
 export 'media_browse_scaffold.dart';
 export 'media_detail_view.dart';
+export 'media_detail_slot.dart';
+export 'media_detail_body_metrics.dart';
+export 'media_detail_header_metrics.dart';
+export 'media_detail_section_label.dart';
+export 'media_child_list.dart';
 export 'media_detail_sections.dart';
 export 'media_detail_hero_summary.dart';
 export 'media_detail_poster_row.dart';
+export 'media_detail_figure_plate.dart';
+export 'media_prose_section.dart';
+export 'media_chip_section.dart';
+export 'media_detail_back_button.dart';
+export 'media_detail_placeholder_view.dart';
 export 'media_poster_card.dart';
 export 'media_info_card.dart';
 export 'media_metadata_line.dart';
 export 'header_action_row.dart';
 export 'library_detail_actions.dart';
-export 'media_search_action_row.dart';
-export 'media_management_row.dart';
 
 // Form & Input
 export 'search_bar_header.dart';

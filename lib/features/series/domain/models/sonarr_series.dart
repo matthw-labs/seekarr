@@ -1,6 +1,7 @@
 import 'package:seekarr/core/models/media_preview.dart';
 import 'package:seekarr/core/models/rating_source.dart';
 import 'package:seekarr/core/utils/arr_model_helpers.dart';
+import 'package:seekarr/features/series/domain/models/sonarr_season.dart';
 
 export 'package:seekarr/core/models/rating_source.dart';
 
@@ -71,6 +72,15 @@ class SonarrSeries {
       (statistics?['episodeFileCount'] as num?)?.toInt();
 
   bool get hasFiles => (episodeFileCount ?? 0) > 0;
+
+  /// [seasons], typed and in display order (specials last).
+  ///
+  /// [seasons] itself stays raw because Sonarr nests a good deal more in each
+  /// entry than the app reads, and the write paths pass the payload back
+  /// untouched. Anything that *renders* a season goes through this instead of
+  /// indexing the map, so a pill and the panel beside it cannot read different
+  /// shapes.
+  List<SonarrSeason> get seasonList => SonarrSeason.listFrom(seasons);
 
   /// True while more episodes are still expected to air.
   bool get isContinuing => status.toLowerCase() == 'continuing';

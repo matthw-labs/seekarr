@@ -1,0 +1,143 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "allowSync": true,
+    "art": "/library/metadata/41000/art/1718220000",
+    "grandparentContentRating": "TV-MA",
+    "grandparentRatingKey": "41000",
+    "grandparentStudio": "Red Hour Productions",
+    "grandparentThumb": "/library/metadata/41000/thumb/1718220000",
+    "grandparentTitle": "Severance",
+    "identifier": "com.plexapp.plugins.library",
+    "key": "41001",
+    "librarySectionID": 2,
+    "librarySectionTitle": "TV Shows",
+    "librarySectionUUID": "9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "mediaTagVersion": 1748100000,
+    "nocache": true,
+    "parentIndex": 1,
+    "parentTitle": "Season 1",
+    "thumb": "/library/metadata/41001/thumb/1718220000",
+    "title1": "TV Shows",
+    "title2": "Season 1",
+    "viewGroup": "episode",
+    "Metadata": [
+      {
+        "addedAt": 1706100000,
+        "art": "/library/metadata/41120/art/1718220000",
+        "contentRating": "TV-MA",
+        "duration": 3300000,
+        "grandparentArt": "/library/metadata/41000/art/1718220000",
+        "grandparentGuid": "plex://show/5d9c081b170e910020f16a4f",
+        "grandparentKey": "/library/metadata/41000",
+        "grandparentRatingKey": "41000",
+        "grandparentThumb": "/library/metadata/41000/thumb/1718220000",
+        "grandparentTitle": "Severance",
+        "guid": "plex://episode/5f4a1e6c9d3e1b002d1f0a0e",
+        "index": 1,
+        "key": "/library/metadata/41120",
+        "librarySectionID": 2,
+        "librarySectionKey": "/library/sections/2",
+        "librarySectionTitle": "TV Shows",
+        "originallyAvailableAt": "2022-02-18",
+        "parentGuid": "plex://season/602e67d31d3358002c411c3f",
+        "parentIndex": 1,
+        "parentKey": "/library/metadata/41001",
+        "parentRatingKey": "41001",
+        "parentThumb": "/library/metadata/41001/thumb/1718220000",
+        "parentTitle": "Season 1",
+        "ratingKey": "41120",
+        "summary": "Helly wakes on a conference table with no memory of who she is.",
+        "thumb": "/library/metadata/41120/thumb/1718220000",
+        "title": "Good News About Hell",
+        "type": "episode",
+        "updatedAt": 1718220000,
+        "viewCount": 1,
+        "lastViewedAt": 1717000000,
+        "year": 2022,
+        "Media": [
+          {
+            "audioChannels": 6,
+            "audioCodec": "eac3",
+            "bitrate": 8400,
+            "container": "mkv",
+            "duration": 3300000,
+            "height": 1080,
+            "id": "992100",
+            "videoCodec": "h264",
+            "videoResolution": "1080",
+            "width": 1920,
+            "Part": [
+              {
+                "container": "mkv",
+                "duration": 3300000,
+                "file": "/mnt/tank/media/tv/Severance/Season 01/Severance - S01E01.mkv",
+                "id": "1002400",
+                "key": "/library/parts/1002400/1706100000/file.mkv",
+                "size": 3541002311
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "addedAt": 1706100000,
+        "art": "/library/metadata/41123/art/1718220000",
+        "contentRating": "TV-MA",
+        "duration": 3180000,
+        "grandparentArt": "/library/metadata/41000/art/1718220000",
+        "grandparentGuid": "plex://show/5d9c081b170e910020f16a4f",
+        "grandparentKey": "/library/metadata/41000",
+        "grandparentRatingKey": "41000",
+        "grandparentThumb": "/library/metadata/41000/thumb/1718220000",
+        "grandparentTitle": "Severance",
+        "guid": "plex://episode/5f4a1e6c9d3e1b002d1f0a11",
+        "index": 4,
+        "key": "/library/metadata/41123",
+        "librarySectionID": 2,
+        "librarySectionKey": "/library/sections/2",
+        "librarySectionTitle": "TV Shows",
+        "originallyAvailableAt": "2022-02-25",
+        "parentGuid": "plex://season/602e67d31d3358002c411c3f",
+        "parentIndex": 1,
+        "parentKey": "/library/metadata/41001",
+        "parentRatingKey": "41001",
+        "parentThumb": "/library/metadata/41001/thumb/1718220000",
+        "parentTitle": "Season 1",
+        "ratingKey": "41123",
+        "summary": "Mark and his team uncover an unsettling detail about their floor.",
+        "thumb": "/library/metadata/41123/thumb/1718220000",
+        "title": "The You You Are",
+        "type": "episode",
+        "updatedAt": 1718220000,
+        "viewOffset": 1245000,
+        "year": 2022,
+        "Media": [
+          {
+            "audioChannels": 8,
+            "audioCodec": "truehd",
+            "bitrate": 24500,
+            "container": "mkv",
+            "duration": 3180000,
+            "height": 2160,
+            "id": "992001",
+            "videoCodec": "hevc",
+            "videoResolution": "4k",
+            "width": 3840,
+            "Part": [
+              {
+                "container": "mkv",
+                "duration": 3180000,
+                "file": "/mnt/tank/media/tv/Severance/Season 01/Severance - S01E04.mkv",
+                "id": "1002314",
+                "key": "/library/parts/1002314/1706100000/file.mkv",
+                "size": 9741002311
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

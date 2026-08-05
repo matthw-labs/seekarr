@@ -61,7 +61,7 @@ class ProwlarrIndexerTile extends StatelessWidget {
                   indexer.name ?? 'Unknown indexer',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                  ).textTheme.titleSmall!.weight(FontWeight.w700),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -86,11 +86,9 @@ class ProwlarrIndexerTile extends StatelessWidget {
             ),
             child: Text(
               (indexer.protocol ?? '?').toUpperCase(),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: protocolColor,
-                letterSpacing: 0.4,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!
+                  .weight(FontWeight.w800)
+                  .copyWith(color: protocolColor),
             ),
           ),
           if (onTap != null) ...[

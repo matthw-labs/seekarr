@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/domain_section.dart';
+import 'package:seekarr/core/widgets/media_detail_section_label.dart';
 import 'package:seekarr/core/widgets/section_header.dart';
 
 Future<void> _pump(WidgetTester tester, Widget child) async {
@@ -99,6 +100,54 @@ void main() {
         containsSemantics(isHeader: true),
       );
       expect(find.semantics.byLabel('7'), findsNothing);
+    });
+  });
+
+  group('MediaDetailSectionLabel', () {
+    // The detail pages' heading widget. Registered here beside [SectionHeader]
+    // because it makes the same three promises — one heading node, the
+    // original-case string in the ear, and an interactive trailing that survives
+    // the silencing — and a seven-region page had no heading rotor at all until
+    // it did.
+    testWidgets('is one heading node with the count folded in', (tester) async {
+      await _pump(
+        tester,
+        const MediaDetailSectionLabel(
+          label: 'Missing subtitles',
+          accent: Color(0xFF8B5CF6),
+          count: '3 missing · 2 languages',
+        ),
+      );
+
+      expect(
+        find.semantics.byLabel('Missing subtitles, 3 missing · 2 languages'),
+        containsSemantics(isHeader: true),
+      );
+      // Uppercase belongs in the eye, not in the ear.
+      expect(find.semantics.byLabel('MISSING SUBTITLES'), findsNothing);
+      expect(find.semantics.byLabel('3 missing · 2 languages'), findsNothing);
+    });
+
+    testWidgets('an action stays reachable inside the heading', (tester) async {
+      var pressed = false;
+      await _pump(
+        tester,
+        MediaDetailSectionLabel(
+          label: 'Episodes',
+          accent: const Color(0xFF8B5CF6),
+          action: TextButton(
+            onPressed: () => pressed = true,
+            child: const Text('S3 of 40'),
+          ),
+        ),
+      );
+
+      expect(
+        find.semantics.byLabel('S3 of 40'),
+        containsSemantics(isButton: true, hasTapAction: true),
+      );
+      await tester.tap(find.text('S3 of 40'));
+      expect(pressed, isTrue);
     });
   });
 

@@ -195,10 +195,12 @@ class _HealthBanner extends StatelessWidget {
                   ),
                   child: Text(
                     label,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: accent,
-                    ),
+                    // Error/issue tallies move as health changes — tabular so
+                    // the badge does not reflow as the digits update.
+                    style: Theme.of(context).textTheme.labelSmall!
+                        .weight(FontWeight.w800)
+                        .tabular
+                        .copyWith(color: accent),
                   ),
                 ),
               ],
@@ -332,9 +334,9 @@ class _HistoryTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleSmall!.weight(FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -359,11 +361,9 @@ class _HistoryTile extends StatelessWidget {
                 ),
                 child: Text(
                   event.label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: event.color,
-                    letterSpacing: 0.4,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!
+                      .weight(FontWeight.w800)
+                      .copyWith(color: event.color),
                 ),
               ),
             ],

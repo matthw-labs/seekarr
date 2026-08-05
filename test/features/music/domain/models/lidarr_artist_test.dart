@@ -117,7 +117,8 @@ void main() {
         });
 
         expect(artist.ratings, hasLength(1));
-        expect(artist.ratings.single.name, '42500 voti');
+        expect(artist.ratings.single.name, 'MB');
+        expect(artist.ratings.single.votes, 42500);
         expect(artist.ratings.single.icon, 'MB');
         expect(artist.ratings.single.value, 8.1);
       });

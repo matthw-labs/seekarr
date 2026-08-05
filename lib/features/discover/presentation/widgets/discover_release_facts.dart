@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
 
+/// The encyclopaedic fact grid for a Seerr title: release dates, studios,
+/// networks and crew.
+///
+/// Headless: the heading comes from the `MediaDetailSlot` that hosts it.
 class DiscoverReleaseInfoCard extends StatelessWidget {
   final List<MediaFact> releaseEntries;
   final String? emptyMessage;
@@ -73,7 +77,7 @@ class DiscoverReleaseInfoCard extends StatelessWidget {
       if ((nextEpisodeToAir.name?.isNotEmpty ?? false)) {
         parts.add(nextEpisodeToAir.name!);
       }
-      parts.add(_formatDate(nextEpisodeToAir.airDate!));
+      parts.add(formatMediumDate(nextEpisodeToAir.airDate!));
 
       entries.add(MediaFact('Next Episode', parts.join(' • ')));
     }
@@ -127,16 +131,7 @@ class DiscoverReleaseInfoCard extends StatelessWidget {
         ),
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        MediaDetailSectionHeader(
-          title: 'Details',
-          accent: ServiceKey.seerr.accent,
-        ),
-        MediaInfoCard(groups: sectionChildren),
-      ],
-    );
+    return MediaInfoCard(groups: sectionChildren);
   }
 }
 
@@ -145,7 +140,7 @@ void _addDatedFactEntry(List<MediaFact> entries, String label, String? value) {
     return;
   }
 
-  entries.add(MediaFact(label, _formatDate(value)));
+  entries.add(MediaFact(label, formatMediumDate(value)));
 }
 
 MovieRelease? _releaseByType(List<MovieRelease> releases, int type) {
@@ -156,32 +151,4 @@ MovieRelease? _releaseByType(List<MovieRelease> releases, int type) {
   }
 
   return null;
-}
-
-String _formatDate(String value) {
-  if (value.isEmpty) {
-    return '';
-  }
-
-  final parsed = DateTime.tryParse(value);
-  if (parsed == null) {
-    return value.split('T').first;
-  }
-
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-
-  return '${months[parsed.month - 1]} ${parsed.day}, ${parsed.year}';
 }
