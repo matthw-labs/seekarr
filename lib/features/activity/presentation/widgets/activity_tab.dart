@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/activity/presentation/activity_provider.dart';
-import 'package:seekarr/features/activity/presentation/activity_screen.dart';
-import 'package:seekarr/features/activity/presentation/widgets/activity_item_tiles.dart';
-import 'package:seekarr/features/activity/presentation/widgets/activity_tab_helpers.dart';
-import 'package:seekarr/features/activity/presentation/widgets/segment_selector.dart';
+import 'package:cupola/features/activity/presentation/activity_provider.dart';
+import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_tab_helpers.dart';
+import 'package:cupola/features/activity/presentation/widgets/segment_selector.dart';
 
 class ActivityTab extends ConsumerStatefulWidget {
   final ServiceType serviceType;

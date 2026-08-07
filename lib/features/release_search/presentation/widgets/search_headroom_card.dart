@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/features/release_search/domain/release_search_headroom.dart';
-import 'package:seekarr/features/release_search/domain/release_search_reach.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_entry.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_headroom_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/features/release_search/domain/release_search_headroom.dart';
+import 'package:cupola/features/release_search/domain/release_search_reach.dart';
+import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
+import 'package:cupola/features/release_search/presentation/release_search_headroom_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// How much room this instance's path leaves for a long search.
 ///

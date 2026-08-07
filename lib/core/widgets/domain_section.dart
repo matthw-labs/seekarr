@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
 
 /// A small, uppercase section label used to head a group of services that
 /// belong to the same [ServiceDomain]. Shared by the Home dashboard, Settings

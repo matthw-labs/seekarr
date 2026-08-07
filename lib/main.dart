@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:seekarr/core/network/pinned_image_cache.dart';
-import 'package:seekarr/core/router.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
-import 'package:seekarr/features/release_search/data/release_search_transport.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/data/settings_service.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/router.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/release_search/data/release_search_transport.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +32,7 @@ void main() async {
         initialSettings: initialSettings,
         onboardingCompleted: onboardingCompleted,
       ),
-      child: const SeekarrApp(),
+      child: const CupolaApp(),
     ),
   );
 }
@@ -94,8 +94,8 @@ _buildProviderOverrides({
   ];
 }
 
-class SeekarrApp extends ConsumerWidget {
-  const SeekarrApp({super.key});
+class CupolaApp extends ConsumerWidget {
+  const CupolaApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

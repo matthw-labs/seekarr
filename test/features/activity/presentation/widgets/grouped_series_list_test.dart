@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/features/activity/presentation/widgets/sonarr_wanted_hierarchy.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/activity/presentation/widgets/sonarr_wanted_hierarchy.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
 
 void main() {
   group('SonarrWantedHierarchy', () {

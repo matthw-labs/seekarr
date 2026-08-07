@@ -3,12 +3,12 @@
 /// specific scenario.
 library;
 
-import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_album.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_artist.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_track.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/music/domain/models/lidarr_album.dart';
+import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/music/domain/models/lidarr_track.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 
 RadarrMovie buildMovie({
   int id = 1,

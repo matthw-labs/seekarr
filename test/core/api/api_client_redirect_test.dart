@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 
 /// Answers the first request with [status] (and a `Location`, unless
 /// [location] is empty) and everything after it with 200 + JSON, recording

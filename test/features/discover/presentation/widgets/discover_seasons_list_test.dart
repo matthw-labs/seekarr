@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
-import 'package:seekarr/features/discover/domain/seerr_status.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_seasons_list.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/seerr_status.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_seasons_list.dart';
 
 void main() {
   group('DiscoverSeasonsList', () {

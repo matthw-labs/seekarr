@@ -2,23 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
-import 'package:seekarr/features/prowlarr/presentation/prowlarr_history_format.dart';
-import 'package:seekarr/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
-import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider_list_screen.dart'
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_history_format.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider_list_screen.dart'
     show prowlarrSyncLevelLabel;
-import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_indexer_tile.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_list_shimmer.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_indexer_tile.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_list_shimmer.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Prowlarr service dashboard: indexer overview, usage stats, recent activity
 /// and the write actions the web UI puts on its indexer page — add an indexer,

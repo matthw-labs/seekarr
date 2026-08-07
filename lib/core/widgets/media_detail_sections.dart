@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/app_card.dart';
 
 /// A short "this is not available" note, for a region that exists but has
 /// nothing to show and no action attached to it.

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/widgets/ambient_background.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
 
 /// A [Scaffold] pre-wired for the premium ambient look: an [AmbientBackground]
 /// paints the gradient full-bleed and the Scaffold itself is transparent, so the

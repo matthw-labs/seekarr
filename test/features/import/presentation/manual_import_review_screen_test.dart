@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/import/data/manual_import_service.dart';
-import 'package:seekarr/features/import/presentation/manual_import_review_screen.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/import/data/manual_import_service.dart';
+import 'package:cupola/features/import/presentation/manual_import_review_screen.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 

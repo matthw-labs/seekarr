@@ -5,27 +5,27 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/api/quality_profile_mixin.dart';
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/utils/rating_display.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/utils/string_utils.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/discover/presentation/widgets/arr_media_extras_section.dart';
-import 'package:seekarr/features/release_search/domain/release_search_target.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_entry.dart';
-import 'package:seekarr/features/release_search/presentation/widgets/release_search_status_card.dart';
-import 'package:seekarr/features/stream/presentation/widgets/stream_availability_slot.dart';
-import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
-import 'package:seekarr/features/movies/domain/radarr_status.dart';
-import 'package:seekarr/features/movies/presentation/movie_detail_provider.dart';
-import 'package:seekarr/features/movies/presentation/movie_detail_view_model.dart';
-import 'package:seekarr/features/movies/presentation/movies_provider.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/api/quality_profile_mixin.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/utils/rating_display.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/presentation/widgets/arr_media_extras_section.dart';
+import 'package:cupola/features/release_search/domain/release_search_target.dart';
+import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
+import 'package:cupola/features/release_search/presentation/widgets/release_search_status_card.dart';
+import 'package:cupola/features/stream/presentation/widgets/stream_availability_slot.dart';
+import 'package:cupola/features/import/presentation/manual_import_routes.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/movies/domain/radarr_status.dart';
+import 'package:cupola/features/movies/presentation/movie_detail_provider.dart';
+import 'package:cupola/features/movies/presentation/movie_detail_view_model.dart';
+import 'package:cupola/features/movies/presentation/movies_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Detail screen for a Radarr movie with M3 styling.
 class MovieDetailScreen extends ConsumerStatefulWidget {

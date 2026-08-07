@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/import/presentation/manual_import_routes.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
   group('manualImportLocation', () {

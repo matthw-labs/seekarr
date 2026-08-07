@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/bazarr/presentation/bazarr_wanted_screen.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_wanted_screen.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 void main() {
   group('BazarrWantedScreen when Bazarr is not configured', () {

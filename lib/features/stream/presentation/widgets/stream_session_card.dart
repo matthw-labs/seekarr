@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
-import 'package:seekarr/features/stream/domain/stream_semantics.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_semantics.dart';
 
 /// One live playback, as three stacked lines.
 ///

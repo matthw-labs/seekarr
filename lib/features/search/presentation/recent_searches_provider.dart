@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// Persisted list of recent search queries (most recent first), backed by
 /// SharedPreferences. Shown as quick chips on the search empty state.

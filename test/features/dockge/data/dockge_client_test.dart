@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/dockge/data/dockge_client.dart';
+import 'package:cupola/features/dockge/data/dockge_client.dart';
 
 DockgeClient _client(String url) => DockgeClient(baseUrl: url);
 

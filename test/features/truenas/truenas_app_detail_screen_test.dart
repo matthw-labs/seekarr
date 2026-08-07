@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/truenas/domain/models/app.dart';
-import 'package:seekarr/features/truenas/presentation/apps/truenas_app_detail_screen.dart';
-import 'package:seekarr/features/truenas/presentation/apps/truenas_apps_providers.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/domain/models/app.dart';
+import 'package:cupola/features/truenas/presentation/apps/truenas_app_detail_screen.dart';
+import 'package:cupola/features/truenas/presentation/apps/truenas_apps_providers.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
 /// The channel `url_launcher` dispatches on. Mocking it is how the test sees
 /// whether a portal tap reached the OS at all.

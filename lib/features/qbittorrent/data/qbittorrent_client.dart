@@ -2,10 +2,10 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 
-import 'package:seekarr/core/network/cert_trust.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/network/redirect_guard.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
+import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/redirect_guard.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 
 /// Error thrown by [QbittorrentClient], carrying the [reason] so a caller
 /// verifying the connection can tell rejected credentials from an unreachable

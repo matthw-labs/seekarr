@@ -1,12 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_file.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_properties.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_tracker.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/transfer_info.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_file.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
+import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
 
 List<Torrent> _parseTorrentList(List<dynamic> json) {
   return json

@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/features/bazarr/data/bazarr_service.dart';
-import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/bazarr/data/bazarr_service.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 const int _lookupPageSize = 500;
 

@@ -9,20 +9,20 @@ library;
 
 import 'package:dio/dio.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/models/media_preview.dart';
-import 'package:seekarr/features/discover/data/seerr_service.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_genre.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
-import 'package:seekarr/features/music/data/lidarr_service.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_album.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_artist.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_track.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/music/domain/models/lidarr_album.dart';
+import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/music/domain/models/lidarr_track.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 
 export 'fake_bazarr_service.dart';
 

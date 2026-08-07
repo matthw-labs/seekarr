@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/discover/presentation/discover_navigation_utils.dart';
-import 'package:seekarr/features/discover/presentation/manage_media_provider.dart';
-import 'package:seekarr/features/discover/presentation/widgets/manage_media_sections.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/presentation/discover_navigation_utils.dart';
+import 'package:cupola/features/discover/presentation/manage_media_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/manage_media_sections.dart';
 
 /// Bottom sheet for managing media requests and files via Seerr.
 ///

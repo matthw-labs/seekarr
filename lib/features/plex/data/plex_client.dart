@@ -4,16 +4,16 @@ import 'dart:isolate';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/features/plex/domain/models/plex_models.dart';
-import 'package:seekarr/features/plex/domain/models/plex_transcode_session.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library_page.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
-import 'package:seekarr/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/plex/domain/models/plex_models.dart';
+import 'package:cupola/features/plex/domain/models/plex_transcode_session.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// Identifies Seekarr to the user's server. Plex shows this in
 /// Settings → Authorized Devices, so it is a name a stranger has to recognise as

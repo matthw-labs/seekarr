@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/features/activity/domain/global_activity_status.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 void main() {
   group('resolveHistoryStatus', () {

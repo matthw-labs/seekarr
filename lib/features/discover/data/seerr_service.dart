@@ -1,10 +1,10 @@
 import 'dart:isolate';
 import 'package:dio/dio.dart';
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_genre.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
-import 'package:seekarr/core/models/media_preview.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/core/models/media_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Thrown when a request has already been acted on somewhere else.

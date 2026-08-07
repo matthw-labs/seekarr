@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/import/domain/manual_import_display.dart';
-import 'package:seekarr/features/import/domain/manual_import_models.dart';
-import 'package:seekarr/features/import/domain/manual_import_status.dart';
-import 'package:seekarr/features/import/presentation/manual_import_fix_sheet.dart';
-import 'package:seekarr/features/import/presentation/manual_import_provider.dart';
-import 'package:seekarr/features/import/presentation/manual_import_review_facets.dart';
-import 'package:seekarr/features/import/presentation/manual_import_review_rows.dart';
-import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
-import 'package:seekarr/features/import/presentation/manual_import_widgets.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/import/domain/manual_import_display.dart';
+import 'package:cupola/features/import/domain/manual_import_models.dart';
+import 'package:cupola/features/import/domain/manual_import_status.dart';
+import 'package:cupola/features/import/presentation/manual_import_fix_sheet.dart';
+import 'package:cupola/features/import/presentation/manual_import_provider.dart';
+import 'package:cupola/features/import/presentation/manual_import_review_facets.dart';
+import 'package:cupola/features/import/presentation/manual_import_review_rows.dart';
+import 'package:cupola/features/import/presentation/manual_import_routes.dart';
+import 'package:cupola/features/import/presentation/manual_import_widgets.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Above this many ready files, groups arrive collapsed.
 ///

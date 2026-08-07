@@ -1,4 +1,4 @@
-import 'package:seekarr/core/utils/url_utils.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 
 class WatchProviderEntry {
   final int id;

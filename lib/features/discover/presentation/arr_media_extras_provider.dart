@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/discover/data/seerr_service.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
-import 'package:seekarr/features/discover/presentation/discover_detail_view_model.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// Cast + collection for an *arr library item, sourced from TMDB via Seerr.
 typedef ArrMediaExtras = ({

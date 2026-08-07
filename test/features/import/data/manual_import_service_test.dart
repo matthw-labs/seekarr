@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/features/import/data/manual_import_service.dart';
-import 'package:seekarr/features/import/domain/manual_import_models.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/import/data/manual_import_service.dart';
+import 'package:cupola/features/import/domain/manual_import_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 

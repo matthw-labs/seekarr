@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/reel_motion.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/core/widgets/reel_command_button.dart';
-import 'package:seekarr/core/widgets/reel_line.dart';
-import 'package:seekarr/core/widgets/service_ring.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
-import 'package:seekarr/features/settings/data/service_connection_provider.dart';
-import 'package:seekarr/features/settings/data/service_verification.dart';
-import 'package:seekarr/features/settings/domain/connection_presentation.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/presentation/widgets/cert_trust_content.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/reel_motion.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/core/widgets/reel_command_button.dart';
+import 'package:cupola/core/widgets/reel_line.dart';
+import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 
 /// Screen padding for every beat. Wider than the app's 16dp because a beat is a
 /// single centred column with nothing beside it.

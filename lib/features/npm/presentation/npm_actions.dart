@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/features/npm/data/npm_client.dart';
-import 'package:seekarr/features/npm/presentation/npm_provider.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/features/npm/data/npm_client.dart';
+import 'package:cupola/features/npm/presentation/npm_provider.dart';
 
 /// Runs an [NpmClient] mutation with the shared plumbing.
 ///

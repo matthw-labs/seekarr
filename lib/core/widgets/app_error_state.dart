@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
 
 /// A premium error state with an optional retry affordance.
 ///
@@ -81,7 +81,7 @@ class AppErrorState extends StatelessWidget {
               error.toString(),
               style: theme.textTheme.labelSmall?.copyWith(
                 color:
-                    theme.extension<SeekarrThemeColors>()?.dimText ??
+                    theme.extension<CupolaThemeColors>()?.dimText ??
                     colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,

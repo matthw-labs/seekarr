@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/utils/string_utils.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 
 /// The encyclopaedic fact grid for a Seerr title: release dates, studios,
 /// networks and crew.

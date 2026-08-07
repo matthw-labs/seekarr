@@ -1,4 +1,4 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// An alert from `alert.list`.
 class TrueNasAlert {

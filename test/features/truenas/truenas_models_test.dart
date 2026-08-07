@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/features/truenas/domain/models/truenas_models.dart';
+import 'package:cupola/features/truenas/domain/models/truenas_models.dart';
 
 void main() {
   test('TrueNasPool parses capacity and topology', () {

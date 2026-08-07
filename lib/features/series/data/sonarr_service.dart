@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/api/base_arr_service.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 final sonarrServiceProvider = Provider<SonarrService>((ref) {
   final settings = ref.watch(currentSettingsProvider);

@@ -24,8 +24,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 
 /// Strings under these keys survive redaction.
 ///

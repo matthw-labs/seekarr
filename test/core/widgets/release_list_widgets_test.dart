@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/release_list_widgets.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/release_list_widgets.dart';
 
 void main() {
   group('InfoChip', () {

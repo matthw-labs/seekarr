@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 
 /// Pumps a host whose only job is to give the helper a `ScaffoldMessenger`, then
 /// fires [show] and settles the snackbar in.

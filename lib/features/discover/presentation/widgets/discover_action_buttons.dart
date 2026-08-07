@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
-import 'package:seekarr/features/discover/presentation/discover_detail_extras_provider.dart';
-import 'package:seekarr/features/discover/presentation/discover_details_provider.dart';
-import 'package:seekarr/features/discover/presentation/discover_navigation_utils.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_videos_button.dart';
-import 'package:seekarr/features/discover/presentation/widgets/manage_media_sheet.dart';
-import 'package:seekarr/features/discover/presentation/widgets/request_bottom_sheet.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/presentation/discover_detail_extras_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_navigation_utils.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_videos_button.dart';
+import 'package:cupola/features/discover/presentation/widgets/manage_media_sheet.dart';
+import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Action buttons for the discover detail screen header.
 ///

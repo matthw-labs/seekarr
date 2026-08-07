@@ -1,4 +1,4 @@
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 
 /// Lidarr's queue indexed two ways.
 ///

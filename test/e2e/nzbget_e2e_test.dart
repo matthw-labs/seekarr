@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
+import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 
 /// Tier-6 E2E (plan §7.6). Drives the real [NzbgetClient] against the Docker
 /// instance from docker-compose.e2e.yml, validating Basic auth, positional

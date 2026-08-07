@@ -22,7 +22,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
 
 /// Why a page has the contents it has.
 enum StreamPageOutcome {

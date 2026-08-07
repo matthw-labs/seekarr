@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/media_chip_section.dart';
-import 'package:seekarr/core/widgets/media_detail_body_metrics.dart';
-import 'package:seekarr/core/widgets/media_detail_figure_plate.dart';
-import 'package:seekarr/core/widgets/media_detail_section_label.dart';
-import 'package:seekarr/core/widgets/media_detail_sections.dart';
-import 'package:seekarr/core/widgets/media_prose_section.dart';
-import 'package:seekarr/core/widgets/tag_chip.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/media_chip_section.dart';
+import 'package:cupola/core/widgets/media_detail_body_metrics.dart';
+import 'package:cupola/core/widgets/media_detail_figure_plate.dart';
+import 'package:cupola/core/widgets/media_detail_section_label.dart';
+import 'package:cupola/core/widgets/media_detail_sections.dart';
+import 'package:cupola/core/widgets/media_prose_section.dart';
+import 'package:cupola/core/widgets/tag_chip.dart';
 
 const _kSonarr = Color(0xFF8B5CF6);
 

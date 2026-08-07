@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/data/settings_service.dart';
-import 'package:seekarr/features/settings/domain/regions.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
-import 'package:seekarr/features/settings/presentation/settings_region_screen.dart';
-import 'package:seekarr/features/settings/presentation/widgets/settings_choice_row.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/regions.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/presentation/settings_region_screen.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_choice_row.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 

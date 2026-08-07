@@ -3,11 +3,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 
 class AddTorrentButton extends ConsumerWidget {
   const AddTorrentButton({super.key});

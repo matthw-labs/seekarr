@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/ambient_background.dart';
-import 'package:seekarr/core/widgets/app_empty_state.dart';
-import 'package:seekarr/core/widgets/app_error_state.dart';
-import 'package:seekarr/core/widgets/glass_app_bar.dart';
-import 'package:seekarr/core/widgets/media_detail_back_button.dart';
-import 'package:seekarr/core/widgets/media_detail_placeholder_view.dart';
-import 'package:seekarr/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/media_detail_back_button.dart';
+import 'package:cupola/core/widgets/media_detail_placeholder_view.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 
 Widget _wrap(Widget child, {double textScale = 1.0}) {
   return MaterialApp(

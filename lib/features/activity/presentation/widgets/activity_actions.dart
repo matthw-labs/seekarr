@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/features/activity/presentation/activity_provider.dart';
-import 'package:seekarr/features/activity/presentation/activity_screen.dart';
-import 'package:seekarr/features/discover/data/seerr_service.dart';
-import 'package:seekarr/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/features/activity/presentation/activity_provider.dart';
+import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
 
 /// The write actions the Activity surfaces can perform on a queue or blocklist
 /// record.

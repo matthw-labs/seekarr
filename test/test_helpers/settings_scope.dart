@@ -1,8 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:seekarr/features/settings/data/settings_service.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import 'fake_secure_settings_store.dart';
 

@@ -6,17 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:seekarr/features/jellyfin/presentation/jellyfin_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library_page.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
-import 'package:seekarr/features/stream/domain/stream_server_client.dart';
-import 'package:seekarr/features/stream/presentation/stream_library_screen.dart';
-import 'package:seekarr/features/stream/presentation/widgets/stream_poster_tile.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/stream/presentation/stream_library_screen.dart';
+import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.dart';
 
 import '../../test_helpers/fake_secure_settings_store.dart';
 

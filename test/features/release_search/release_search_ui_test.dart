@@ -4,17 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/release_search/domain/release_search_job.dart';
-import 'package:seekarr/features/release_search/domain/release_search_reach.dart';
-import 'package:seekarr/features/release_search/domain/release_search_target.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_jobs_provider.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_sheet.dart';
-import 'package:seekarr/features/release_search/presentation/release_searches_body.dart';
-import 'package:seekarr/features/release_search/presentation/widgets/release_search_job_card.dart';
-import 'package:seekarr/features/release_search/presentation/widgets/release_search_status_card.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/release_search/domain/release_search_job.dart';
+import 'package:cupola/features/release_search/domain/release_search_reach.dart';
+import 'package:cupola/features/release_search/domain/release_search_target.dart';
+import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
+import 'package:cupola/features/release_search/presentation/release_search_sheet.dart';
+import 'package:cupola/features/release_search/presentation/release_searches_body.dart';
+import 'package:cupola/features/release_search/presentation/widgets/release_search_job_card.dart';
+import 'package:cupola/features/release_search/presentation/widgets/release_search_status_card.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 final _season = ReleaseSearchTarget.season(
   seriesId: 1,

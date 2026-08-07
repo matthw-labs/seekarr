@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_elevation.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/release_utils.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_elevation.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/release_utils.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 
 /// Semantic tone of a release row.
 ///

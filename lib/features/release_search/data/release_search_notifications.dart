@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import 'package:seekarr/features/release_search/domain/release_search_job.dart';
+import 'package:cupola/features/release_search/domain/release_search_job.dart';
 
 /// What a finished search should say, if anything.
 ///

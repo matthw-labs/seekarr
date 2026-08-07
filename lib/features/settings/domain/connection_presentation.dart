@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/features/settings/data/service_connection_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A connection state resolved into everything the UI needs to render it: a
 /// tone from the closed vocabulary, a glyph, and words.

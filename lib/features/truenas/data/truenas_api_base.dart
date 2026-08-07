@@ -1,6 +1,6 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
-import 'package:seekarr/features/truenas/domain/models/dashboard.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
+import 'package:cupola/features/truenas/domain/models/dashboard.dart';
 
 /// Shared helpers for the domain-grouped TrueNAS API classes. Each API wraps
 /// the single shared [TrueNasWsClient]; the connection is opened lazily and

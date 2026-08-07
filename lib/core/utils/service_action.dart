@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 
 /// Runs a mutating service call with the shared plumbing every write action in
 /// the app needs: await [action], invalidate the [invalidate] providers on

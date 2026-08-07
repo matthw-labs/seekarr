@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/settings/data/service_connection_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The `host:port` an origin string shows a human, dropping the `https://`
 /// every origin carries (every entry in [SettingsModel.trustedCertificates]

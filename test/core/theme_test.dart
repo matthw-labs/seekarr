@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/theme.dart';
 
 void main() {
   group('AppTheme', () {
@@ -49,12 +49,12 @@ void main() {
       expect(theme.dialogTheme.backgroundColor, theme.colorScheme.surface);
     });
 
-    testWidgets('dark theme attaches SeekarrThemeColors defaults', (
+    testWidgets('dark theme attaches CupolaThemeColors defaults', (
       tester,
     ) async {
       final theme = AppTheme.darkTheme();
 
-      final colors = theme.extension<SeekarrThemeColors>();
+      final colors = theme.extension<CupolaThemeColors>();
 
       expect(colors, isNotNull);
       expect(
@@ -64,12 +64,12 @@ void main() {
       expect(colors.statusBadgeForeground, theme.colorScheme.onSurface);
     });
 
-    testWidgets('light theme attaches SeekarrThemeColors defaults', (
+    testWidgets('light theme attaches CupolaThemeColors defaults', (
       tester,
     ) async {
       final theme = AppTheme.lightTheme();
 
-      final colors = theme.extension<SeekarrThemeColors>();
+      final colors = theme.extension<CupolaThemeColors>();
 
       expect(colors, isNotNull);
       expect(
@@ -79,13 +79,13 @@ void main() {
       expect(colors.statusBadgeForeground, theme.colorScheme.onSurface);
     });
 
-    test('SeekarrThemeColors.defaults uses surface scrim and onSurface', () {
+    test('CupolaThemeColors.defaults uses surface scrim and onSurface', () {
       final colorScheme = AppTheme.lightTheme().colorScheme.copyWith(
         surface: const Color(0xFF123456),
         onSurface: const Color(0xFFABCDEF),
       );
 
-      final colors = SeekarrThemeColors.defaults(
+      final colors = CupolaThemeColors.defaults(
         brightness: Brightness.light,
         colorScheme: colorScheme,
       );

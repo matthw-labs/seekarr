@@ -1,18 +1,18 @@
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/core/utils/arr_activity_display.dart';
-import 'package:seekarr/core/utils/dynamic_map_utils.dart'
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart'
     show intOrNull, mapOrNull, stringOrNull;
-import 'package:seekarr/core/utils/release_utils.dart';
-import 'package:seekarr/core/utils/string_utils.dart';
-import 'package:seekarr/features/activity/domain/global_activity_status.dart';
-import 'package:seekarr/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/core/utils/release_utils.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
+import 'package:cupola/features/activity/presentation/activity_screen.dart';
 
-export 'package:seekarr/core/utils/dynamic_map_utils.dart'
+export 'package:cupola/core/utils/dynamic_map_utils.dart'
     show intOrNull, stringOrNull;
-export 'package:seekarr/core/utils/string_utils.dart' show formatIsoDate;
+export 'package:cupola/core/utils/string_utils.dart' show formatIsoDate;
 // The status resolvers moved to the domain layer; re-exported so the existing
 // presentation call sites keep one import.
-export 'package:seekarr/features/activity/domain/global_activity_status.dart'
+export 'package:cupola/features/activity/domain/global_activity_status.dart'
     show
         GlobalActivityKind,
         historyEventDisplay,

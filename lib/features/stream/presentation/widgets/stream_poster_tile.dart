@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/content_card.dart';
-import 'package:seekarr/core/widgets/media_poster_card.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
-import 'package:seekarr/features/jellyfin/presentation/jellyfin_provider.dart';
-import 'package:seekarr/features/plex/presentation/plex_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
 
 /// One poster in a Stream library grid.
 ///

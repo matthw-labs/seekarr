@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
+import 'package:cupola/core/api/api_client.dart';
 
 /// Shared in-memory fake [ApiClient] used by service tests.
 ///

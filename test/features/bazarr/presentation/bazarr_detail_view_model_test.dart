@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
-import 'package:seekarr/features/bazarr/presentation/bazarr_detail_view_model.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_detail_view_model.dart';
 
 void main() {
   group('BazarrDetailViewModel.forMovie', () {

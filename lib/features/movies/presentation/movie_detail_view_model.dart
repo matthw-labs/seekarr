@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/utils/image_utils.dart';
-import 'package:seekarr/core/utils/string_utils.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 
 class MovieDetailViewModel {
   final String title;

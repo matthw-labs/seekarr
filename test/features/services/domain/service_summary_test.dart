@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/services/domain/service_summary.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
   group('ServiceSummary', () {

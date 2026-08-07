@@ -3,17 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/sabnzbd/domain/models/sabnzbd_models.dart';
-import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_actions.dart';
-import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_provider.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_actions.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// SABnzbd dashboard: live queue and recent history. Read-only for the first
 /// release.

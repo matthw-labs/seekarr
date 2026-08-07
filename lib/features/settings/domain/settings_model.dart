@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' show ThemeMode;
 
-import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 enum AppThemeMode {
   system(label: 'System'),

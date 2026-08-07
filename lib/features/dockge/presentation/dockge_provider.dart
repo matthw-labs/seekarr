@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/dockge/data/dockge_client.dart';
-import 'package:seekarr/features/dockge/data/dockge_service.dart';
-import 'package:seekarr/features/dockge/domain/models/dockge_stack.dart';
-import 'package:seekarr/features/dockge/domain/models/dockge_stack_detail.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/dockge/data/dockge_client.dart';
+import 'package:cupola/features/dockge/data/dockge_service.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// Long-lived Socket.IO client for Dockge, rebuilt when its URL/credentials
 /// change. Closed automatically when disposed.

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/discover/data/seerr_service.dart';
-import 'package:seekarr/features/discover/presentation/request_form_provider.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/presentation/request_form_provider.dart';
 
 import '../../../test_helpers/fake_services.dart' as shared;
 

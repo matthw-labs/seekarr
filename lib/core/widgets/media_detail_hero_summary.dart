@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/media_metadata_line.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/media_metadata_line.dart';
 
 /// Title + metadata + chip stack of the hero copy block.
 ///

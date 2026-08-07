@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
-import 'package:seekarr/features/bazarr/presentation/bazarr_movie_detail_screen.dart';
-import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_movie_detail_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_bazarr_service.dart';
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/features/truenas/domain/truenas_version.dart';
+import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
 void main() {
   group('TrueNasVersion.parse', () {

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/import/domain/manual_import_display.dart';
-import 'package:seekarr/features/import/domain/manual_import_models.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/import/domain/manual_import_display.dart';
+import 'package:cupola/features/import/domain/manual_import_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 ManualImportItem _item(Map<String, dynamic> json) =>
     ManualImportItem.fromJson({'path': '/downloads/x.mkv', ...json});

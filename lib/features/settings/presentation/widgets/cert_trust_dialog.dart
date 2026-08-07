@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/features/settings/data/service_connection_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/presentation/widgets/cert_trust_content.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 
 /// Prompts the user to trust an untrusted (typically self-signed) TLS
 /// certificate for a self-hosted service, mirroring a browser's "this site

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 
 /// Higher-level skeleton presets, built on [ShimmerPlaceholder], that mirror
 /// the real shapes screens render. Using these instead of hand-built shimmer

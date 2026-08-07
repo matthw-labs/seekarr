@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/truenas/domain/truenas_version.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
 enum ServiceKey {
   seerr,

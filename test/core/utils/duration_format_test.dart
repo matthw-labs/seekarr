@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/utils/duration_format.dart';
+import 'package:cupola/core/utils/duration_format.dart';
 
 void main() {
   group('formatElapsed', () {

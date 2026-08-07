@@ -7,22 +7,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
-import 'package:seekarr/features/services/domain/recently_added.dart';
-import 'package:seekarr/features/services/domain/service_signal.dart';
-import 'package:seekarr/features/services/domain/service_summary.dart';
-import 'package:seekarr/features/services/domain/services_semantics.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/services/presentation/service_matrix_collapse_provider.dart';
-import 'package:seekarr/features/services/presentation/services_alert_band.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/core/widgets/service_ring.dart';
-import 'package:seekarr/features/services/presentation/services_screen.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/services/domain/recently_added.dart';
+import 'package:cupola/features/services/domain/service_signal.dart';
+import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/service_matrix_collapse_provider.dart';
+import 'package:cupola/features/services/presentation/services_alert_band.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/features/services/presentation/services_screen.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/reel_finders.dart';
 
 /// How many services the more-services hint has left to offer, derived rather

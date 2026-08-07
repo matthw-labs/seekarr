@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
 
 /// A horizontally scrolling row of pills selecting one value along one axis.
 ///

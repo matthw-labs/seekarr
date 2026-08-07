@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/core/widgets/ambient_background.dart';
-import 'package:seekarr/core/widgets/service_ring.dart';
-import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
-import 'package:seekarr/features/onboarding/presentation/widgets/onboarding_parts.dart';
-import 'package:seekarr/features/settings/data/service_connection_provider.dart';
-import 'package:seekarr/features/settings/data/service_verification.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
+import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// First run, in four beats: the claim, the choice, one service at a time, and
 /// what it actually achieved.

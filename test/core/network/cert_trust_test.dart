@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/network/cert_trust.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
+import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 
 /// The trust *record* has been covered since ADR-6 by
 /// `test/features/settings/cert_pinning_scope_test.dart`. Nothing covered its

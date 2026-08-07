@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:reel_text/reel_text.dart';
 
-import 'package:seekarr/core/reel_motion.dart';
+import 'package:cupola/core/reel_motion.dart';
 
 /// A primary button whose label rolls instead of being replaced by a spinner.
 ///

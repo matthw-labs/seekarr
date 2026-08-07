@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/music/data/lidarr_service.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_album.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/music/domain/models/lidarr_album.dart';
+import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 
 final musicDetailProvider = FutureProvider.autoDispose
     .family<LidarrArtist?, int>((ref, artistId) async {

@@ -1,6 +1,6 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/import/domain/manual_import_models.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/import/domain/manual_import_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Container extensions the video \*arrs actually import.
 ///

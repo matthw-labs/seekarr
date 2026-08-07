@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/bazarr/data/bazarr_service.dart';
+import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 

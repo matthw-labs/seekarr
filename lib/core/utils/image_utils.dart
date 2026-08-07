@@ -1,4 +1,4 @@
-import 'package:seekarr/core/utils/url_utils.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 
 typedef ImageSource = ({String url, Map<String, String>? headers});
 

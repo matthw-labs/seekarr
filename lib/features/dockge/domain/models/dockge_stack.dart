@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// Lifecycle state of a Dockge stack.
 ///

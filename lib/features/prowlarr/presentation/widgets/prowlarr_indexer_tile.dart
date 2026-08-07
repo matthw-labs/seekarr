@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 
 /// A single indexer row shared by the dashboard preview and the library list.
 ///

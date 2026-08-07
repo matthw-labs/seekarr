@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/widgets/app_empty_state.dart';
-import 'package:seekarr/features/release_search/domain/release_search_job.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_jobs_provider.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_sheet.dart';
-import 'package:seekarr/features/release_search/presentation/widgets/release_search_job_card.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/features/release_search/domain/release_search_job.dart';
+import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
+import 'package:cupola/features/release_search/presentation/release_search_sheet.dart';
+import 'package:cupola/features/release_search/presentation/widgets/release_search_job_card.dart';
 
 /// Keeps the windows honest while the section is on screen.
 ///

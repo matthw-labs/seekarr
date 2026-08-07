@@ -1,4 +1,4 @@
-import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 
 /// Transmission's `status` field.
 ///

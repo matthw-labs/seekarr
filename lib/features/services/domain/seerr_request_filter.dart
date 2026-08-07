@@ -1,4 +1,4 @@
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 /// The buckets the All Requests screen filters by.
 ///

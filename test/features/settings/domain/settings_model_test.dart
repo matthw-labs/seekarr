@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart' show Icons, ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/settings/domain/nav_tab.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 void main() {
   group('SettingsModel.urlFor', () {

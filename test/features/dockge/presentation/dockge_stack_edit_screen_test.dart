@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/dockge/data/dockge_client.dart';
-import 'package:seekarr/features/dockge/domain/models/dockge_stack.dart';
-import 'package:seekarr/features/dockge/domain/models/dockge_stack_detail.dart';
-import 'package:seekarr/features/dockge/presentation/dockge_provider.dart';
-import 'package:seekarr/features/dockge/presentation/dockge_stack_edit_screen.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/dockge/data/dockge_client.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
+import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/dockge/presentation/dockge_stack_edit_screen.dart';
 
 const _existingYaml = '''services:
   immich:

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/reel_command_button.dart';
+import 'package:cupola/core/widgets/reel_command_button.dart';
 
 void main() {
   testWidgets('a throwing action is handled at the button, not dropped', (

@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/features/settings/data/service_verification.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
-import 'package:seekarr/features/settings/presentation/settings_connections_screen.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/presentation/settings_connections_screen.dart';
 
 void main() {
   group('SettingsConnectionsScreen', () {

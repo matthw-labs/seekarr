@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/selection_pills.dart';
-import 'package:seekarr/features/activity/presentation/widgets/segment_selector.dart';
+import 'package:cupola/core/widgets/selection_pills.dart';
+import 'package:cupola/features/activity/presentation/widgets/segment_selector.dart';
 
 /// Pumps the selector inside a scroll view and returns the height it occupies.
 Future<double> _pumpAndMeasure(

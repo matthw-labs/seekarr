@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
-import 'package:seekarr/core/network/cert_trust.dart';
-import 'package:seekarr/core/network/redirect_guard.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
+import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/network/redirect_guard.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 
 /// Timeouts match the newer per-service clients (SABnzbd, NZBGet, Unraid) so a
 /// black-holed host fails in seconds instead of hanging on socket defaults.

@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 
 /// In-memory [HttpClientAdapter] that returns a canned response and
 /// records the last request for assertions.

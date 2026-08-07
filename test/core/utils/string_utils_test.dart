@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 
 void main() {
   group('formatMediumDate', () {

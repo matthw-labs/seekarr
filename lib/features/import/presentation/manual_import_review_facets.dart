@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/import/domain/manual_import_status.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/import/domain/manual_import_status.dart';
 
 /// The scan verdict at a glance — and the control that acts on it.
 ///

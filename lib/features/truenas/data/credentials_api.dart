@@ -1,5 +1,5 @@
-import 'package:seekarr/features/truenas/data/truenas_api_base.dart';
-import 'package:seekarr/features/truenas/domain/models/credentials.dart';
+import 'package:cupola/features/truenas/data/truenas_api_base.dart';
+import 'package:cupola/features/truenas/domain/models/credentials.dart';
 
 /// User and group management (`user.*`, `group.*`).
 class TrueNasCredentialsApi extends TrueNasApiBase {

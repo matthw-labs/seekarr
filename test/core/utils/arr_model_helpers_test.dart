@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/utils/arr_model_helpers.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
 
 void main() {
   group('parseArrRatings', () {

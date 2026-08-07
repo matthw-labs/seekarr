@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/utils/duration_format.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/features/release_search/domain/release_search_job.dart';
-import 'package:seekarr/features/release_search/domain/release_search_target.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_jobs_provider.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_sheet.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/duration_format.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/features/release_search/domain/release_search_job.dart';
+import 'package:cupola/features/release_search/domain/release_search_target.dart';
+import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
+import 'package:cupola/features/release_search/presentation/release_search_sheet.dart';
 
 /// Job state where the intent is formed.
 ///

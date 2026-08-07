@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 
 void main() {
   group('MediaStatusInfo.label', () {

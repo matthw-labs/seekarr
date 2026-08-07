@@ -1,5 +1,5 @@
-import 'package:seekarr/features/truenas/data/truenas_api_base.dart';
-import 'package:seekarr/features/truenas/domain/models/dataset.dart';
+import 'package:cupola/features/truenas/data/truenas_api_base.dart';
+import 'package:cupola/features/truenas/domain/models/dataset.dart';
 
 /// Dataset / zvol / snapshot operations (`pool.dataset.*`, `zfs.snapshot.*`).
 class TrueNasDatasetApi extends TrueNasApiBase {

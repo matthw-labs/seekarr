@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:seekarr/core/network/cert_trust.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
+import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 
 /// Error surfaced by the TrueNAS WebSocket client. Carries the [reason] so a
 /// caller verifying the connection can tell an unreachable host from a

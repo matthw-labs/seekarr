@@ -1,7 +1,7 @@
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_season.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
+import 'package:cupola/features/series/domain/models/sonarr_season.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 
 /// Resolves the badge status for a Sonarr series.
 MediaStatusInfo sonarrSeriesStatus(

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/route_utils.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
-import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
-import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
-import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider_actions.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_list_shimmer.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/route_utils.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider_actions.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_list_shimmer.dart';
 
 /// One screen for all four field-driven resources: apps, download clients,
 /// notifications and indexer proxies.

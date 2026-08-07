@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/unraid/data/unraid_client.dart';
+import 'package:cupola/features/unraid/data/unraid_client.dart';
 
 import '../../../test_helpers/capturing_http_adapter.dart';
 import '../../../test_helpers/fixtures.dart';

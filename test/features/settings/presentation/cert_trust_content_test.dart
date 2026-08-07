@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/network/cert_trust.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/presentation/widgets/cert_trust_content.dart';
+import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 
 const _cert = ServerCertificate(
   fingerprint:

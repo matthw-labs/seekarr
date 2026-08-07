@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/media_detail_header_metrics.dart';
+import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
 
 void main() {
   group('MediaDetailHeaderMetrics', () {

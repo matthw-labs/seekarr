@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/readarr/domain/models/readarr_models.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 
 /// Visual style (icon + colour + label) for a Readarr history event type.
 ({IconData icon, Color color, String label}) readarrEventStyle(

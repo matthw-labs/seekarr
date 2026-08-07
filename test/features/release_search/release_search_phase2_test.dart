@@ -6,17 +6,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/features/release_search/data/release_search_notifications.dart';
-import 'package:seekarr/features/release_search/data/release_search_transport.dart';
-import 'package:seekarr/features/release_search/domain/release_search_job.dart';
-import 'package:seekarr/features/release_search/domain/release_search_reach.dart';
-import 'package:seekarr/features/release_search/domain/release_search_target.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_entry.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_settings_provider.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/release_search/data/release_search_notifications.dart';
+import 'package:cupola/features/release_search/data/release_search_transport.dart';
+import 'package:cupola/features/release_search/domain/release_search_job.dart';
+import 'package:cupola/features/release_search/domain/release_search_reach.dart';
+import 'package:cupola/features/release_search/domain/release_search_target.dart';
+import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
+import 'package:cupola/features/release_search/presentation/release_search_settings_provider.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../test_helpers/fake_services.dart';
 import '../../test_helpers/settings_scope.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/text_scale.dart';
+import 'package:cupola/core/text_scale.dart';
 
 /// Builds a context carrying [scale] as the reading size.
 Future<BuildContext> _contextAt(WidgetTester tester, double scale) async {

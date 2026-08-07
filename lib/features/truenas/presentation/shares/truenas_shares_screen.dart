@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/core/widgets/app_error_state.dart';
-import 'package:seekarr/core/widgets/app_skeleton.dart';
-import 'package:seekarr/features/truenas/domain/models/service_item.dart';
-import 'package:seekarr/features/truenas/domain/models/share.dart';
-import 'package:seekarr/features/truenas/presentation/shares/truenas_shares_providers.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_actions.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_form_sheet.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/features/truenas/domain/models/service_item.dart';
+import 'package:cupola/features/truenas/domain/models/share.dart';
+import 'package:cupola/features/truenas/presentation/shares/truenas_shares_providers.dart';
+import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 
 class TrueNasSharesScreen extends ConsumerStatefulWidget {
   const TrueNasSharesScreen({super.key});

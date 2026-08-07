@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/duration_format.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
-import 'package:seekarr/features/release_search/domain/release_search_job.dart';
-import 'package:seekarr/features/release_search/domain/release_search_target.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_jobs_provider.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/duration_format.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/release_search/domain/release_search_job.dart';
+import 'package:cupola/features/release_search/domain/release_search_target.dart';
+import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 
 /// Job state on a row that has room for a few words.
 ///

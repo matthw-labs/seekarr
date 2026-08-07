@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/theme.dart';
 
 /// A reusable section header with title and optional "See All" action.
 ///

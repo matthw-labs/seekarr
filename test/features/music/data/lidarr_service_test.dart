@@ -2,9 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/music/data/lidarr_service.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 
 void main() {
   group('parseInt', () {

@@ -1,12 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/network/pinned_image_cache.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 
 /// Where a title can be streamed or bought, in the viewer's region.
 ///

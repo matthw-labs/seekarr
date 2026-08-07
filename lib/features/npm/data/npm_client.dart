@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 
-import 'package:seekarr/core/network/cert_trust.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/network/redirect_guard.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/features/npm/domain/models/npm_models.dart';
+import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/redirect_guard.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/npm/domain/models/npm_models.dart';
 
 /// Error thrown by [NpmClient].
 ///

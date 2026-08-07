@@ -1,12 +1,12 @@
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/core/utils/arr_activity_display.dart';
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/core/utils/string_utils.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 
-export 'package:seekarr/core/status/media_status.dart';
+export 'package:cupola/core/status/media_status.dart';
 // Part of this layer's surface: `ArrQueueEntry.severity` is typed on it, so a
 // caller holding an entry can read it without also importing the raw-JSON utils.
-export 'package:seekarr/core/utils/arr_activity_display.dart'
+export 'package:cupola/core/utils/arr_activity_display.dart'
     show ArrQueueSeverity, arrQueueSeverity;
 
 /// One media item's slice of an \*arr download queue.

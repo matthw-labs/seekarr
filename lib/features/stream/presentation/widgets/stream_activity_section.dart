@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/jellyfin/presentation/jellyfin_provider.dart';
-import 'package:seekarr/features/plex/presentation/plex_provider.dart';
-import 'package:seekarr/features/services/domain/services_semantics.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/stream/domain/stream_semantics.dart';
-import 'package:seekarr/features/stream/presentation/stream_activity_provider.dart';
-import 'package:seekarr/features/stream/presentation/widgets/stream_session_card.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/domain/stream_semantics.dart';
+import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
+import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
 /// The Streaming half of `/activity`'s **Now** bucket.
 ///

@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'package:seekarr/core/network/connection_failure.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 
 /// Status codes that carry a `Location` header we are expected to follow.
 const _redirectStatuses = {301, 302, 303, 307, 308};

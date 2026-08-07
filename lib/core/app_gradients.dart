@@ -2,7 +2,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/theme.dart';
 
 /// Centralised gradient tokens for Seekarr.
 ///

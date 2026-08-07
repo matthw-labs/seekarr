@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:reel_text/reel_text.dart';
 
-import 'package:seekarr/core/reel_motion.dart';
+import 'package:cupola/core/reel_motion.dart';
 
 /// A line of text that rolls its changed glyphs — but only while it genuinely
 /// fits on one line, and falls back to a plain [Text] the moment it does not.

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/series/data/sonarr_service.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 
 final seriesDetailProvider = FutureProvider.autoDispose
     .family<SonarrSeries?, int>((ref, seriesId) async {

@@ -9,10 +9,10 @@
 /// difference from the arr side that `StreamItem` was designed around.
 library;
 
-import 'package:seekarr/features/jellyfin/domain/models/jellyfin_transcode_reason.dart';
-import 'package:seekarr/features/jellyfin/domain/models/jellyfin_units.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_transcode_reason.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_units.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
 
 /// Above this many rows, mapping moves to an isolate.
 ///

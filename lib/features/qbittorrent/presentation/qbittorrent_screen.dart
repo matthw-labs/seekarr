@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/widgets/ambient_scaffold.dart';
-import 'package:seekarr/core/widgets/async_value_widget.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/core/widgets/search_bar_header.dart';
-import 'package:seekarr/core/widgets/service_kpi_peek.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
-import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_list_controls.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_selection_bar.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_tile.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/async_value_widget.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/search_bar_header.dart';
+import 'package:cupola/core/widgets/service_kpi_peek.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_list_controls.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_selection_bar.dart';
+import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_tile.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class QbittorrentScreen extends ConsumerStatefulWidget {
   final bool showAppBar;

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/features/activity/presentation/activity_screen.dart';
-import 'package:seekarr/features/activity/presentation/widgets/activity_tab.dart';
-import 'package:seekarr/features/activity/presentation/widgets/wanted_tab.dart';
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_tab.dart';
+import 'package:cupola/features/activity/presentation/widgets/wanted_tab.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
 
 void main() {
   group('ActivityTab', () {

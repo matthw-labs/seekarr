@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
-import 'package:seekarr/core/widgets/header_action_row.dart';
-import 'package:seekarr/core/widgets/media_profile_selector.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/header_action_row.dart';
+import 'package:cupola/core/widgets/media_profile_selector.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// What a promoted primary action *does*.
 ///

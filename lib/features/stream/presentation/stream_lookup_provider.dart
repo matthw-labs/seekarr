@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/jellyfin/presentation/jellyfin_provider.dart';
-import 'package:seekarr/features/plex/presentation/plex_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
 
 /// The external ids an arr can offer for one title.
 ///

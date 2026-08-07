@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/widgets/media_detail_body_metrics.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/widgets/media_detail_body_metrics.dart';
 
 /// Running prose on a detail page — an overview, a biography — clamped to a
 /// readable measure and expandable in place.

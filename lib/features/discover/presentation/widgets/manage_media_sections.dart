@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 class RequestsSection extends StatelessWidget {
   final List<SeerrRequest> requests;

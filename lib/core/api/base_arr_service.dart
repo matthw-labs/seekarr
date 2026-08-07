@@ -2,7 +2,7 @@ import 'dart:isolate';
 
 import 'package:dio/dio.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
+import 'package:cupola/core/api/api_client.dart';
 
 /// Configuration for *arr service activity endpoints.
 class ArrServiceConfig {

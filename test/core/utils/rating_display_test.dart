@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/models/rating_source.dart';
-import 'package:seekarr/core/utils/arr_model_helpers.dart';
-import 'package:seekarr/core/utils/rating_display.dart';
+import 'package:cupola/core/models/rating_source.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
+import 'package:cupola/core/utils/rating_display.dart';
 
 void main() {
   group('ratingSourceLabel', () {

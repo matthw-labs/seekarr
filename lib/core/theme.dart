@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/app_radius.dart';
+import 'package:cupola/core/app_radius.dart';
 
 /// Builds a [TextStyle] backed by the bundled Inter variable font.
 ///
@@ -36,7 +36,7 @@ TextStyle _inter({
 /// will happily change [TextStyle.fontWeight] and leave `fontVariations`
 /// pointing at the old weight, so the text keeps rendering at the weight it
 /// had. Re-weight through [weight] instead.
-extension SeekarrTextStyle on TextStyle {
+extension CupolaTextStyle on TextStyle {
   /// Re-weights this style so the change actually reaches Inter's `wght` axis.
   ///
   /// The bundled Inter is a single variable face registered at weight 400.
@@ -245,7 +245,7 @@ class AppColors {
 }
 
 @immutable
-class SeekarrThemeColors extends ThemeExtension<SeekarrThemeColors> {
+class CupolaThemeColors extends ThemeExtension<CupolaThemeColors> {
   final Color statusBadgeBackground;
   final Color statusBadgeForeground;
 
@@ -260,7 +260,7 @@ class SeekarrThemeColors extends ThemeExtension<SeekarrThemeColors> {
   final Color brandGradientStart;
   final Color brandGradientEnd;
 
-  const SeekarrThemeColors({
+  const CupolaThemeColors({
     required this.statusBadgeBackground,
     required this.statusBadgeForeground,
     required this.dimText,
@@ -269,12 +269,12 @@ class SeekarrThemeColors extends ThemeExtension<SeekarrThemeColors> {
     required this.brandGradientEnd,
   });
 
-  factory SeekarrThemeColors.defaults({
+  factory CupolaThemeColors.defaults({
     required Brightness brightness,
     required ColorScheme colorScheme,
   }) {
     final isDark = brightness == Brightness.dark;
-    return SeekarrThemeColors(
+    return CupolaThemeColors(
       statusBadgeBackground: colorScheme.surface.withValues(alpha: 0.8),
       statusBadgeForeground: colorScheme.onSurface,
       dimText: isDark
@@ -289,7 +289,7 @@ class SeekarrThemeColors extends ThemeExtension<SeekarrThemeColors> {
   }
 
   @override
-  SeekarrThemeColors copyWith({
+  CupolaThemeColors copyWith({
     Color? statusBadgeBackground,
     Color? statusBadgeForeground,
     Color? dimText,
@@ -297,7 +297,7 @@ class SeekarrThemeColors extends ThemeExtension<SeekarrThemeColors> {
     Color? brandGradientStart,
     Color? brandGradientEnd,
   }) {
-    return SeekarrThemeColors(
+    return CupolaThemeColors(
       statusBadgeBackground:
           statusBadgeBackground ?? this.statusBadgeBackground,
       statusBadgeForeground:
@@ -310,15 +310,15 @@ class SeekarrThemeColors extends ThemeExtension<SeekarrThemeColors> {
   }
 
   @override
-  SeekarrThemeColors lerp(
-    covariant ThemeExtension<SeekarrThemeColors>? other,
+  CupolaThemeColors lerp(
+    covariant ThemeExtension<CupolaThemeColors>? other,
     double t,
   ) {
-    if (other is! SeekarrThemeColors) {
+    if (other is! CupolaThemeColors) {
       return this;
     }
 
-    return SeekarrThemeColors(
+    return CupolaThemeColors(
       statusBadgeBackground:
           Color.lerp(statusBadgeBackground, other.statusBadgeBackground, t) ??
           statusBadgeBackground,
@@ -507,7 +507,7 @@ class AppTheme {
       brightness: brightness,
       colorScheme: colorScheme,
       extensions: [
-        SeekarrThemeColors.defaults(
+        CupolaThemeColors.defaults(
           brightness: brightness,
           colorScheme: colorScheme,
         ),
@@ -777,7 +777,7 @@ class AppTheme {
   /// The type ramp.
   ///
   /// Sizes and weights are unchanged; what is new is that the weights actually
-  /// render (see [SeekarrTextStyle.weight]), that tracking comes from Inter's
+  /// render (see [CupolaTextStyle.weight]), that tracking comes from Inter's
   /// own curve rather than Roboto's table ([interTracking]), and that line
   /// height is a decision per role instead of the font file's default.
   ///

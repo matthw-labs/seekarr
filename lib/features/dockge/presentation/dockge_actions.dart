@@ -2,9 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/features/dockge/data/dockge_client.dart';
-import 'package:seekarr/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/features/dockge/data/dockge_client.dart';
+import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 
 /// Runs a [DockgeClient] mutation with the shared plumbing every action button
 /// uses: resolve the client, await [action], invalidate [invalidate] providers

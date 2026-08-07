@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_gradients.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
 
 /// The posterless hero lead: the page's own figure, standing in the poster slot.
 ///

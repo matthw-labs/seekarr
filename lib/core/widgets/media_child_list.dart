@@ -38,15 +38,15 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/media_metadata_line.dart';
-import 'package:seekarr/core/widgets/selection_pills.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/media_metadata_line.dart';
+import 'package:cupola/core/widgets/selection_pills.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 
 /// The status as a word for a child row's [MediaChildTile.facts] line, or null
 /// when the row needs none.
@@ -587,7 +587,7 @@ class _GroupSelector extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final dimText =
-        theme.extension<SeekarrThemeColors>()?.dimText ??
+        theme.extension<CupolaThemeColors>()?.dimText ??
         colorScheme.onSurfaceVariant;
     final progress = selected.progress;
     // Same threshold and the same scaler-not-LayoutBuilder rationale as

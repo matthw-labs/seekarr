@@ -1,5 +1,5 @@
-import 'package:seekarr/core/network/cert_trust.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
+import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 
 /// Represents the reachability state of a configured service.
 ///

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/models/service_kpi.dart';
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/services/domain/service_signal.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
-import 'package:seekarr/features/stream/domain/stream_semantics.dart';
-import 'package:seekarr/features/stream/presentation/widgets/stream_session_card.dart';
+import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/services/domain/service_signal.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_semantics.dart';
+import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
 /// Rebuilds the KPI list `_streamKpis` produces, without the providers.
 ///

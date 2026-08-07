@@ -21,8 +21,8 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 void main() {
   const fakeFingerprint =

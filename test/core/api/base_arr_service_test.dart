@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/api/base_arr_service.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
 
 import '../../test_helpers/fake_api_client.dart';
 

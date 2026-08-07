@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/truenas/domain/models/reporting.dart';
-import 'package:seekarr/features/truenas/presentation/dashboard/truenas_dashboard_screen.dart';
+import 'package:cupola/features/truenas/domain/models/reporting.dart';
+import 'package:cupola/features/truenas/presentation/dashboard/truenas_dashboard_screen.dart';
 
 TrueNasReportingGraph _graph(
   String name,

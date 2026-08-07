@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
-import 'package:seekarr/core/widgets/header_action_row.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/header_action_row.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
 
 /// Opens the quality profile picker.
 ///

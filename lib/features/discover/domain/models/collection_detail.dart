@@ -1,4 +1,4 @@
-import 'package:seekarr/core/models/media_preview.dart';
+import 'package:cupola/core/models/media_preview.dart';
 
 /// A movie collection as returned by Overseerr/Jellyseerr `/collection/{id}`,
 /// including its member movies (`parts`).

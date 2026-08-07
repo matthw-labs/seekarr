@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 
 void main() {
   group('ServiceRoutes', () {

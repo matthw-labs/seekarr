@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/network/redirect_guard.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/redirect_guard.dart';
 
 /// Adapter that answers a redirect for the first N requests, then 200, and
 /// records every (uri, method, headers) triple it saw.

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/media_search_popup_menu.dart';
-import 'package:seekarr/features/activity/presentation/activity_screen.dart';
-import 'package:seekarr/features/activity/presentation/widgets/activity_formatters.dart';
-import 'package:seekarr/features/activity/presentation/widgets/activity_tab_helpers.dart';
-import 'package:seekarr/features/activity/presentation/widgets/detail_sheets.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/media_search_popup_menu.dart';
+import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_tab_helpers.dart';
+import 'package:cupola/features/activity/presentation/widgets/detail_sheets.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
 
 class SonarrWantedHierarchy extends StatelessWidget {
   final List<dynamic> items;

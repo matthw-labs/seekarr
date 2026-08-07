@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
-import 'package:seekarr/features/nzbget/presentation/nzbget_actions.dart';
-import 'package:seekarr/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:cupola/features/nzbget/data/nzbget_client.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_actions.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 
 import '../../../test_helpers/capturing_http_adapter.dart';
 

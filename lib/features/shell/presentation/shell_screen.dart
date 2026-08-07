@@ -3,14 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/utils/a11y_announce.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_jobs_provider.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_lifecycle.dart';
-import 'package:seekarr/features/settings/domain/nav_tab.dart';
+import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/utils/a11y_announce.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/features/import/presentation/manual_import_routes.dart';
+import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
+import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
 
 /// Main shell screen with floating bottom navigation.
 ///

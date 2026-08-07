@@ -12,7 +12,7 @@
 /// failure `serviceMatrixCellValue` already documents for the matrix cell.
 library;
 
-import 'package:seekarr/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/arr_activity_display.dart';
 
 String _join(Iterable<String?> parts) =>
     joinDisplayParts(parts, separator: ', ');

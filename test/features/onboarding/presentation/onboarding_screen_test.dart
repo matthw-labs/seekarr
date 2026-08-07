@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:seekarr/core/widgets/service_ring.dart';
-import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
-import 'package:seekarr/features/onboarding/presentation/onboarding_screen.dart';
-import 'package:seekarr/features/settings/data/service_connection_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 import '../../../test_helpers/reel_finders.dart';

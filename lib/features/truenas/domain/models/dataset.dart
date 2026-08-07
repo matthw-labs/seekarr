@@ -1,4 +1,4 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// Reads the `parsed` (numeric) value out of a ZFS property object
 /// (`{value, rawvalue, parsed, source}`), or a bare number.

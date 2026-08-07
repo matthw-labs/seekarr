@@ -6,16 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/ambient_background.dart';
-import 'package:seekarr/core/widgets/media_detail_body_metrics.dart';
-import 'package:seekarr/core/widgets/media_detail_header_metrics.dart';
-import 'package:seekarr/core/widgets/media_detail_poster_row.dart';
-import 'package:seekarr/core/widgets/media_detail_section_label.dart';
-import 'package:seekarr/core/widgets/media_detail_slot.dart';
-import 'package:seekarr/core/widgets/media_detail_view.dart';
-import 'package:seekarr/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
+import 'package:cupola/core/widgets/media_detail_body_metrics.dart';
+import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
+import 'package:cupola/core/widgets/media_detail_poster_row.dart';
+import 'package:cupola/core/widgets/media_detail_section_label.dart';
+import 'package:cupola/core/widgets/media_detail_slot.dart';
+import 'package:cupola/core/widgets/media_detail_view.dart';
+import 'package:cupola/core/widgets/media_poster_card.dart';
 
 const _kTitle = 'The Matrix';
 const _kTopPadding = 59.0;

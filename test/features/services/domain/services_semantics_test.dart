@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/services/domain/services_semantics.dart';
 
 void main() {
   group('downloadRowValue', () {

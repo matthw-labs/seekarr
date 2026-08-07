@@ -1,12 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/activity/presentation/widgets/activity_formatters.dart';
-import 'package:seekarr/features/discover/domain/seerr_status.dart';
-import 'package:seekarr/features/movies/domain/radarr_status.dart';
-import 'package:seekarr/features/series/domain/sonarr_status.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
+import 'package:cupola/features/discover/domain/seerr_status.dart';
+import 'package:cupola/features/movies/domain/radarr_status.dart';
+import 'package:cupola/features/series/domain/sonarr_status.dart';
 
 import '../../test_helpers/fixtures.dart';
 import '../../test_helpers/model_builders.dart';

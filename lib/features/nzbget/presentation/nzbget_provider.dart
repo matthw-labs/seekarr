@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
-import 'package:seekarr/features/nzbget/domain/models/nzbget_models.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/nzbget/data/nzbget_client.dart';
+import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// NZBGet client bound to the current settings.
 ///

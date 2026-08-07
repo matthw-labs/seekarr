@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_elevation.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/models/service_kpi.dart';
-import 'package:seekarr/core/reel_motion.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/reel_line.dart';
-import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/core/app_elevation.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/reel_motion.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/reel_line.dart';
+import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 
 /// A premium horizontal rail of KPI "stat cards" shown at the top of a service
 /// page. Replaces the ad-hoc per-service stat rows with one shared component.

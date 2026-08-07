@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
 
 /// A reusable widget to display file information (path and filename).
 ///

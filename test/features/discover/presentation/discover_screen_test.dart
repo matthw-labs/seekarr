@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/models/media_preview.dart';
-import 'package:seekarr/core/widgets/content_card.dart';
-import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_genre.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
-import 'package:seekarr/features/discover/presentation/discover_provider.dart';
-import 'package:seekarr/features/discover/presentation/discover_screen.dart';
-import 'package:seekarr/features/discover/presentation/discover_search_provider.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_search_provider.dart';
 
 const _movies = [
   MediaPreview(id: 1, title: 'Movie One', mediaType: 'movie'),

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/utils/string_utils.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
-import 'package:seekarr/features/discover/domain/seerr_status.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/seerr_status.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Seerr's seasons and the selected season's episodes.
 ///

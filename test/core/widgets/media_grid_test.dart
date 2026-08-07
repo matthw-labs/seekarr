@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/core/widgets/media_grid.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/widgets/media_grid.dart';
 
 void main() {
   group('MediaGrid', () {

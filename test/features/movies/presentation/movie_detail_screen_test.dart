@@ -5,16 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
-import 'package:seekarr/core/utils/arr_model_helpers.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
-import 'package:seekarr/features/movies/presentation/movie_detail_provider.dart';
-import 'package:seekarr/features/movies/presentation/movie_detail_screen.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/movies/presentation/movie_detail_provider.dart';
+import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';

@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/header_action_row.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_action_buttons.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/widgets/header_action_row.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_action_buttons.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// `FilledButton.icon` builds a private subclass, so an exact type finder
 /// misses it.

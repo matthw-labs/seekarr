@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart' show Color, IconData, Icons;
 
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/theme.dart';
 
 /// The four canonical tabs.
 ///

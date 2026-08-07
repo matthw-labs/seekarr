@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_tracker.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
 
 void main() {
   group('TorrentTracker.fromJson', () {

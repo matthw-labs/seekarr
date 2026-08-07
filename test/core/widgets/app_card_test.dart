@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
 
 void main() {
   const childKey = ValueKey('card-child');

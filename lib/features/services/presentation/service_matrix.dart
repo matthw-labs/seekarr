@@ -117,25 +117,25 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/reel_motion.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
-import 'package:seekarr/core/widgets/reel_line.dart';
-import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
-import 'package:seekarr/features/services/domain/service_signal.dart';
-import 'package:seekarr/features/services/domain/services_semantics.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/services/presentation/service_matrix_collapse_provider.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/reel_motion.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/widgets/reel_line.dart';
+import 'package:cupola/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/services/domain/service_signal.dart';
+import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/service_matrix_collapse_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Reachability of one service, as the matrix paints it.
 ///
@@ -749,7 +749,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final dim =
-        theme.extension<SeekarrThemeColors>()?.dimText ??
+        theme.extension<CupolaThemeColors>()?.dimText ??
         colorScheme.onSurfaceVariant;
 
     return Padding(
@@ -1207,7 +1207,7 @@ class _ServiceMatrixCellBody extends StatelessWidget {
                       // you already know — so it should be the first thing
                       // the eye skips.
                       color:
-                          theme.extension<SeekarrThemeColors>()?.dimText ??
+                          theme.extension<CupolaThemeColors>()?.dimText ??
                           colorScheme.onSurfaceVariant,
                     ),
                   ),

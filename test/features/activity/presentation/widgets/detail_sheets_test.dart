@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/activity/presentation/activity_screen.dart';
-import 'package:seekarr/features/activity/presentation/widgets/detail_sheets.dart';
+import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/presentation/widgets/detail_sheets.dart';
 
 void main() {
   group('DetailSheets', () {

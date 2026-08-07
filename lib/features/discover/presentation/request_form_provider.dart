@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 
 const Object _noSelectionUpdate = Object();
 

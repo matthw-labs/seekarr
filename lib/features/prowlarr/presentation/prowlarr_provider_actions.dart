@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/utils/service_action.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
-import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_field_inputs.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_provider_form_sheet.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_provider_pickers.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/utils/service_action.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_field_inputs.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_provider_form_sheet.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_provider_pickers.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Write flows for the field-driven Prowlarr resources: apps, download clients,
 /// notifications and indexer proxies. Indexers have their own flows in

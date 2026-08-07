@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
 
 /// Result from the delete confirmation dialog.
 class DeleteMediaResult {

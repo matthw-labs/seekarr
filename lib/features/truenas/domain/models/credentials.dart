@@ -1,4 +1,4 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// A user account from `user.query`.
 class TrueNasUser {

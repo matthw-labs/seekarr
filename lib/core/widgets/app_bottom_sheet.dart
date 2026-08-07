@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_elevation.dart';
-import 'package:seekarr/core/app_gradients.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/sheet_utils.dart';
+import 'package:cupola/core/app_elevation.dart';
+import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/sheet_utils.dart';
 
 /// Canonical drag handle for Seekarr bottom sheets (36×4, subtle).
 class AppSheetHandle extends StatelessWidget {
@@ -270,7 +270,7 @@ class AppBottomSheet extends StatelessWidget {
     bool enableDrag = true,
     EdgeInsetsGeometry? bodyPadding,
   }) {
-    return SheetUtils.showSeekarrModalSheet<T>(
+    return SheetUtils.showCupolaModalSheet<T>(
       context: context,
       isDismissible: isDismissible,
       enableDrag: enableDrag,
@@ -316,7 +316,7 @@ class AppBottomSheet extends StatelessWidget {
     bool enableDrag = true,
     EdgeInsetsGeometry? bodyPadding,
   }) {
-    return SheetUtils.showSeekarrModalSheet<T>(
+    return SheetUtils.showCupolaModalSheet<T>(
       context: context,
       isDismissible: isDismissible,
       enableDrag: enableDrag,

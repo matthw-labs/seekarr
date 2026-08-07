@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart' show TargetPlatform;
 
-import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/features/release_search/data/release_search_transport.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/release_search/data/release_search_transport.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// How far a search on this instance can travel once the sheet is left.
 ///

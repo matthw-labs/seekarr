@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 
 /// Bazarr-specific detail sections. Feature-local on purpose: no other
 /// service has a subtitle-language axis, so these do not belong in

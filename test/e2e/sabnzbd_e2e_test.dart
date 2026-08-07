@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/sabnzbd/data/sabnzbd_client.dart';
+import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 
 /// Tier-6 E2E (plan §7.6). Exercises the real [SabnzbdClient] transport against
 /// the Docker instance from docker-compose.e2e.yml. Auto-skipped by dart_test.yaml

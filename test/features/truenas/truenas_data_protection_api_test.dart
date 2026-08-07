@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/truenas/data/data_protection_api.dart';
-import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
-import 'package:seekarr/features/truenas/domain/models/data_protection.dart';
+import 'package:cupola/features/truenas/data/data_protection_api.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
+import 'package:cupola/features/truenas/domain/models/data_protection.dart';
 
 /// One recorded RPC: the method name plus the params actually sent.
 typedef _Call = ({String method, List<dynamic> params, bool asJob});

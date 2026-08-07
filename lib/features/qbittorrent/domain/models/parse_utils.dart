@@ -1,4 +1,4 @@
-import 'package:seekarr/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/byte_format.dart';
 
 int parseInt(dynamic v) {
   if (v is int) return v;

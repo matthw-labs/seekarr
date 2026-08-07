@@ -1,4 +1,4 @@
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class GlobalSearchResult {
   final ServiceKey service;

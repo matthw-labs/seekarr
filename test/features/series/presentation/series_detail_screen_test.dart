@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
-import 'package:seekarr/features/series/presentation/series_detail_provider.dart';
-import 'package:seekarr/features/series/presentation/series_detail_screen.dart';
-import 'package:seekarr/features/series/presentation/widgets/series_seasons_list.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/series/presentation/series_detail_provider.dart';
+import 'package:cupola/features/series/presentation/series_detail_screen.dart';
+import 'package:cupola/features/series/presentation/widgets/series_seasons_list.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';

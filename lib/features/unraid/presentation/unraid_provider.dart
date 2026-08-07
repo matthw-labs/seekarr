@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/unraid/data/unraid_client.dart';
-import 'package:seekarr/features/unraid/domain/models/unraid_models.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/unraid/data/unraid_client.dart';
+import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 
 /// Unraid client bound to the current settings.
 ///

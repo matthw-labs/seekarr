@@ -5,16 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/models/service_kpi.dart';
-import 'package:seekarr/core/widgets/not_configured_placeholder.dart';
-import 'package:seekarr/features/sabnzbd/domain/models/sabnzbd_models.dart';
-import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_provider.dart';
-import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_screen.dart';
-import 'package:seekarr/features/services/domain/service_summary.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_screen.dart';
+import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 const _configured = SettingsModel(
   sabnzbdUrl: 'http://sab.local:8080',

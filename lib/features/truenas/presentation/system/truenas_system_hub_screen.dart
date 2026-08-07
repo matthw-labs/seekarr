@@ -1,18 +1,18 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/truenas/presentation/system/truenas_diagnostics_screen.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/truenas/presentation/system/truenas_diagnostics_screen.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 
 class _SystemEntry {
   final String title;

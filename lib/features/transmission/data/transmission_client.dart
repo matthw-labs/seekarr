@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
-import 'package:seekarr/core/network/cert_trust.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/network/redirect_guard.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/features/transmission/domain/models/transmission_models.dart';
+import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/redirect_guard.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
 /// Error thrown by [TransmissionClient]. Carries the [reason] so a caller
 /// verifying the connection can tell an unreachable host from rejected

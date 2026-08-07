@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/qbittorrent/domain/models/transfer_info.dart';
+import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
 
 void main() {
   group('TransferInfo.fromJson', () {

@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:seekarr/core/widgets/content_card.dart';
-import 'package:seekarr/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/core/widgets/media_poster_card.dart';
 
-import 'package:seekarr/features/discover/data/seerr_service.dart';
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
-import 'package:seekarr/features/search/presentation/global_search_provider.dart';
-import 'package:seekarr/features/search/presentation/search_screen.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/search/presentation/global_search_provider.dart';
+import 'package:cupola/features/search/presentation/search_screen.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';

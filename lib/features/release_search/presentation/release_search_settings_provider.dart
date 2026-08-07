@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_jobs_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// How long Seekarr waits for a release search, and how many it runs at once.
 ///

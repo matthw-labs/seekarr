@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_actions.dart';
-import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
 
 class TorrentSelectionBar extends ConsumerWidget {
   final VoidCallback onConfirmDelete;

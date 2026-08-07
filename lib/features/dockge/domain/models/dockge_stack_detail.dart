@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/dockge/domain/models/dockge_stack.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 
 /// Full detail of a stack, returned by Dockge's `getStack` event.
 ///

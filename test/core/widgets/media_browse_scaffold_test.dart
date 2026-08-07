@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
-import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 final testSearchQueryProvider = StateProvider<String>((ref) => '');
 final testLibraryProvider = FutureProvider<List<String>>(

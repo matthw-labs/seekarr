@@ -14,11 +14,11 @@
 /// or a warning for an Activity row comes from here.
 library;
 
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
-import 'package:seekarr/core/utils/arr_activity_display.dart';
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/core/utils/string_utils.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 /// The kinds of record the global Activity feed can show.
 ///

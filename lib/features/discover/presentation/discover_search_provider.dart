@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:seekarr/core/models/media_preview.dart';
-import 'package:seekarr/features/discover/data/seerr_service.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 
 /// Provider for the current search query in Discover section.
 final discoverSearchQueryProvider = StateProvider<String>((ref) => '');

@@ -4,14 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
-import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
-import 'package:seekarr/features/qbittorrent/data/qbittorrent_service.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_file.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_properties.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_tracker.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/transfer_info.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_file.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
+import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
   final settings = ref.watch(currentSettingsProvider);

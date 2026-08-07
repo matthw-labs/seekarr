@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/widgets/ambient_scaffold.dart';
-import 'package:seekarr/core/widgets/app_empty_state.dart';
-import 'package:seekarr/core/widgets/app_error_state.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/core/widgets/glass_app_bar.dart';
-import 'package:seekarr/core/widgets/media_detail_back_button.dart';
-import 'package:seekarr/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/media_detail_back_button.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 
 /// The full-page state a media detail route shows when it has no media to show.
 ///

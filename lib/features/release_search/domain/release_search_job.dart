@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:seekarr/core/widgets/status_badge.dart';
-import 'package:seekarr/features/release_search/domain/release_search_reach.dart';
-import 'package:seekarr/features/release_search/domain/release_search_target.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/release_search/domain/release_search_reach.dart';
+import 'package:cupola/features/release_search/domain/release_search_target.dart';
 
 /// How long Sonarr keeps a found release grabbable.
 ///

@@ -4,13 +4,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:reel_text/reel_text.dart';
 
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/reel_motion.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/reel_line.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/reel_motion.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/reel_line.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The ring gives up size as the reading size grows, so the copy beside it never
 /// loses room — the Column Floor Rule applied to a diagram instead of a grid.

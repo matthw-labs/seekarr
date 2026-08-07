@@ -2,12 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_elevation.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_elevation.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
 
 /// A destination for the [FloatingBottomNavBar].
 class FloatingNavDestination {
@@ -275,7 +275,7 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
     final labelStyle = _NavBarItem.labelStyleOf(context);
     final isDark = colorScheme.brightness == Brightness.dark;
     final glassColor =
-        theme.extension<SeekarrThemeColors>()?.glassSurface ??
+        theme.extension<CupolaThemeColors>()?.glassSurface ??
         colorScheme.surfaceContainer.withValues(alpha: isDark ? 0.72 : 0.55);
     final borderColor = isDark
         ? Colors.white.withValues(alpha: 0.12)

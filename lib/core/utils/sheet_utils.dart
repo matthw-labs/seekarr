@@ -18,12 +18,12 @@ class SheetUtils {
   ///
   /// Usage:
   /// ```dart
-  /// SheetUtils.showSeekarrModalSheet(
+  /// SheetUtils.showCupolaModalSheet(
   ///   context: context,
   ///   builder: (context) => MyBottomSheet(),
   /// );
   /// ```
-  static Future<T?> showSeekarrModalSheet<T>({
+  static Future<T?> showCupolaModalSheet<T>({
     required BuildContext context,
     required WidgetBuilder builder,
     bool isDismissible = true,

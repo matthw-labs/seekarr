@@ -4,21 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
-import 'package:seekarr/core/api/base_arr_service.dart';
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/core/utils/arr_activity_display.dart';
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/activity/domain/global_activity_status.dart';
-import 'package:seekarr/features/activity/presentation/activity_screen.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
-import 'package:seekarr/features/discover/presentation/discover_provider.dart';
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/music/data/lidarr_service.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
+import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
-export 'package:seekarr/features/activity/domain/global_activity_status.dart'
+export 'package:cupola/features/activity/domain/global_activity_status.dart'
     show GlobalActivityKind;
 
 final activityRefreshVersionProvider = StateProvider<int>((ref) => 0);

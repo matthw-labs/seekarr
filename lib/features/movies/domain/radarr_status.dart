@@ -1,5 +1,5 @@
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
-import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 
 /// Resolves the badge status for a Radarr movie.
 ///

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 
 /// Loading placeholder for Prowlarr list sections.
 ///

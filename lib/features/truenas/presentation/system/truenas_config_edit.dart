@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_actions.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_form_sheet.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.dart';
 
 /// Opens an edit form for a TrueNAS config section, then — before writing
 /// anything — shows an explicit review of exactly what changed and asks for

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/widgets/selection_pills.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/widgets/selection_pills.dart';
 
 enum ActivitySegment {
   queue('Queue'),

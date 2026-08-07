@@ -2,9 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/features/qbittorrent/data/qbittorrent_service.dart';
-import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 
 /// Runs a [QbittorrentService] mutation with the plumbing every action
 /// button shares: resolve the service, await [action], invalidate the

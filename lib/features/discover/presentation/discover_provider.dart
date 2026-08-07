@@ -1,7 +1,7 @@
-import 'package:seekarr/features/discover/domain/models/seerr_genre.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
-import 'package:seekarr/core/models/media_preview.dart';
-import 'package:seekarr/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Sort key for the "Top Rated" rows.

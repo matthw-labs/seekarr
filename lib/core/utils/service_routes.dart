@@ -1,4 +1,4 @@
-import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 
 class ServiceRoutes {
   ServiceRoutes._();

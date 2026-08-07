@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/npm/data/npm_client.dart';
-import 'package:seekarr/features/npm/domain/models/npm_models.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/npm/data/npm_client.dart';
+import 'package:cupola/features/npm/domain/models/npm_models.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// Nginx Proxy Manager client bound to the current settings.
 ///

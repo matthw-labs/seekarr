@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:seekarr/core/widgets/app_error_state.dart';
-import 'package:seekarr/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 
 /// A widget that handles AsyncValue states with premium, consistent styling.
 ///

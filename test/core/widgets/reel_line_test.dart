@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reel_text/reel_text.dart';
 
-import 'package:seekarr/core/widgets/reel_line.dart';
+import 'package:cupola/core/widgets/reel_line.dart';
 
 /// The gate [ReelLine] applies is a real paragraph shaping, and it runs inside a
 /// [LayoutBuilder] — so without memoisation it is paid again on every build of

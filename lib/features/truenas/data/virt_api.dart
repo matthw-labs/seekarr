@@ -1,5 +1,5 @@
-import 'package:seekarr/features/truenas/data/truenas_api_base.dart';
-import 'package:seekarr/features/truenas/domain/models/virt_instance.dart';
+import 'package:cupola/features/truenas/data/truenas_api_base.dart';
+import 'package:cupola/features/truenas/domain/models/virt_instance.dart';
 
 /// Incus virtualization: LXC containers and VMs (`virt.instance.*`,
 /// `virt.device.*`, `virt.global.*`). Available on TrueNAS SCALE 25.04+.

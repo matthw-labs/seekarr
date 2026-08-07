@@ -1,4 +1,4 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 String joinDisplayParts(Iterable<String?> parts, {String separator = ' · '}) {
   return parts

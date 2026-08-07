@@ -3,11 +3,11 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/jellyfin/data/jellyfin_client.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library_page.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
 
 import '../../../test_helpers/capturing_http_adapter.dart';
 import '../../../test_helpers/fixtures.dart';

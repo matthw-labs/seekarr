@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 
 void main() {
   group('ArrQueueEntry.fromQueueItem', () {

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// What a release search is being run for.
 enum ReleaseSearchScope {

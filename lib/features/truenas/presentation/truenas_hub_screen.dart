@@ -2,23 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/ambient_scaffold.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/app_empty_state.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/core/widgets/glass_app_bar.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
-import 'package:seekarr/core/widgets/service_kpi_peek.dart';
-import 'package:seekarr/core/widgets/staggered_entrance.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_version_banner.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/widgets/service_kpi_peek.dart';
+import 'package:cupola/core/widgets/staggered_entrance.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_version_banner.dart';
 
 /// A TrueNAS management section reachable from the hub grid.
 class _TrueNasSection {

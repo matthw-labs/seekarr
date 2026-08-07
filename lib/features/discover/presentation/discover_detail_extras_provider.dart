@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/models/rating_source.dart';
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/discover/presentation/discover_detail_view_model.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/models/rating_source.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 typedef DiscoverDetailExtras = ({
   bool? isInLibrary,

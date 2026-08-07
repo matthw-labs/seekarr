@@ -5,11 +5,11 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/network/redirect_guard.dart';
-import 'package:seekarr/features/settings/data/service_connection_provider.dart';
-import 'package:seekarr/features/settings/data/service_verification.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/redirect_guard.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The two media servers do not authenticate the way every other service does,
 /// and verifying them through the shared `ApiClient` was therefore a check that

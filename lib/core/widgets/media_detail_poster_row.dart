@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/widgets/media_detail_header_metrics.dart';
-import 'package:seekarr/core/widgets/media_detail_hero_summary.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
+import 'package:cupola/core/widgets/media_detail_hero_summary.dart';
 
 /// Prototype-style hero title row for media detail screens.
 ///

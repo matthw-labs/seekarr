@@ -21,7 +21,7 @@
 /// `Pending n`.
 library;
 
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 /// How many requests the hub shows before deferring to the full list.
 ///

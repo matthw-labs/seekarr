@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_actions.dart';
-import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/add_torrent_button.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/features/qbittorrent/presentation/widgets/add_torrent_button.dart';
 
 class QbittorrentActionsBar extends ConsumerWidget {
   const QbittorrentActionsBar({super.key});

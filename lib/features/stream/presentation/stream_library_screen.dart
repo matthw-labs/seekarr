@@ -4,16 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/jellyfin/presentation/jellyfin_provider.dart';
-import 'package:seekarr/features/plex/presentation/plex_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/stream_semantics.dart';
-import 'package:seekarr/features/stream/domain/stream_server_client.dart';
-import 'package:seekarr/features/stream/presentation/widgets/stream_poster_tile.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/stream_semantics.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.dart';
 
 /// One library on a media server, browsed by watch state.
 ///

@@ -1,12 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/api/base_arr_service.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_album.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_artist.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_track.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/features/music/domain/models/lidarr_album.dart';
+import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/music/domain/models/lidarr_track.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 final lidarrServiceProvider = Provider<LidarrService>((ref) {
   final settings = ref.watch(currentSettingsProvider);

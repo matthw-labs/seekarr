@@ -1,4 +1,4 @@
-import 'package:seekarr/core/models/rating_source.dart';
+import 'package:cupola/core/models/rating_source.dart';
 
 /// Display vocabulary for rating pills.
 ///

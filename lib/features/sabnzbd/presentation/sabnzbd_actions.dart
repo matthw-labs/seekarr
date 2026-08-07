@@ -2,9 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/features/sabnzbd/data/sabnzbd_client.dart';
-import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 
 /// Runs a [SabnzbdClient] mutation with the shared plumbing: resolve the client,
 /// await [action], invalidate [invalidate] providers on success and report the

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/truenas/domain/models/credentials.dart';
-import 'package:seekarr/features/truenas/domain/models/network.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/domain/models/credentials.dart';
+import 'package:cupola/features/truenas/domain/models/network.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
 final truenasGeneralConfigProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {

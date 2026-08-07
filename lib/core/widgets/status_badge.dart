@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/theme.dart';
 
-export 'package:seekarr/core/status/media_status.dart';
+export 'package:cupola/core/status/media_status.dart';
 
 /// Renders a resolved [MediaStatusInfo].
 ///
@@ -63,9 +63,9 @@ class StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final seekarrColors =
-        theme.extension<SeekarrThemeColors>() ??
-        SeekarrThemeColors.defaults(
+    final cupolaColors =
+        theme.extension<CupolaThemeColors>() ??
+        CupolaThemeColors.defaults(
           brightness: theme.brightness,
           colorScheme: colorScheme,
         );
@@ -73,10 +73,10 @@ class StatusBadge extends StatelessWidget {
     final accentColor = statusToneColor(colorScheme, info.tone);
     final backgroundColor = compact
         ? accentColor.withValues(alpha: 0.9)
-        : seekarrColors.statusBadgeBackground;
+        : cupolaColors.statusBadgeBackground;
     final borderColor = compact
         ? accentColor
-        : seekarrColors.statusBadgeForeground.withValues(alpha: 0.12);
+        : cupolaColors.statusBadgeForeground.withValues(alpha: 0.12);
     // A compact badge fills with the tone colour, so its foreground must be
     // chosen from that colour's luminance: white on the success green or the
     // warning amber measures ~2.2:1, well below AA.
@@ -85,7 +85,7 @@ class StatusBadge extends StatelessWidget {
     );
     final textColor = compact
         ? onAccentColor
-        : seekarrColors.statusBadgeForeground;
+        : cupolaColors.statusBadgeForeground;
 
     if (iconOnly) {
       return _spoken(

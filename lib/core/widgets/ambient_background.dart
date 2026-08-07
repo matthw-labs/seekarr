@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_gradients.dart';
+import 'package:cupola/core/app_gradients.dart';
 
 /// Paints the app's ambient background — an opaque base surface with soft accent
 /// radial glows — behind [child], full-bleed.

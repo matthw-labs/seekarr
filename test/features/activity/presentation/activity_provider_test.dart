@@ -1,19 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/activity/presentation/activity_provider.dart';
-import 'package:seekarr/features/activity/presentation/activity_screen.dart';
-import 'package:seekarr/features/activity/presentation/widgets/activity_tab.dart';
-import 'package:seekarr/features/activity/presentation/widgets/wanted_tab.dart';
-import 'package:seekarr/features/discover/data/seerr_service.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
-import 'package:seekarr/features/discover/presentation/discover_provider.dart';
-import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/music/data/lidarr_service.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/activity/presentation/activity_provider.dart';
+import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_tab.dart';
+import 'package:cupola/features/activity/presentation/widgets/wanted_tab.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';

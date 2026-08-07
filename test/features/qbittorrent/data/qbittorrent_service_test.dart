@@ -5,9 +5,9 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
-import 'package:seekarr/features/qbittorrent/data/qbittorrent_service.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 
 /// In-memory [HttpClientAdapter] keyed by request path. Decodes the request
 /// stream to expose form-urlencoded bodies as a Map for easier assertions.

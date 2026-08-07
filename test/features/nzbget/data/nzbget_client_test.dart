@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
-import 'package:seekarr/features/nzbget/domain/models/nzbget_models.dart';
+import 'package:cupola/features/nzbget/data/nzbget_client.dart';
+import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 
 import '../../../test_helpers/capturing_http_adapter.dart';
 import '../../../test_helpers/fixtures.dart';

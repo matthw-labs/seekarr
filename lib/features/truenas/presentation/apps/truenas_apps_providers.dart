@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/truenas/domain/models/app.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/domain/models/app.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
 final truenasAppsProvider = FutureProvider.autoDispose<List<TrueNasApp>>((
   ref,

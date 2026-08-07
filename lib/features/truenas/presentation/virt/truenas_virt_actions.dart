@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_actions.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
-import 'package:seekarr/features/truenas/presentation/virt/truenas_virt_providers.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_form_sheet.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/presentation/virt/truenas_virt_providers.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.dart';
 
 /// Creates a new Incus instance (container or VM). This is a best-effort
 /// minimal create — the server validates the full payload and surfaces any

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/truenas/domain/models/pool.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/domain/models/pool.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
 /// All pools (lightweight, no topology).
 final truenasPoolsProvider = FutureProvider.autoDispose<List<TrueNasPool>>((

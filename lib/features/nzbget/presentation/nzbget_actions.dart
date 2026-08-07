@@ -2,9 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
-import 'package:seekarr/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/features/nzbget/data/nzbget_client.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 
 /// True when NZBGet answered the call but refused to do the work.
 ///

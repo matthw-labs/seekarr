@@ -1,5 +1,5 @@
-import 'package:seekarr/features/truenas/data/truenas_api_base.dart';
-import 'package:seekarr/features/truenas/domain/models/app.dart';
+import 'package:cupola/features/truenas/data/truenas_api_base.dart';
+import 'package:cupola/features/truenas/domain/models/app.dart';
 
 /// Installed application operations (`app.*`).
 class TrueNasAppsApi extends TrueNasApiBase {

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/sabnzbd/data/sabnzbd_client.dart';
-import 'package:seekarr/features/sabnzbd/domain/models/sabnzbd_models.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
+import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// SABnzbd client bound to the current settings.
 ///

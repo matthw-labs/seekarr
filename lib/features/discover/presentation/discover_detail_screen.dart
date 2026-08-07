@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/utils/rating_display.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/discover/domain/seerr_status.dart';
-import 'package:seekarr/features/discover/presentation/discover_detail_extras_provider.dart';
-import 'package:seekarr/features/discover/presentation/discover_detail_view_model.dart';
-import 'package:seekarr/features/discover/presentation/discover_details_provider.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_action_buttons.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_cast_list.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_collection_banner.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_release_facts.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_seasons_list.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_watch_providers.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/rating_display.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/domain/seerr_status.dart';
+import 'package:cupola/features/discover/presentation/discover_detail_extras_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_action_buttons.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_collection_banner.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_release_facts.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_seasons_list.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_watch_providers.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class DiscoverDetailScreen extends ConsumerWidget {
   final int mediaId;

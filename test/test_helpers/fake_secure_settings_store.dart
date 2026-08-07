@@ -1,4 +1,4 @@
-import 'package:seekarr/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/data/settings_service.dart';
 
 class FakeSecureSettingsStore implements SecureSettingsStore {
   final Map<String, String> _storage = {};

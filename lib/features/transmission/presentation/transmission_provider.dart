@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/transmission/data/transmission_client.dart';
-import 'package:seekarr/features/transmission/domain/models/transmission_models.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/transmission/data/transmission_client.dart';
+import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
 /// Transmission client bound to the current settings.
 ///

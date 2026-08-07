@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/media_metadata_line.dart';
+import 'package:cupola/core/widgets/media_metadata_line.dart';
 
 void main() {
   group('MediaMetadataLine', () {

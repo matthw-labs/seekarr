@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/settings/domain/nav_tab.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The alphas the selected nav pill and the Activity segment pills actually use.
 const _darkTintAlpha = 0.16;

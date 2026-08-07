@@ -1,5 +1,5 @@
-import 'package:seekarr/features/truenas/data/truenas_api_base.dart';
-import 'package:seekarr/features/truenas/domain/models/share.dart';
+import 'package:cupola/features/truenas/data/truenas_api_base.dart';
+import 'package:cupola/features/truenas/domain/models/share.dart';
 
 /// SMB / NFS / iSCSI share operations (`sharing.*`, `iscsi.target.*`).
 class TrueNasSharingApi extends TrueNasApiBase {

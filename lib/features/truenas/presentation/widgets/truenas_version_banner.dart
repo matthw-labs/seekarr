@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/truenas/domain/truenas_version.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/truenas/domain/truenas_version.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
 /// A warning banner shown when the connected TrueNAS is older than the minimum
 /// supported version. Renders nothing while loading, on error, or when the

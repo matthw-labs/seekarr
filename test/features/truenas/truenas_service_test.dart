@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/truenas/data/truenas_service.dart';
-import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
+import 'package:cupola/features/truenas/data/truenas_service.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 
 /// A [TrueNasWsClient] that returns canned JSON-RPC results per method.
 class _FakeClient extends TrueNasWsClient {

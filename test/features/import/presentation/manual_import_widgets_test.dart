@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/utils/byte_format.dart';
-import 'package:seekarr/features/import/presentation/manual_import_widgets.dart';
+import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/features/import/presentation/manual_import_widgets.dart';
 
 void main() {
   group('formatImportBytes', () {

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/prowlarr/data/prowlarr_service.dart';
-import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
-import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_provider_form_sheet.dart';
+import 'package:cupola/features/prowlarr/data/prowlarr_service.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_provider_form_sheet.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 

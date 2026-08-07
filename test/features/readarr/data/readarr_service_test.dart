@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/readarr/data/readarr_service.dart';
+import 'package:cupola/features/readarr/data/readarr_service.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 import '../../../test_helpers/fixtures.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/truenas/domain/models/virt_instance.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/domain/models/virt_instance.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
 final truenasVirtGlobalProvider =
     FutureProvider.autoDispose<TrueNasVirtGlobalConfig>((ref) async {

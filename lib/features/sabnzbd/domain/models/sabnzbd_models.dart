@@ -8,7 +8,7 @@
 /// depending on which dashboard you were looking at.
 library;
 
-import 'package:seekarr/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/byte_format.dart';
 
 double _asDouble(dynamic value) {
   if (value is num) return value.toDouble();

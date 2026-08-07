@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/music/domain/models/lidarr_track.dart';
+import 'package:cupola/features/music/domain/models/lidarr_track.dart';
 
 void main() {
   group('LidarrTrack', () {

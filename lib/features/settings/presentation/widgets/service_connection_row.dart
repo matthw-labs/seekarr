@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
-import 'package:seekarr/features/settings/data/service_connection_provider.dart';
-import 'package:seekarr/features/settings/data/service_verification.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/connection_presentation.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One service inside a [SettingsGroupCard]: its accent icon, its host, and the
 /// live state of the connection.

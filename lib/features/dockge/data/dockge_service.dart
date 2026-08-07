@@ -1,6 +1,6 @@
-import 'package:seekarr/features/dockge/data/dockge_client.dart';
-import 'package:seekarr/features/dockge/domain/models/dockge_stack.dart';
-import 'package:seekarr/features/dockge/domain/models/dockge_stack_detail.dart';
+import 'package:cupola/features/dockge/data/dockge_client.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 
 /// Thin facade over [DockgeClient] for one-shot, request/response style reads
 /// (used by KPI and status aggregation). Live views should watch the client's

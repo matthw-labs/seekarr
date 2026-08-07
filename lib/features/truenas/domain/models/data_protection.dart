@@ -1,4 +1,4 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// The kind of data-protection task, each backed by a distinct RPC namespace.
 enum TrueNasTaskKind {

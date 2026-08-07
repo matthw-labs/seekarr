@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/release_search/presentation/release_search_jobs_provider.dart';
+import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 
 /// Whether the app is currently in front of the user.
 ///

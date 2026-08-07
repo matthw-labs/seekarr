@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/utils/image_utils.dart';
-import 'package:seekarr/core/utils/string_utils.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_season.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/series/domain/models/sonarr_season.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 
 class SeriesDetailViewModel {
   final String title;

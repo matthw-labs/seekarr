@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/utils/service_action.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
-import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_add_indexer_sheet.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_bulk_edit_sheet.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_field_inputs.dart';
-import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_indexer_form_sheet.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/utils/service_action.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_add_indexer_sheet.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_bulk_edit_sheet.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_field_inputs.dart';
+import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_indexer_form_sheet.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Everything a write action can invalidate: the indexer list itself plus the
 /// derived views (stats, failure state, health, activity) and the `/services`

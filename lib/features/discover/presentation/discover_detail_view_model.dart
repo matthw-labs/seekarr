@@ -1,6 +1,6 @@
-import 'package:seekarr/core/utils/image_utils.dart';
-import 'package:seekarr/core/utils/string_utils.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 
 typedef DiscoverDetailRating = ({
   String name,

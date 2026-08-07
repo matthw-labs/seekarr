@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
-import 'package:seekarr/features/bazarr/presentation/bazarr_detail_view_model.dart';
-import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
-import 'package:seekarr/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_detail_view_model.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Bazarr movie subtitle detail, on the shared media-detail scaffold.
 class BazarrMovieDetailScreen extends ConsumerWidget {

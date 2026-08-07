@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/features/sabnzbd/data/sabnzbd_client.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 
 import '../../../test_helpers/capturing_http_adapter.dart';
 import '../../../test_helpers/fixtures.dart';

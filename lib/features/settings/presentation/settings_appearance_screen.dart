@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/widgets/ambient_scaffold.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/core/widgets/glass_app_bar.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
-import 'package:seekarr/features/settings/presentation/widgets/settings_choice_row.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_choice_row.dart';
 
 class SettingsAppearanceScreen extends ConsumerWidget {
   const SettingsAppearanceScreen({super.key});

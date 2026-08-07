@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_tile.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_tile.dart';
 
 Torrent _torrent({
   String name = 'Ubuntu 24.04 LTS',

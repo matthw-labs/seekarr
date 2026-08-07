@@ -5,12 +5,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
-import 'package:seekarr/features/qbittorrent/data/qbittorrent_service.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_properties.dart';
-import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 class _StubAdapter implements HttpClientAdapter {
   // Holds JSON responses keyed by request path. The values can be either

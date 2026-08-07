@@ -4,21 +4,21 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/duration_format.dart';
-import 'package:seekarr/core/utils/grab_error_utils.dart';
-import 'package:seekarr/core/utils/release_utils.dart';
-import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/core/widgets/app_empty_state.dart';
-import 'package:seekarr/core/widgets/app_error_state.dart';
-import 'package:seekarr/core/widgets/release_list_widgets.dart';
-import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/duration_format.dart';
+import 'package:cupola/core/utils/grab_error_utils.dart';
+import 'package:cupola/core/utils/release_utils.dart';
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/release_list_widgets.dart';
+import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 
 // Re-export ReleaseSortType for backwards compatibility
-export 'package:seekarr/core/utils/release_utils.dart' show ReleaseSortType;
+export 'package:cupola/core/utils/release_utils.dart' show ReleaseSortType;
 
 /// Signals that a grab callback deliberately did **not** grab.
 ///

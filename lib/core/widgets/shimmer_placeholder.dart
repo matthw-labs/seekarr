@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_radius.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_radius.dart';
 
 /// A shimmer loading placeholder effect following Material Design 3.
 ///

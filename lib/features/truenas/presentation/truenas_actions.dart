@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
-import 'package:seekarr/core/utils/service_action.dart';
+import 'package:cupola/core/utils/service_action.dart';
 
 /// Runs a TrueNAS mutation with the shared plumbing: await [action],
 /// invalidate the [invalidate] providers on success, and report the outcome

@@ -1,5 +1,5 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ManualImportRootFolder {
   final int id;

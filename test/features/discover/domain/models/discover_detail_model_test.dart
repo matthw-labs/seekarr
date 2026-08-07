@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 
 void main() {
   group('RelatedVideo.url', () {

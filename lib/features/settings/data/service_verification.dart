@@ -1,21 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/features/dockge/data/dockge_client.dart';
-import 'package:seekarr/features/jellyfin/data/jellyfin_client.dart';
-import 'package:seekarr/features/npm/data/npm_client.dart';
-import 'package:seekarr/features/nzbget/data/nzbget_client.dart';
-import 'package:seekarr/features/plex/data/plex_client.dart';
-import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
-import 'package:seekarr/features/sabnzbd/data/sabnzbd_client.dart';
-import 'package:seekarr/features/settings/data/service_connection_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
-import 'package:seekarr/features/transmission/data/transmission_client.dart';
-import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
-import 'package:seekarr/features/unraid/data/unraid_client.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/features/dockge/data/dockge_client.dart';
+import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
+import 'package:cupola/features/npm/data/npm_client.dart';
+import 'package:cupola/features/nzbget/data/nzbget_client.dart';
+import 'package:cupola/features/plex/data/plex_client.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/transmission/data/transmission_client.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
+import 'package:cupola/features/unraid/data/unraid_client.dart';
 
 /// Where a service's connection is checked, and how the result is described.
 ///

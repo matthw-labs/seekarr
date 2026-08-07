@@ -1,4 +1,4 @@
-import 'package:seekarr/core/models/rating_source.dart';
+import 'package:cupola/core/models/rating_source.dart';
 
 /// Parses *arr API ratings data into a list of [RatingSource].
 List<RatingSource> parseArrRatings(

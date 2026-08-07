@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/models/rating_source.dart';
-import 'package:seekarr/core/utils/rating_display.dart';
-import 'package:seekarr/core/widgets/rating_chip.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/models/rating_source.dart';
+import 'package:cupola/core/utils/rating_display.dart';
+import 'package:cupola/core/widgets/rating_chip.dart';
 
 /// Displays a horizontal wrap of [RatingChip] widgets from a list of
 /// [RatingSource].

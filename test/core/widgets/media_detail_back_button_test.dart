@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/header_action_row.dart';
-import 'package:seekarr/core/widgets/media_detail_back_button.dart';
-import 'package:seekarr/core/widgets/media_detail_header_metrics.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/header_action_row.dart';
+import 'package:cupola/core/widgets/media_detail_back_button.dart';
+import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
 
 /// The two extremes of photographic artwork. Every real backdrop composites
 /// somewhere between them, and the plate's guarantee is monotonic in the

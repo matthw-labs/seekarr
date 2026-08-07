@@ -5,7 +5,7 @@
 /// says on this tab is built here, so the widget and the test read one source.
 library;
 
-import 'package:seekarr/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/arr_activity_display.dart';
 
 /// Joins the non-empty parts with the comma both screen readers read as a short
 /// pause.

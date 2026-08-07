@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/features/truenas/domain/models/dataset.dart';
-import 'package:seekarr/features/truenas/presentation/datasets/truenas_dataset_providers.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_actions.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_form_sheet.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/features/truenas/domain/models/dataset.dart';
+import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_providers.dart';
+import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.dart';
 
 /// Creates a dataset. With [parentId], asks for a child name and creates
 /// `parentId/child`; without it, asks for a full `pool/dataset` path.

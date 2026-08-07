@@ -1,5 +1,5 @@
-import 'package:seekarr/features/truenas/data/truenas_api_base.dart';
-import 'package:seekarr/features/truenas/domain/models/reporting.dart';
+import 'package:cupola/features/truenas/data/truenas_api_base.dart';
+import 'package:cupola/features/truenas/domain/models/reporting.dart';
 
 /// Reporting graphs from Netdata (`reporting.get_data`).
 class TrueNasReportingApi extends TrueNasApiBase {

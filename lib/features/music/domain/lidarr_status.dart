@@ -1,7 +1,7 @@
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_album.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_artist.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_track.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/features/music/domain/models/lidarr_album.dart';
+import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/music/domain/models/lidarr_track.dart';
 
 /// Resolves the badge status for a Lidarr artist.
 MediaStatusInfo lidarrArtistStatus(

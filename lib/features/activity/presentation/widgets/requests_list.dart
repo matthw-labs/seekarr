@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/core/widgets/app_empty_state.dart';
-import 'package:seekarr/core/widgets/app_error_state.dart';
-import 'package:seekarr/core/widgets/app_skeleton.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
-import 'package:seekarr/core/widgets/tag_chip.dart';
-import 'package:seekarr/features/activity/domain/global_activity_status.dart';
-import 'package:seekarr/features/discover/data/seerr_service.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
-import 'package:seekarr/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/core/widgets/tag_chip.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
 
 /// The Seerr requests list, reached from `/activity/discover`.
 ///
@@ -24,7 +24,7 @@ import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 /// info-row pattern found nowhere else in the app, and a raw
 /// `CircularProgressIndicator` plus `'Error: $err'` for its states. Every string
 /// here still takes a role off `textTheme` — and re-weights through
-/// `SeekarrTextStyle.weight`, since `copyWith(fontWeight:)` on the bundled
+/// `CupolaTextStyle.weight`, since `copyWith(fontWeight:)` on the bundled
 /// variable Inter does not reach the `wght` axis and silently renders Regular.
 class RequestsList extends ConsumerWidget {
   const RequestsList({super.key});

@@ -1,6 +1,6 @@
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/features/bazarr/data/bazarr_service.dart';
-import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/bazarr/data/bazarr_service.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 
 ApiClient _client(String baseUrl) => ApiClient(baseUrl: baseUrl, apiKey: 'key');
 

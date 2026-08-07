@@ -1,11 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/app_elevation.dart';
-import 'package:seekarr/core/app_gradients.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/network/pinned_image_cache.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/app_elevation.dart';
+import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
 
 /// A card widget for displaying media content with cached images.
 ///

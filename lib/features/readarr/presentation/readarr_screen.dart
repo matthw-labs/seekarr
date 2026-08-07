@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/readarr/domain/models/readarr_models.dart';
-import 'package:seekarr/features/readarr/presentation/readarr_provider.dart';
-import 'package:seekarr/features/readarr/presentation/widgets/readarr_tiles.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
+import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
+import 'package:cupola/features/readarr/presentation/widgets/readarr_tiles.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Readarr service dashboard: author overview, library KPIs and recent activity.
 /// Read-only for the first release. Readarr is archived upstream but its v1 API

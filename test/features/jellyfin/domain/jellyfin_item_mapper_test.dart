@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/jellyfin/domain/models/jellyfin_item_mapper.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_item_mapper.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
 
 /// The mappers, exercised on the shapes a fixture cannot conveniently hold: a
 /// field that is **absent** rather than zero, and the artwork fallback chain.

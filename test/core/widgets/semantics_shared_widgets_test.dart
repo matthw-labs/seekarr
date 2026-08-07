@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/async_value_widget.dart';
-import 'package:seekarr/core/widgets/domain_section.dart';
-import 'package:seekarr/core/widgets/media_detail_section_label.dart';
-import 'package:seekarr/core/widgets/section_header.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/async_value_widget.dart';
+import 'package:cupola/core/widgets/domain_section.dart';
+import 'package:cupola/core/widgets/media_detail_section_label.dart';
+import 'package:cupola/core/widgets/section_header.dart';
 
 Future<void> _pump(WidgetTester tester, Widget child) async {
   await tester.pumpWidget(MaterialApp(home: Scaffold(body: child)));

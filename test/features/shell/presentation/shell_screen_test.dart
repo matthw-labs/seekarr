@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_jobs_provider.dart';
-import 'package:seekarr/features/release_search/presentation/release_search_lifecycle.dart';
-import 'package:seekarr/features/shell/presentation/shell_screen.dart';
+import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
+import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
+import 'package:cupola/features/shell/presentation/shell_screen.dart';
 
 import '../../../test_helpers/semantics_announcements.dart';
 

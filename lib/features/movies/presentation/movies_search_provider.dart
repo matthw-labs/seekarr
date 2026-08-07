@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
-import 'package:seekarr/core/utils/search_results_loader.dart';
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/core/utils/search_results_loader.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 
 /// Provider for the current search query in Movies section.
 final moviesSearchQueryProvider = StateProvider<String>((ref) => '');

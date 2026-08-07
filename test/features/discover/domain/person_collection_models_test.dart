@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/discover/domain/models/collection_detail.dart';
-import 'package:seekarr/features/discover/domain/models/person_detail.dart';
+import 'package:cupola/features/discover/domain/models/collection_detail.dart';
+import 'package:cupola/features/discover/domain/models/person_detail.dart';
 
 void main() {
   group('PersonDetail.fromJson', () {

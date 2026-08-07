@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/models/service_kpi.dart';
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/services/domain/service_signal.dart';
+import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/services/domain/service_signal.dart';
 
 ServiceKpi _kpi(String label, String value, {Color? accent}) =>
     ServiceKpi(label: label, value: value, icon: Icons.circle, accent: accent);

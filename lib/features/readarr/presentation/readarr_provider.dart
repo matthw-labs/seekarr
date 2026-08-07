@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/features/readarr/data/readarr_service.dart';
-import 'package:seekarr/features/readarr/domain/models/readarr_models.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/readarr/data/readarr_service.dart';
+import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// Dashboard-ready alias for the underlying Readarr service.
 ///

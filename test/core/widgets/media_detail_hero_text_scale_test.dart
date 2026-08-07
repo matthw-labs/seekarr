@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/media_detail_header_metrics.dart';
-import 'package:seekarr/core/widgets/media_detail_poster_row.dart';
-import 'package:seekarr/core/widgets/media_detail_slot.dart';
-import 'package:seekarr/core/widgets/media_detail_view.dart';
-import 'package:seekarr/core/widgets/media_poster_card.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
-import 'package:seekarr/core/widgets/tag_chip.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
+import 'package:cupola/core/widgets/media_detail_poster_row.dart';
+import 'package:cupola/core/widgets/media_detail_slot.dart';
+import 'package:cupola/core/widgets/media_detail_view.dart';
+import 'package:cupola/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/core/widgets/tag_chip.dart';
 
 /// The worst realistic hero copy: a title that needs both its lines, a full
 /// metadata line, and three long genre chips that wrap into multiple runs.

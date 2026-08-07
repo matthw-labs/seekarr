@@ -3,27 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/ambient_scaffold.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/core/widgets/glass_app_bar.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
-import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
-import 'package:seekarr/features/settings/data/donation_service.dart';
-import 'package:seekarr/features/settings/data/service_connection_provider.dart';
-import 'package:seekarr/features/settings/data/service_verification.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/connection_presentation.dart';
-import 'package:seekarr/features/settings/domain/regions.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/domain/settings_model.dart';
-import 'package:seekarr/features/settings/presentation/widgets/donation_sheet.dart';
-import 'package:seekarr/features/settings/presentation/widgets/service_connection_row.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/settings/data/donation_service.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/regions.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/presentation/widgets/donation_sheet.dart';
+import 'package:cupola/features/settings/presentation/widgets/service_connection_row.dart';
 
 /// The settings index.
 ///

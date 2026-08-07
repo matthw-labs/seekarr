@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 Future<bool> openMediaInService({
   required BuildContext context,

@@ -15,10 +15,10 @@ library;
 
 import 'package:dio/dio.dart' show CancelToken;
 
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library_page.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
 
 /// A viewer whose watch state a library can be read through.
 class StreamViewer {

@@ -1,22 +1,22 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/network/pinned_image_cache.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/app_empty_state.dart';
-import 'package:seekarr/core/widgets/app_error_state.dart';
-import 'package:seekarr/core/widgets/app_skeleton.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
-import 'package:seekarr/features/truenas/domain/models/app.dart';
-import 'package:seekarr/features/truenas/presentation/apps/truenas_app_actions.dart';
-import 'package:seekarr/features/truenas/presentation/apps/truenas_apps_providers.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/features/truenas/domain/models/app.dart';
+import 'package:cupola/features/truenas/presentation/apps/truenas_app_actions.dart';
+import 'package:cupola/features/truenas/presentation/apps/truenas_apps_providers.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 
 class TrueNasAppsScreen extends ConsumerWidget {
   const TrueNasAppsScreen({super.key});

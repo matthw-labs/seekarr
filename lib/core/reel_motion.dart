@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:reel_text/reel_text.dart';
 
-import 'package:seekarr/core/app_animation.dart';
+import 'package:cupola/core/app_animation.dart';
 
 /// The app's roll vocabulary: five presets, and no call site may hand-write a
 /// `ReelTextOptions`.

@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/music/data/lidarr_service.dart';
-import 'package:seekarr/features/release_search/domain/release_search_headroom.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/release_search/domain/release_search_headroom.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Everything Seekarr has measured about how each instance is reached.
 ///

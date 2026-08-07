@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/models/media_preview.dart';
-import 'package:seekarr/core/utils/image_utils.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/app_skeleton.dart';
-import 'package:seekarr/core/widgets/content_card.dart';
-import 'package:seekarr/core/widgets/media_poster_card.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
-import 'package:seekarr/core/widgets/section_header.dart';
-import 'package:seekarr/core/widgets/staggered_entrance.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/core/widgets/staggered_entrance.dart';
 
 /// A single premium discover row: a section header + horizontal poster
 /// carousel. Collapses to nothing while it has no data (so unsupported Seerr

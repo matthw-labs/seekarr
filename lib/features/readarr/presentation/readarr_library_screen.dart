@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/readarr/presentation/readarr_provider.dart';
-import 'package:seekarr/features/readarr/presentation/readarr_screen.dart';
-import 'package:seekarr/features/readarr/presentation/widgets/readarr_tiles.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
+import 'package:cupola/features/readarr/presentation/readarr_screen.dart';
+import 'package:cupola/features/readarr/presentation/widgets/readarr_tiles.dart';
 
 /// Full author list for Readarr, reached from the dashboard "Authors" section.
 class ReadarrLibraryScreen extends ConsumerWidget {

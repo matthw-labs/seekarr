@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/ambient_scaffold.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/core/widgets/glass_app_bar.dart';
-import 'package:seekarr/core/widgets/service_ring.dart';
-import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
-import 'package:seekarr/features/services/presentation/service_matrix.dart';
-import 'package:seekarr/features/services/presentation/services_alert_band.dart';
-import 'package:seekarr/features/services/presentation/services_dashboard_sections.dart';
-import 'package:seekarr/features/services/presentation/services_provider.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/service_matrix.dart';
+import 'package:cupola/features/services/presentation/services_alert_band.dart';
+import 'package:cupola/features/services/presentation/services_dashboard_sections.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ServicesScreen extends ConsumerWidget {
   const ServicesScreen({super.key});

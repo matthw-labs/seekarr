@@ -1,6 +1,6 @@
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 
 /// Resolves the badge status for a Seerr media entry.
 ///

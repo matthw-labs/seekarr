@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/models/media_preview.dart';
-import 'package:seekarr/core/utils/image_utils.dart';
-import 'package:seekarr/core/utils/string_utils.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/discover/presentation/discover_details_provider.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_carousel.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Premium person (cast member) page: profile hero, biography and a filmography
 /// rail. Reached by tapping a cast member on a detail page.

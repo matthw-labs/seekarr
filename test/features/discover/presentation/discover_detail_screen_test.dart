@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/discover/presentation/discover_detail_extras_provider.dart';
-import 'package:seekarr/features/discover/presentation/discover_detail_screen.dart';
-import 'package:seekarr/features/discover/presentation/discover_details_provider.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_seasons_list.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/presentation/discover_detail_extras_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_seasons_list.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// Screen-level coverage for the Seerr detail page.
 ///

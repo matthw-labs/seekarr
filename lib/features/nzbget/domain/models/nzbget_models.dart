@@ -10,7 +10,7 @@
 /// quantity read differently depending on which download client reported it.
 library;
 
-import 'package:seekarr/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/byte_format.dart';
 
 int _asInt(dynamic value) {
   if (value is num) return value.toInt();

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
 
 /// Reading size past which a label and its action stop sharing a line.
 ///
@@ -73,7 +73,7 @@ class MediaDetailSectionLabel extends StatelessWidget {
       tintAlpha: 0,
     );
     final dimText =
-        theme.extension<SeekarrThemeColors>()?.dimText ??
+        theme.extension<CupolaThemeColors>()?.dimText ??
         colorScheme.onSurfaceVariant;
 
     final headline = ExcludeSemantics(

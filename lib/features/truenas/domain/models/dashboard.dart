@@ -1,8 +1,8 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/truenas/domain/models/alert.dart';
-import 'package:seekarr/features/truenas/domain/models/pool.dart';
-import 'package:seekarr/features/truenas/domain/models/service_item.dart';
-import 'package:seekarr/features/truenas/domain/models/system_info.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/truenas/domain/models/alert.dart';
+import 'package:cupola/features/truenas/domain/models/pool.dart';
+import 'package:cupola/features/truenas/domain/models/service_item.dart';
+import 'package:cupola/features/truenas/domain/models/system_info.dart';
 
 /// Aggregated dashboard snapshot (system, pools, alerts, services).
 class TrueNasDashboard {

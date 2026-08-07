@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/header_action_row.dart';
-import 'package:seekarr/core/widgets/media_profile_selector.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/widgets/header_action_row.dart';
+import 'package:cupola/core/widgets/media_profile_selector.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 const _profiles = <Map<String, dynamic>>[
   {'id': 1, 'name': 'HD-1080p'},

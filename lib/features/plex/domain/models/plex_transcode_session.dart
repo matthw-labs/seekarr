@@ -17,8 +17,8 @@ library;
 
 import 'package:flutter/foundation.dart';
 
-import 'package:seekarr/features/plex/domain/models/plex_models.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/plex/domain/models/plex_models.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
 
 /// What Plex decided to do with one stream of the file.
 enum PlexStreamDecision {

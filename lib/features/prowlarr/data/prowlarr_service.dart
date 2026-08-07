@@ -2,9 +2,9 @@ import 'dart:isolate';
 
 import 'package:dio/dio.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 
 /// Service for interacting with the Prowlarr API (v1).
 ///

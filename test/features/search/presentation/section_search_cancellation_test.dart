@@ -4,15 +4,15 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/movies/data/radarr_service.dart';
-import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
-import 'package:seekarr/features/movies/presentation/movies_search_provider.dart';
-import 'package:seekarr/features/music/data/lidarr_service.dart';
-import 'package:seekarr/features/music/domain/models/lidarr_artist.dart';
-import 'package:seekarr/features/music/presentation/music_search_provider.dart';
-import 'package:seekarr/features/series/data/sonarr_service.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
-import 'package:seekarr/features/series/presentation/series_search_provider.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/movies/presentation/movies_search_provider.dart';
+import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/music/presentation/music_search_provider.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/series/presentation/series_search_provider.dart';
 
 import '../../../test_helpers/fake_services.dart';
 

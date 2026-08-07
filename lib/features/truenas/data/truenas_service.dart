@@ -1,11 +1,11 @@
-import 'package:seekarr/features/truenas/data/storage_api.dart';
-import 'package:seekarr/features/truenas/data/system_api.dart';
-import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
-import 'package:seekarr/features/truenas/domain/models/alert.dart';
-import 'package:seekarr/features/truenas/domain/models/dashboard.dart';
-import 'package:seekarr/features/truenas/domain/models/pool.dart';
-import 'package:seekarr/features/truenas/domain/models/service_item.dart';
-import 'package:seekarr/features/truenas/domain/models/system_info.dart';
+import 'package:cupola/features/truenas/data/storage_api.dart';
+import 'package:cupola/features/truenas/data/system_api.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
+import 'package:cupola/features/truenas/domain/models/alert.dart';
+import 'package:cupola/features/truenas/domain/models/dashboard.dart';
+import 'package:cupola/features/truenas/domain/models/pool.dart';
+import 'package:cupola/features/truenas/domain/models/service_item.dart';
+import 'package:cupola/features/truenas/domain/models/system_info.dart';
 
 /// Thin facade preserving the original dashboard/KPI surface, delegating to the
 /// domain-grouped API classes over the shared [TrueNasWsClient].

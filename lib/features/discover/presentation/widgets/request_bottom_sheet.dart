@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/features/discover/presentation/request_form_provider.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/features/discover/presentation/request_form_provider.dart';
 
 /// Bottom sheet for selecting quality profile and submitting request to Seerr.
 ///

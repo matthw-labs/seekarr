@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/network/redirect_guard.dart';
-import 'package:seekarr/features/transmission/data/transmission_client.dart';
-import 'package:seekarr/features/transmission/domain/models/transmission_models.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/redirect_guard.dart';
+import 'package:cupola/features/transmission/data/transmission_client.dart';
+import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
 import '../../../test_helpers/scripted_http_adapter.dart';
 

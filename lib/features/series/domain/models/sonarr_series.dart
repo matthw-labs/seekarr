@@ -1,9 +1,9 @@
-import 'package:seekarr/core/models/media_preview.dart';
-import 'package:seekarr/core/models/rating_source.dart';
-import 'package:seekarr/core/utils/arr_model_helpers.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_season.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/models/rating_source.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
+import 'package:cupola/features/series/domain/models/sonarr_season.dart';
 
-export 'package:seekarr/core/models/rating_source.dart';
+export 'package:cupola/core/models/rating_source.dart';
 
 class SonarrSeries {
   final int id;

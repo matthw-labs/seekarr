@@ -1,19 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/truenas/data/apps_api.dart';
-import 'package:seekarr/features/truenas/data/credentials_api.dart';
-import 'package:seekarr/features/truenas/data/data_protection_api.dart';
-import 'package:seekarr/features/truenas/data/dataset_api.dart';
-import 'package:seekarr/features/truenas/data/network_api.dart';
-import 'package:seekarr/features/truenas/data/reporting_api.dart';
-import 'package:seekarr/features/truenas/data/sharing_api.dart';
-import 'package:seekarr/features/truenas/data/storage_api.dart';
-import 'package:seekarr/features/truenas/data/system_api.dart';
-import 'package:seekarr/features/truenas/data/truenas_service.dart';
-import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
-import 'package:seekarr/features/truenas/data/virt_api.dart';
-import 'package:seekarr/features/truenas/domain/truenas_version.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/truenas/data/apps_api.dart';
+import 'package:cupola/features/truenas/data/credentials_api.dart';
+import 'package:cupola/features/truenas/data/data_protection_api.dart';
+import 'package:cupola/features/truenas/data/dataset_api.dart';
+import 'package:cupola/features/truenas/data/network_api.dart';
+import 'package:cupola/features/truenas/data/reporting_api.dart';
+import 'package:cupola/features/truenas/data/sharing_api.dart';
+import 'package:cupola/features/truenas/data/storage_api.dart';
+import 'package:cupola/features/truenas/data/system_api.dart';
+import 'package:cupola/features/truenas/data/truenas_service.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
+import 'package:cupola/features/truenas/data/virt_api.dart';
+import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
 /// Long-lived WebSocket client for TrueNAS, rebuilt when its URL/API key
 /// change. Closed automatically when disposed.

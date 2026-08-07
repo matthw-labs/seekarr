@@ -1,4 +1,4 @@
-name: seekarr
+name: cupola
 description: A Flutter app for managing self-hosted Seerr, Radarr, Sonarr, and Lidarr services.
 homepage: https://github.com/matthw-labs/seekarr
 repository: https://github.com/matthw-labs/seekarr

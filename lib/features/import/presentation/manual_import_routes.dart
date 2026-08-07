@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 const manualImportPathPrefix = '/import';
 

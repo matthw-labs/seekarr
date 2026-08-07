@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/selection_pills.dart';
+import 'package:cupola/core/widgets/selection_pills.dart';
 
 enum _Segment { history, blocklist }
 

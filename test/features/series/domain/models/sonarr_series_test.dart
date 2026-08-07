@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 
 void main() {
   group('SonarrSeries', () {

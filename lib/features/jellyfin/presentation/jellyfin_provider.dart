@@ -1,12 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/jellyfin/data/jellyfin_client.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
-import 'package:seekarr/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// Jellyfin client bound to the current settings.
 ///

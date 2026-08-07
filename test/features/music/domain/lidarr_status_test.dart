@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/status/arr_queue_snapshot.dart';
-import 'package:seekarr/features/music/domain/lidarr_status.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/features/music/domain/lidarr_status.dart';
 
 import '../../../test_helpers/model_builders.dart';
 

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/theme.dart';
 
 /// A 270° radial gauge for a single 0..1 value (e.g. CPU load, pool usage).
 class RadialGauge extends StatelessWidget {

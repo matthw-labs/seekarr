@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_gradients.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The full colour bundle for a single service, derived from its accent.
 ///

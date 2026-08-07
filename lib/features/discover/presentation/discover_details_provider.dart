@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/models/media_preview.dart';
-import 'package:seekarr/features/discover/data/seerr_service.dart';
-import 'package:seekarr/features/discover/domain/models/collection_detail.dart';
-import 'package:seekarr/features/discover/domain/models/person_detail.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/collection_detail.dart';
+import 'package:cupola/features/discover/domain/models/person_detail.dart';
 
 final discoverDetailProvider = FutureProvider.autoDispose
     .family<Map<String, dynamic>, ({int id, String type})>((ref, arg) async {

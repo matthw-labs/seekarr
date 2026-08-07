@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/features/services/presentation/service_dashboard_screen.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/services/presentation/service_dashboard_screen.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
   testWidgets('pushes service dashboard from services home and pops back', (

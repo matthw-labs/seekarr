@@ -14,7 +14,7 @@
 /// grab landed was being shown a stable list that never changed.
 library;
 
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One library item, flattened to just what the rail paints and sorts on.
 ///

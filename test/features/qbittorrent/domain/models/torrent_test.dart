@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 
 void main() {
   group('TorrentState.fromString', () {

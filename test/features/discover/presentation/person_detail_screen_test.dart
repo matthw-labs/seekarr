@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/models/media_preview.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/discover/domain/models/person_detail.dart';
-import 'package:seekarr/features/discover/presentation/discover_details_provider.dart';
-import 'package:seekarr/features/discover/presentation/person_detail_screen.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/domain/models/person_detail.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
 
 const _personId = 9;
 

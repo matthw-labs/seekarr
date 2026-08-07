@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/widgets/app_empty_state.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Shown where a service has no address or credentials stored yet.
 ///

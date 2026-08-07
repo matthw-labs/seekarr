@@ -14,8 +14,8 @@ library;
 
 import 'package:flutter/foundation.dart';
 
-import 'package:seekarr/features/stream/domain/models/stream_library.dart';
-import 'package:seekarr/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// `GET /System/Info/Public` — the one endpoint that takes no credential.
 ///

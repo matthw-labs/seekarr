@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/widgets/header_action_row.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/header_action_row.dart';
 
 void main() {
   group('HeaderActionRow.buttonHeight', () {

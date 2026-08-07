@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/media_detail_slot.dart';
-import 'package:seekarr/features/discover/presentation/arr_media_extras_provider.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_cast_list.dart';
-import 'package:seekarr/features/discover/presentation/widgets/discover_collection_banner.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/media_detail_slot.dart';
+import 'package:cupola/features/discover/presentation/arr_media_extras_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_collection_banner.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Region-6 slots for an *arr (Radarr/Sonarr) detail page — the `CAST` rail and
 /// the `COLLECTION` banner, fetched from TMDB via Seerr — or the "Connect Seerr"

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 
 /// Badge style (label, colour, icon) for a Prowlarr history [item].
 ///

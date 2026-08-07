@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/byte_format.dart';
 
 /// Sort options for releases in Interactive Search.
 enum ReleaseSortType {

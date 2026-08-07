@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
-import 'package:seekarr/core/widgets/header_action_row.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/header_action_row.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 
 /// Full-width filled button that opens the related-videos sheet.
 class DiscoverVideosButton extends StatelessWidget {

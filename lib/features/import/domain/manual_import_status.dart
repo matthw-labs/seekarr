@@ -1,6 +1,6 @@
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/features/import/domain/manual_import_models.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/import/domain/manual_import_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The four classes the Review screen sorts a scan into.
 ///

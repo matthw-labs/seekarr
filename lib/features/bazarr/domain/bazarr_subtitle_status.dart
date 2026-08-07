@@ -1,4 +1,4 @@
-import 'package:seekarr/core/status/media_status.dart';
+import 'package:cupola/core/status/media_status.dart';
 
 /// Resolves a Bazarr movie/series monitoring state into the shared status
 /// vocabulary, per the rule that statuses are built in a feature's `domain/`

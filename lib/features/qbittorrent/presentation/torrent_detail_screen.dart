@@ -3,20 +3,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/route_utils.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_file.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_properties.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/torrent_tracker.dart';
-import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_actions.dart';
-import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_edit_dialogs.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/route_utils.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_file.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
+import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_edit_dialogs.dart';
 
 class TorrentDetailScreen extends ConsumerStatefulWidget {
   final String hash;

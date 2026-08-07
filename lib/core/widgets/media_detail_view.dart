@@ -5,24 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
     show OverScrollHeaderStretchConfiguration;
 
-import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_gradients.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/network/pinned_image_cache.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/ambient_background.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/core/widgets/glass_app_bar.dart';
-import 'package:seekarr/core/widgets/media_detail_back_button.dart';
-import 'package:seekarr/core/widgets/media_detail_body_metrics.dart';
-import 'package:seekarr/core/widgets/media_detail_header_metrics.dart';
-import 'package:seekarr/core/widgets/media_detail_poster_row.dart';
-import 'package:seekarr/core/widgets/media_detail_section_label.dart';
-import 'package:seekarr/core/widgets/media_detail_slot.dart';
-import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
-import 'package:seekarr/core/widgets/staggered_entrance.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/media_detail_back_button.dart';
+import 'package:cupola/core/widgets/media_detail_body_metrics.dart';
+import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
+import 'package:cupola/core/widgets/media_detail_poster_row.dart';
+import 'package:cupola/core/widgets/media_detail_section_label.dart';
+import 'package:cupola/core/widgets/media_detail_slot.dart';
+import 'package:cupola/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/core/widgets/staggered_entrance.dart';
 
 /// A reusable view for displaying media details with a cinematic collapsing
 /// hero, compact poster/title block, and a six-region sliver body.

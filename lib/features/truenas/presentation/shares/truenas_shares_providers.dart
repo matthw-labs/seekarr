@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/truenas/domain/models/service_item.dart';
-import 'package:seekarr/features/truenas/domain/models/share.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/domain/models/service_item.dart';
+import 'package:cupola/features/truenas/domain/models/share.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
 final truenasSmbSharesProvider =
     FutureProvider.autoDispose<List<TrueNasSmbShare>>((ref) async {

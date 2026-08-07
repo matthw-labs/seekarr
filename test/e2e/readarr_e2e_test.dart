@@ -3,8 +3,8 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/features/readarr/data/readarr_service.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/readarr/data/readarr_service.dart';
 
 /// Tier-6 E2E (plan §7.6). Runs the real [ReadarrService] over [ApiClient]
 /// against the Docker instance from docker-compose.e2e.yml, validating the

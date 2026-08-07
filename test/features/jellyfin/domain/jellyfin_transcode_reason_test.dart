@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/jellyfin/domain/models/jellyfin_transcode_reason.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_transcode_reason.dart';
 
 void main() {
   group('jellyfinTranscodeReasonPhrases', () {

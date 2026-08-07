@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/features/plex/data/plex_client.dart';
-import 'package:seekarr/features/plex/domain/models/plex_models.dart';
-import 'package:seekarr/features/settings/data/settings_provider.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
-import 'package:seekarr/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/plex/data/plex_client.dart';
+import 'package:cupola/features/plex/domain/models/plex_models.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// Plex client bound to the current settings.
 ///

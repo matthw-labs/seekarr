@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/utils/image_utils.dart';
+import 'package:cupola/core/utils/image_utils.dart';
 
 void main() {
   group('ImageUtils', () {

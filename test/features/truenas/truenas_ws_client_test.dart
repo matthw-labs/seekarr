@@ -4,8 +4,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 
 /// A loopback JSON-RPC server standing in for TrueNAS middleware.
 ///

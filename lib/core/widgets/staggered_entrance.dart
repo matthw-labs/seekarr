@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_animation.dart';
+import 'package:cupola/core/app_animation.dart';
 
 /// A one-shot fade + slide-up entrance for list/grid children.
 ///

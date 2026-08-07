@@ -2,7 +2,7 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' show Client;
 
-import 'package:seekarr/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/network/pinned_image_cache.dart';
 
 /// Stands in for a real [CacheManager], which opens a sqflite store in its
 /// constructor and so cannot be built in a unit test.

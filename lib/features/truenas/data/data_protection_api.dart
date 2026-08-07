@@ -1,6 +1,6 @@
-import 'package:seekarr/features/truenas/data/truenas_api_base.dart';
-import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
-import 'package:seekarr/features/truenas/domain/models/data_protection.dart';
+import 'package:cupola/features/truenas/data/truenas_api_base.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
+import 'package:cupola/features/truenas/domain/models/data_protection.dart';
 
 /// Data-protection tasks: periodic snapshots, replication, cloud sync, rsync,
 /// and scrub tasks. Each kind maps to its own RPC namespace via

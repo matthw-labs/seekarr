@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:seekarr/core/app_spacing.dart';
+import 'package:cupola/core/app_spacing.dart';
 
 /// Measure of the media detail body's content column.
 ///

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/models/arr_release.dart';
+import 'package:cupola/core/models/arr_release.dart';
 
 void main() {
   group('ArrRelease', () {

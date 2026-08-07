@@ -4,13 +4,13 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/features/plex/data/plex_client.dart';
-import 'package:seekarr/features/plex/domain/models/plex_models.dart';
-import 'package:seekarr/features/plex/domain/models/plex_transcode_session.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/features/plex/data/plex_client.dart';
+import 'package:cupola/features/plex/domain/models/plex_models.dart';
+import 'package:cupola/features/plex/domain/models/plex_transcode_session.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
 
 import '../../../test_helpers/capturing_http_adapter.dart';
 import '../../../test_helpers/fixtures.dart';

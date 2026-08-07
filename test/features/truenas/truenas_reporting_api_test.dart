@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/truenas/data/reporting_api.dart';
-import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
-import 'package:seekarr/features/truenas/domain/models/reporting.dart';
+import 'package:cupola/features/truenas/data/reporting_api.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
+import 'package:cupola/features/truenas/domain/models/reporting.dart';
 
 /// A [TrueNasWsClient] that answers `reporting.get_data` from [handler] and
 /// records the query object each call carried.

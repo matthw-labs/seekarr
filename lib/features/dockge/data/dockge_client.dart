@@ -5,12 +5,12 @@ import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 import 'package:web_socket/io_web_socket.dart';
 import 'package:web_socket/web_socket.dart' as ws;
 
-import 'package:seekarr/core/network/cert_trust.dart';
-import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/features/dockge/domain/models/dockge_stack.dart';
-import 'package:seekarr/features/dockge/domain/models/dockge_stack_detail.dart';
+import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 
 /// Error surfaced by the Dockge client. Carries the [reason] so a caller
 /// verifying the connection can tell an unreachable host from a rejected

@@ -1,16 +1,16 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 
 /// A raw JSON-RPC probe: a human label plus the method + params to send.
 class _Probe {

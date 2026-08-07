@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/models/rating_source.dart';
-import 'package:seekarr/core/widgets/rating_chip.dart';
-import 'package:seekarr/core/widgets/rating_chips_row.dart';
+import 'package:cupola/core/models/rating_source.dart';
+import 'package:cupola/core/widgets/rating_chip.dart';
+import 'package:cupola/core/widgets/rating_chips_row.dart';
 
 void main() {
   group('RatingChipsRow', () {

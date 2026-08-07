@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/theme.dart';
+import 'package:cupola/core/theme.dart';
 
 /// One named series for [LineAreaChart].
 class ChartSeries {

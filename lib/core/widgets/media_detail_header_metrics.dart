@@ -3,7 +3,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/widgets.dart';
 
-import 'package:seekarr/core/text_scale.dart';
+import 'package:cupola/core/text_scale.dart';
 
 /// Extent math for the media detail pages' pinned hero header.
 ///

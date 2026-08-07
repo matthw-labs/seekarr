@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:seekarr/core/utils/snack_bar_helper.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/features/truenas/domain/models/app.dart';
-import 'package:seekarr/features/truenas/presentation/apps/truenas_apps_providers.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_actions.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/features/truenas/domain/models/app.dart';
+import 'package:cupola/features/truenas/presentation/apps/truenas_apps_providers.dart';
+import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
 enum AppAction { start, stop, upgrade, delete }
 

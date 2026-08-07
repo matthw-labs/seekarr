@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/app_dialog.dart';
-import 'package:seekarr/core/widgets/app_error_state.dart';
-import 'package:seekarr/core/widgets/app_skeleton.dart';
-import 'package:seekarr/core/widgets/section_header.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
-import 'package:seekarr/features/truenas/domain/models/virt_instance.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_actions.dart';
-import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
-import 'package:seekarr/features/truenas/presentation/virt/truenas_virt_providers.dart';
-import 'package:seekarr/features/truenas/presentation/virt/truenas_virt_screen.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_info_row.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:cupola/features/truenas/domain/models/virt_instance.dart';
+import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/presentation/virt/truenas_virt_providers.dart';
+import 'package:cupola/features/truenas/presentation/virt/truenas_virt_screen.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 
 class TrueNasVirtDetailScreen extends ConsumerWidget {
   final String id;

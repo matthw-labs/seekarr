@@ -5,15 +5,15 @@ import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/features/jellyfin/domain/models/jellyfin_item_mapper.dart';
-import 'package:seekarr/features/jellyfin/domain/models/jellyfin_models.dart';
-import 'package:seekarr/features/stream/domain/models/stream_item.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library.dart';
-import 'package:seekarr/features/stream/domain/models/stream_library_page.dart';
-import 'package:seekarr/features/stream/domain/models/stream_session.dart';
-import 'package:seekarr/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_item_mapper.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// Jellyfin's implementation of [StreamServerClient].
 ///

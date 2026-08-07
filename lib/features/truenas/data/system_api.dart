@@ -1,8 +1,8 @@
-import 'package:seekarr/core/utils/dynamic_map_utils.dart';
-import 'package:seekarr/features/truenas/data/truenas_api_base.dart';
-import 'package:seekarr/features/truenas/domain/models/alert.dart';
-import 'package:seekarr/features/truenas/domain/models/service_item.dart';
-import 'package:seekarr/features/truenas/domain/models/system_info.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/truenas/data/truenas_api_base.dart';
+import 'package:cupola/features/truenas/domain/models/alert.dart';
+import 'package:cupola/features/truenas/domain/models/service_item.dart';
+import 'package:cupola/features/truenas/domain/models/system_info.dart';
 
 /// System info, services, alerts, and system-configuration operations.
 class TrueNasSystemApi extends TrueNasApiBase {

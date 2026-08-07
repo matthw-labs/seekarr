@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/widgets/ambient_scaffold.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:seekarr/core/widgets/glass_app_bar.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_version_banner.dart';
+import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_version_banner.dart';
 
 /// Standard chrome for a pushed TrueNAS section/detail screen: ambient
 /// background, a glass app bar with back navigation, and an optional

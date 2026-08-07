@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/features/bazarr/domain/bazarr_subtitle_status.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/bazarr/domain/bazarr_subtitle_status.dart';
 
 void main() {
   group('bazarrSubtitleStatus', () {

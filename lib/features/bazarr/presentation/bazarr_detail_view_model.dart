@@ -1,7 +1,7 @@
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/core/widgets/media_info_card.dart';
-import 'package:seekarr/features/bazarr/domain/bazarr_subtitle_status.dart';
-import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/widgets/media_info_card.dart';
+import 'package:cupola/features/bazarr/domain/bazarr_subtitle_status.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 
 /// Presentation model for the Bazarr movie/series detail screens.
 ///

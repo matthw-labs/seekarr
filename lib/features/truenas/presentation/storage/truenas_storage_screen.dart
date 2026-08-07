@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/core/widgets/app_empty_state.dart';
-import 'package:seekarr/core/widgets/app_error_state.dart';
-import 'package:seekarr/core/widgets/app_skeleton.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
-import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
-import 'package:seekarr/features/truenas/domain/models/pool.dart';
-import 'package:seekarr/features/truenas/presentation/storage/truenas_storage_providers.dart';
-import 'package:seekarr/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:cupola/features/truenas/domain/models/pool.dart';
+import 'package:cupola/features/truenas/presentation/storage/truenas_storage_providers.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 
 class TrueNasStorageScreen extends ConsumerWidget {
   const TrueNasStorageScreen({super.key});

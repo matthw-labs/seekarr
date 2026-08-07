@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/discover/presentation/discover_detail_view_model.dart';
+import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
 
 void main() {
   group('DiscoverDetailViewModel', () {

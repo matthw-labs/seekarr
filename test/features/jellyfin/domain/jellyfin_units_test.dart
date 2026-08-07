@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/features/jellyfin/domain/models/jellyfin_units.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_units.dart';
 
 /// The highest-value tests in the feature: four units meet here and every
 /// mistake produces a plausible number rather than an error, so nothing catches

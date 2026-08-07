@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/core/status/media_status.dart';
-import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
-import 'package:seekarr/features/discover/domain/seerr_status.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/seerr_status.dart';
 
 void main() {
   group('seerrMediaStatus', () {

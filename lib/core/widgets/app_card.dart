@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:seekarr/core/app_elevation.dart';
-import 'package:seekarr/core/app_gradients.dart';
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/app_elevation.dart';
+import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
 
 /// Variants for AppCard appearance following Material Design 3.
 enum AppCardVariant {

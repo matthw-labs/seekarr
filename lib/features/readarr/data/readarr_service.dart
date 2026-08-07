@@ -1,6 +1,6 @@
-import 'package:seekarr/core/api/api_client.dart';
-import 'package:seekarr/core/api/base_arr_service.dart';
-import 'package:seekarr/features/readarr/domain/models/readarr_models.dart';
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 
 /// Service for interacting with the Readarr API (v1).
 ///

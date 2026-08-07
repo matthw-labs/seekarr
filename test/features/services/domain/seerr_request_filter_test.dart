@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seekarr/features/discover/domain/models/seerr_request.dart';
-import 'package:seekarr/features/services/domain/seerr_request_filter.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/services/domain/seerr_request_filter.dart';
 
 /// [mediaStatus] defaults to `unknown`, which is what makes `displayStatus` fall
 /// through to the request's own [status] instead of overriding it.

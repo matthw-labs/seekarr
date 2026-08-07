@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/app_radius.dart';
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
-import 'package:seekarr/features/series/domain/models/sonarr_season.dart';
-import 'package:seekarr/features/series/presentation/widgets/series_seasons_list.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
+import 'package:cupola/features/series/domain/models/sonarr_season.dart';
+import 'package:cupola/features/series/presentation/widgets/series_seasons_list.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
   group('SeriesSeasonsList', () {

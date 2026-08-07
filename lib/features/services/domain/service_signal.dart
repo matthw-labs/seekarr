@@ -7,8 +7,8 @@ library;
 
 import 'package:flutter/widgets.dart';
 
-import 'package:seekarr/core/models/service_kpi.dart';
-import 'package:seekarr/core/status/media_status.dart';
+import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/status/media_status.dart';
 
 /// A service's headline metric, already reduced to something paintable.
 ///

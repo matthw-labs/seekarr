@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:seekarr/core/app_animation.dart';
+import 'package:cupola/core/app_animation.dart';
 
 /// Wraps a tappable child with a subtle press-down scale + optional haptic,
 /// giving the app a tactile, "alive" feel on touch.

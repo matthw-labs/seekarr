@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
-import 'package:seekarr/core/service_theme.dart';
-import 'package:seekarr/core/widgets/status_badge.dart';
-import 'package:seekarr/core/theme.dart';
-import 'package:seekarr/core/utils/duration_format.dart';
-import 'package:seekarr/core/widgets/app_card.dart';
-import 'package:seekarr/features/release_search/domain/release_search_job.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/duration_format.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/features/release_search/domain/release_search_job.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One background release search, as an instrument.
 ///

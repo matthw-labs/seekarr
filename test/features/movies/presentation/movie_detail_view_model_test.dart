@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:seekarr/core/widgets/widgets.dart';
-import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
-import 'package:seekarr/features/movies/presentation/movie_detail_view_model.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/movies/presentation/movie_detail_view_model.dart';
 
 void main() {
   group('MovieDetailViewModel', () {
