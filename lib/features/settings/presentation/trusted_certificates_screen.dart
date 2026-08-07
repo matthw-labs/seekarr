@@ -14,7 +14,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 
-/// Every self-signed certificate trusted inside Seekarr (ADR-6), independent
+/// Every self-signed certificate trusted inside Cupola (ADR-6), independent
 /// of any one service's settings screen.
 ///
 /// Trust is scoped to an origin, not to a service — the per-service form

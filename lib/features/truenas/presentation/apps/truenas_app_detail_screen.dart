@@ -63,7 +63,7 @@ class TrueNasAppDetailScreen extends ConsumerWidget {
 /// App portals are strings the *server* chose — a compromised TrueNAS, or just
 /// a hostile chart in a third-party catalog, controls both the label and the
 /// target. Handing them straight to `launchUrl` let a tile reading "Web UI"
-/// fire `intent://`, `file://` or `tel:` from Seekarr's context. A portal is a
+/// fire `intent://`, `file://` or `tel:` from Cupola's context. A portal is a
 /// web address; anything that isn't http/https is refused.
 ///
 /// The allowlist itself is [UrlUtils.isLaunchableWebUri], shared with the

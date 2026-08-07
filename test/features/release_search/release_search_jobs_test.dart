@@ -464,7 +464,7 @@ void main() {
         elapsed: const Duration(minutes: 5),
       );
       expect(failure.kind, ReleaseSearchFailureKind.clientTimeout);
-      expect(failure.headline, contains('Seekarr stopped waiting'));
+      expect(failure.headline, contains('Cupola stopped waiting'));
     });
 
     test('a timeout well short of the ceiling blames the connection', () {
@@ -489,7 +489,7 @@ void main() {
         wasBackgrounded: true,
       );
       expect(failure.kind, ReleaseSearchFailureKind.interruptedByBackground);
-      expect(failure.headline, contains('left Seekarr'));
+      expect(failure.headline, contains('left Cupola'));
     });
 
     test('a certificate trusted only in-app names the cause and the remedy, '

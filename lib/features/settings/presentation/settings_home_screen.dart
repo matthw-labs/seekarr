@@ -243,7 +243,7 @@ class SettingsHomeScreen extends ConsumerWidget {
     if (DonationService.usesIAP) {
       final useFallback = await AppBottomSheet.show<bool>(
         context: context,
-        title: 'Support Seekarr',
+        title: 'Support Cupola',
         icon: Icons.favorite_rounded,
         builder: (_) => const DonationSheet(),
       );

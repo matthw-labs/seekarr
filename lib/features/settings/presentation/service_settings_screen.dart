@@ -947,7 +947,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // way to interpret — so it is refused at the point of paste, where the
     // message can still say what to paste instead.
     if (isPlex && trimmed.startsWith('eyJ')) {
-      return 'That is a temporary token — it expires in 7 days and Seekarr '
+      return 'That is a temporary token — it expires in 7 days and Cupola '
           'cannot renew it. Paste a device token instead.';
     }
 

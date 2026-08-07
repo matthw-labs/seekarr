@@ -27,7 +27,7 @@ const kSlowScanReceiveTimeout = Duration(minutes: 5);
 /// defaults to 60s, Cloudflare caps at 100s and cannot be raised on a free plan
 /// — which is what makes a failure attributable: a connection that dies at 62s
 /// was cut by something in the middle, not by us, and the UI can say so. A 60s
-/// client timeout would make Seekarr indistinguishable from the proxy it is
+/// client timeout would make Cupola indistinguishable from the proxy it is
 /// trying to blame.
 ///
 /// Only [ApiClient.get]'s `receiveTimeout` is raised. `connectTimeout` stays at

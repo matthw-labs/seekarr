@@ -257,7 +257,7 @@ StatusTone releaseSearchTone(ReleaseSearchJob job) {
 /// [reach] then decides *which* limitation: [ReleaseSearchReach.whileOpen] is
 /// a platform fact with nothing to fix, [ReleaseSearchReach.whileOpenTrustedCert]
 /// is permanent until the certificate is trusted at the OS level rather than
-/// only inside Seekarr, [ReleaseSearchReach.whileOpenCleartext] lifts the moment
+/// only inside Cupola, [ReleaseSearchReach.whileOpenCleartext] lifts the moment
 /// the instance is reached over https, and only [ReleaseSearchReach.beyondTheApp]
 /// should never reach this branch at all — backgrounding does not interrupt it.
 ReleaseSearchFailure classifyReleaseSearchFailure(
@@ -339,7 +339,7 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
   if (wasBackgrounded) {
     return ReleaseSearchFailure(
       kind: ReleaseSearchFailureKind.interruptedByBackground,
-      headline: 'Stopped when you left Seekarr.',
+      headline: 'Stopped when you left Cupola.',
       diagnosis: switch (reach) {
         // Backgrounding a search that survives it should never land here —
         // named rather than silently falling through the generic case below,
@@ -348,7 +348,7 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
           'The search cannot continue while the app is in the background. '
               'Searching again asks your indexers a second time.',
         ReleaseSearchReach.whileOpenTrustedCert =>
-          'This instance uses a certificate trusted only inside Seekarr, and '
+          'This instance uses a certificate trusted only inside Cupola, and '
               'background search cannot see that trust — it needs the app '
               'open. Installing the certificate on this device would '
               'restore it. Searching again asks your indexers a second '
@@ -377,10 +377,10 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
     if (atCeiling) {
       return ReleaseSearchFailure(
         kind: ReleaseSearchFailureKind.clientTimeout,
-        headline: 'Seekarr stopped waiting after ${_readable(elapsed)}.',
+        headline: 'Cupola stopped waiting after ${_readable(elapsed)}.',
         diagnosis:
             'The search may still finish on the server. You can raise how long '
-            'Seekarr waits in Settings.',
+            'Cupola waits in Settings.',
         detail: error.type.name,
       );
     }

@@ -98,7 +98,7 @@ void main() {
 
     test('is a filesystem-safe name under a recognisable prefix', () {
       final key = pinnedImageCacheKey('https://nas.local:443', 'aa');
-      expect(key, startsWith('seekarr_pinned_'));
+      expect(key, startsWith('cupola_pinned_'));
       expect(RegExp(r'^[a-z0-9_]+$').hasMatch(key), isTrue, reason: key);
     });
   });

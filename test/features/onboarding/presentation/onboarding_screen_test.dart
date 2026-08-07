@@ -38,8 +38,8 @@ void main() {
       // Congratulating someone on connecting nothing reads as a bug; the empty
       // case is legitimate and gets copy that says what actually happened.
       expect(find.text('Nothing connected yet.'), findsOneWidget);
-      expect(find.textContaining('Seekarr will stay empty'), findsOneWidget);
-      expect(_button('Enter Seekarr'), findsOneWidget);
+      expect(find.textContaining('Cupola will stay empty'), findsOneWidget);
+      expect(_button('Enter Cupola'), findsOneWidget);
     });
 
     testWidgets('picking every service walks all of them in registry order', (
@@ -167,7 +167,7 @@ void main() {
 
       expect(find.textContaining('Nothing connected'), findsOneWidget);
       // And it never blocks the way out.
-      expect(_button('Enter Seekarr'), findsOneWidget);
+      expect(_button('Enter Cupola'), findsOneWidget);
     });
 
     testWidgets('the close names the service that did not answer', (
@@ -203,7 +203,7 @@ void main() {
       await _tap(tester, 'Skip Sonarr', settle: false);
       await tester.pumpAndSettle();
 
-      expect(_button('Enter Seekarr'), findsOneWidget);
+      expect(_button('Enter Cupola'), findsOneWidget);
     });
 
     testWidgets('no beat overflows a short phone at an accessibility size', (
@@ -228,7 +228,7 @@ void main() {
 
       await _tap(tester, 'Continue');
       expect(tester.takeException(), isNull);
-      expect(_button('Enter Seekarr'), findsOneWidget);
+      expect(_button('Enter Cupola'), findsOneWidget);
     });
 
     testWidgets('the walk stacks its actions at an accessibility size', (
@@ -334,7 +334,7 @@ void main() {
       await _pumpOnboarding(tester);
       await _tap(tester, 'Skip for now');
       expect(find.text('Nothing connected yet.'), findsOneWidget);
-      expect(_button('Enter Seekarr'), findsOneWidget);
+      expect(_button('Enter Cupola'), findsOneWidget);
     });
 
     testWidgets('the ring is one instrument that survives the walk', (

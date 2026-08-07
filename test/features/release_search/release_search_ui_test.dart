@@ -421,7 +421,7 @@ void main() {
 
       expect(find.textContaining('Searching'), findsOneWidget);
       expect(
-        find.textContaining('Running while Seekarr is open'),
+        find.textContaining('Running while Cupola is open'),
         findsOneWidget,
         reason: 'the phase-accurate promise, not an OS background',
       );
@@ -481,10 +481,10 @@ void main() {
       () {
         // Two functions, not two constants — because under ADR-5 they were two
         // hard-coded strings that quietly drifted apart (one saying "runs while
-        // Seekarr is open", the other "running in the background", for the same
+        // Cupola is open", the other "running in the background", for the same
         // build), and that drift was the most dangerous defect in the design.
         // ADR-6 makes the split three-way (a certificate trusted only inside
-        // Seekarr also cannot survive leaving the app), so the guard now checks
+        // Cupola also cannot survive leaving the app), so the guard now checks
         // every value of ReleaseSearchReach rather than one hard-coded pair.
         for (final reach in ReleaseSearchReach.values) {
           final body = ReleaseSearchHandoffCopy.explainerBody(reach);
@@ -493,10 +493,10 @@ void main() {
               reach == ReleaseSearchReach.beyondTheApp;
 
           expect(
-            body.toLowerCase().contains('while seekarr is open'),
+            body.toLowerCase().contains('while cupola is open'),
             !survivesLeavingTheApp,
             reason:
-                '$reach: explainerBody claims "while Seekarr is open" iff the '
+                '$reach: explainerBody claims "while Cupola is open" iff the '
                 'search does NOT survive leaving the app.',
           );
           expect(

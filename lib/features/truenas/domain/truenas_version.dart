@@ -1,4 +1,4 @@
-/// Minimum TrueNAS SCALE version Seekarr's TrueNAS console supports.
+/// Minimum TrueNAS SCALE version Cupola's TrueNAS console supports.
 ///
 /// 25.04 "Fangtooth" is the first release with the Incus virtualization API
 /// (`virt.instance.*`, used for both LXC containers and VMs) and the stable

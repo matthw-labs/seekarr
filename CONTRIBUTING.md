@@ -1,4 +1,4 @@
-# Contributing to Seekarr
+# Contributing to Cupola
 
 This project is under active development, so small focused contributions are preferred over large unsolicited refactors.
 
@@ -115,7 +115,7 @@ Use example files or placeholder values when documentation needs configuration e
 
 ### Licensing of contributions
 
-Seekarr is licensed under the [Apache License 2.0](LICENSE). Unless you state
+Cupola is licensed under the [Apache License 2.0](LICENSE). Unless you state
 otherwise in writing, any contribution you intentionally submit for inclusion in
 this project is offered under the same license — inbound equals outbound, as
 described in section 5 of the license. No separate contributor agreement is

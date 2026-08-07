@@ -34,7 +34,7 @@ final releaseSearchPlatformProvider = Provider<TargetPlatform?>((ref) => null);
 /// How far a search against [service] can travel — see [ReleaseSearchReach].
 ///
 /// Both facts reach asks about — the saved URL's scheme and whether that origin
-/// is trusted only inside Seekarr (ADR-6) — are read straight from settings
+/// is trusted only inside Cupola (ADR-6) — are read straight from settings
 /// rather than through `serviceDiagnosisProvider`: reach must stay correct even
 /// for an instance that has never been tested this session.
 final releaseSearchReachProvider =
@@ -58,7 +58,7 @@ final releaseSearchReachProvider =
 /// pinned adapter the real client uses:
 ///
 /// * macOS, which does not suspend apps and so has nothing to survive;
-/// * a certificate trusted only inside Seekarr, which the native task cannot
+/// * a certificate trusted only inside Cupola, which the native task cannot
 ///   see at all;
 /// * a cleartext `http://` origin, where the native task's unstoppable redirect
 ///   following would let anyone on the path collect the API key — the one case

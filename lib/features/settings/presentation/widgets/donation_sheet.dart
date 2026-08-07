@@ -154,7 +154,7 @@ class _DonationSheetState extends State<DonationSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Seekarr is free. If it saves you time, a tip helps keep it updated.',
+          'Cupola is free. If it saves you time, a tip helps keep it updated.',
           style: textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
@@ -296,7 +296,7 @@ class _DonationSheetState extends State<DonationSheet> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Your support means a lot and helps keep Seekarr alive.',
+            'Your support means a lot and helps keep Cupola alive.',
             style: textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),

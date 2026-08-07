@@ -42,7 +42,7 @@ class ReleaseSearchStatusCard extends ConsumerWidget {
       ),
       ReleaseSearchJobStatus.running => (
         'Searching · ${formatElapsed(job.elapsedAt(now))}',
-        'Running while Seekarr is open. Tap to watch it, or find it in '
+        'Running while Cupola is open. Tap to watch it, or find it in '
             'Activity.',
       ),
       ReleaseSearchJobStatus.completed =>

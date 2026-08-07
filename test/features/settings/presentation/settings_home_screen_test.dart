@@ -25,7 +25,7 @@ void main() {
       expect(find.text('CONNECTIONS'), findsOneWidget);
       expect(find.text('GENERAL'), findsOneWidget);
       expect(find.text('ABOUT'), findsOneWidget);
-      expect(find.text('Seekarr v1.0.0'), findsNothing);
+      expect(find.text('Cupola v1.0.0'), findsNothing);
     });
 
     testWidgets('the connections summary says when nothing is set up', (

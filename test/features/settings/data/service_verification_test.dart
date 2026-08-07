@@ -167,7 +167,7 @@ void main() {
 
     test('a plex.tv JSON Web Token is refused before it is sent', () async {
       // No HTTP at all: the client refuses to send a token that expires in seven
-      // days and can only be refreshed by plex.tv, which Seekarr never calls.
+      // days and can only be refreshed by plex.tv, which Cupola never calls.
       // Through the old shared-client path this reached `/identity`, answered
       // 200, and reported a connection that had a week to live.
       final diagnosis = await diagnoseCredentials(

@@ -942,7 +942,7 @@ class OnboardingClose extends StatelessWidget {
 
   String get _body {
     if (connected.isEmpty && silent.isEmpty) {
-      return 'Seekarr will stay empty until you add a service — you can do '
+      return 'Cupola will stay empty until you add a service — you can do '
           'that any time in Settings, or from any dark card on Services.';
     }
     if (silent.isEmpty) {
@@ -951,7 +951,7 @@ class OnboardingClose extends StatelessWidget {
     }
     final names = silent.map((s) => s.title).join(', ');
     final verb = silent.length == 1 ? 'is' : 'are';
-    return '$names $verb configured but nothing came back. Seekarr will keep '
+    return '$names $verb configured but nothing came back. Cupola will keep '
         'trying — or you can look at it now.';
   }
 
@@ -1013,7 +1013,7 @@ class _FinishButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ReelCommandButton(
-    label: 'Enter Seekarr',
+    label: 'Enter Cupola',
     busyLabel: 'Opening',
     onPressed: onFinish,
   );
@@ -1024,7 +1024,7 @@ class _FinishButton extends StatelessWidget {
 /// Flags a pasted Plex JSON Web Token while it is still being typed.
 ///
 /// A warning rather than an error: the token is well-formed and will work — for
-/// seven days. After that it can only be renewed through plex.tv, which Seekarr
+/// seven days. After that it can only be renewed through plex.tv, which Cupola
 /// never calls, so the user would be left with a 401 and no way to read it.
 String? _plexTokenWarning(String value) => value.trim().startsWith('eyJ')
     ? 'That token expires in 7 days and cannot be renewed here. Paste a '
@@ -1047,7 +1047,7 @@ String? _serviceNote(ServiceKey service) {
           'own, so pick whose watch state to read in Settings afterwards.';
     case ServiceKey.plex:
       return 'It must be a long-lived device token: one beginning "eyJ" expires '
-          'in 7 days and Seekarr cannot renew it without contacting plex.tv.';
+          'in 7 days and Cupola cannot renew it without contacting plex.tv.';
     default:
       return null;
   }

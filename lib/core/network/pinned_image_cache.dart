@@ -181,5 +181,5 @@ Future<void> _retire(PinnedImageCache cache) async {
 @visibleForTesting
 String pinnedImageCacheKey(String origin, String fingerprint) {
   final digest = sha256.convert(utf8.encode('$origin\x00$fingerprint'));
-  return 'seekarr_pinned_${digest.toString().substring(0, 32)}';
+  return 'cupola_pinned_${digest.toString().substring(0, 32)}';
 }

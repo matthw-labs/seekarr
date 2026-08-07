@@ -29,7 +29,7 @@ class AppForegroundNotifier extends Notifier<bool> {
 /// with results would be worse than the limitation it is trying to describe.
 ///
 /// So the app records that it went away, and if the request then dies the failure
-/// is attributed to the OS — "Stopped when you left Seekarr" — instead of to the
+/// is attributed to the OS — "Stopped when you left Cupola" — instead of to the
 /// user's network, which is the difference between a limitation of this build and
 /// a problem they should go and investigate.
 ///

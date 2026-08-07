@@ -11,7 +11,7 @@ void main() {
   group('Readarr OpenAPI contract', () {
     final spec = jsonFixtureMap('readarr/openapi.json');
 
-    test('the endpoints Seekarr calls exist in the schema', () {
+    test('the endpoints Cupola calls exist in the schema', () {
       final paths = (spec['paths'] as Map).keys;
       for (final p in const [
         '/api/v1/system/status',

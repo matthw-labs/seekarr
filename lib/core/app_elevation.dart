@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Premium elevation tokens for Seekarr.
+/// Premium elevation tokens for Cupola.
 ///
-/// Instead of Material's flat `elevation: n` (which tints the surface), Seekarr
+/// Instead of Material's flat `elevation: n` (which tints the surface), Cupola
 /// uses explicit, layered [BoxShadow] stacks that read as soft, physical depth:
 /// a tight *contact* shadow plus a wide, low-opacity *ambient* shadow. Shadows
 /// are tuned per brightness — deeper and darker on dark surfaces, softer on

@@ -48,7 +48,7 @@ class ServiceOfflineState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              "Seekarr can't reach the server. Check that $serviceName is "
+              "Cupola can't reach the server. Check that $serviceName is "
               'running and that the URL in Settings is reachable.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,

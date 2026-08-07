@@ -94,7 +94,7 @@ extension CupolaTextStyle on TextStyle {
   );
 }
 
-/// Seerr-inspired color palette for Seekarr
+/// Seerr-inspired color palette for Cupola
 ///
 /// Colors extracted from Seerr source code (Tailwind config)
 /// Provides both dark and light theme variants while maintaining
@@ -338,7 +338,7 @@ class CupolaThemeColors extends ThemeExtension<CupolaThemeColors> {
   }
 }
 
-/// Material Design 3 Theme configuration for Seekarr
+/// Material Design 3 Theme configuration for Cupola
 class AppTheme {
   AppTheme._();
 
@@ -456,7 +456,7 @@ class AppTheme {
 
   // === DARK THEME (Primary) ===
   //
-  // Both themes are deliberately fixed. Seekarr's palette is part of its
+  // Both themes are deliberately fixed. Cupola's palette is part of its
   // identity — per-service accents have to stay recognisable, and the
   // experience is meant to be identical on every OS — so platform dynamic
   // color (Material You) is not harmonised in. The previous signature took a

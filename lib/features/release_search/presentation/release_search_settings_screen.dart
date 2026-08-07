@@ -58,7 +58,7 @@ class _ReleaseSearchSettingsScreenState
     if (!granted) {
       SnackBarHelper.error(
         context,
-        'Notifications are turned off for Seekarr in system settings.',
+        'Notifications are turned off for Cupola in system settings.',
       );
     }
   }
@@ -167,7 +167,7 @@ class _NotifyRow extends StatelessWidget {
   final bool busy;
 
   /// Release-search services whose background reach is cut off by something
-  /// about the instance itself — a certificate trusted only inside Seekarr, or
+  /// about the instance itself — a certificate trusted only inside Cupola, or
   /// a cleartext origin. Both land in the same sentence because the user-facing
   /// consequence is identical: a search that stops when they leave the app.
   /// See [ReleaseSearchReach].
@@ -179,10 +179,10 @@ class _NotifyRow extends StatelessWidget {
       return 'Not needed here — the app keeps running';
     }
     if (foregroundOnlyServices.isEmpty) {
-      return 'Only when Seekarr is not in front of you';
+      return 'Only when Cupola is not in front of you';
     }
     final names = foregroundOnlyServices.map((s) => s.title).join(', ');
-    return 'Only when Seekarr is not in front of you — for $names, that '
+    return 'Only when Cupola is not in front of you — for $names, that '
         "includes a search stopping because it couldn't keep running in the "
         'background';
   }
@@ -252,7 +252,7 @@ class _LimitsCard extends StatelessWidget {
   });
 
   /// Release-search services whose background reach is cut off by a
-  /// certificate trusted only inside Seekarr — see [ReleaseSearchReach].
+  /// certificate trusted only inside Cupola — see [ReleaseSearchReach].
   final List<ServiceKey> pinnedServices;
 
   /// Release-search services whose background reach is cut off because they
@@ -293,22 +293,22 @@ class _LimitsCard extends StatelessWidget {
           line(
             backgroundSearchSupported()
                 ? 'A search keeps going when you switch apps, but it ends if you '
-                      'force-quit Seekarr — no app can continue work after that.'
-                : 'A search runs as long as Seekarr is running. Quitting the app '
+                      'force-quit Cupola — no app can continue work after that.'
+                : 'A search runs as long as Cupola is running. Quitting the app '
                       'ends it.',
           ),
           if (androidCeilingApplies)
             line(
               'Android stops background work after '
               '${BackgroundReleaseSearchTransport.androidCeiling.inMinutes} '
-              'minutes. A longer search needs Seekarr open, where there is no '
+              'minutes. A longer search needs Cupola open, where there is no '
               'ceiling.',
             ),
           if (pinnedServices.isNotEmpty)
             line(
               '${pinnedServices.map((s) => s.title).join(', ')} '
               '${pinnedServices.length == 1 ? 'uses' : 'use'} a certificate '
-              "trusted only inside Seekarr, so ${pinnedServices.length == 1 ? 'its' : 'their'} "
+              "trusted only inside Cupola, so ${pinnedServices.length == 1 ? 'its' : 'their'} "
               'searches run in the foreground instead of the background — see '
               "that service's connection in Settings for how to restore it.",
             ),
@@ -324,7 +324,7 @@ class _LimitsCard extends StatelessWidget {
             ),
           line(
             'Nothing is searched on a server of ours — there is not one. Your '
-            'own instances do the work, and what Seekarr measures about them '
+            'own instances do the work, and what Cupola measures about them '
             'never leaves this device.',
           ),
         ],

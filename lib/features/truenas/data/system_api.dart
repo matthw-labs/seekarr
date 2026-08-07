@@ -70,8 +70,8 @@ class TrueNasSystemApi extends TrueNasApiBase {
   Future<dynamic> sendTestMail(Map<String, dynamic>? config) =>
       client.callJob('mail.send', [
         {
-          'subject': 'Seekarr test email',
-          'text': 'This is a test email from Seekarr.',
+          'subject': 'Cupola test email',
+          'text': 'This is a test email from Cupola.',
         },
         if (config != null) config,
       ]);

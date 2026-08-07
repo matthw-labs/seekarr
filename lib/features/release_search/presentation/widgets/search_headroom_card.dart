@@ -150,7 +150,7 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
   /// another, and it belongs on the same card for the same reason.
   ///
   /// Derived from the reach rather than from either fact directly, so the two
-  /// instance-specific reasons — a certificate trusted only inside Seekarr, and
+  /// instance-specific reasons — a certificate trusted only inside Cupola, and
   /// a cleartext origin the background path must not carry an API key over —
   /// cannot drift apart from the transport actually chosen.
   ///
@@ -168,12 +168,12 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
     return switch (reach) {
       ReleaseSearchReach.beyondTheApp || ReleaseSearchReach.whileOpen => null,
       ReleaseSearchReach.whileOpenTrustedCert =>
-        '$title uses a certificate trusted only inside Seekarr, so this '
-            'search runs while Seekarr stays open instead of in the '
+        '$title uses a certificate trusted only inside Cupola, so this '
+            'search runs while Cupola stays open instead of in the '
             'background$noCeiling. Installing the certificate on this device '
             'restores it.',
       ReleaseSearchReach.whileOpenCleartext =>
-        '$title is reached over plain http, so this search runs while Seekarr '
+        '$title is reached over plain http, so this search runs while Cupola '
             'stays open instead of in the background$noCeiling. A background '
             'search cannot refuse a redirect, and over http anyone on the '
             "network can inject one to collect $title's API key. Switching "
@@ -187,7 +187,7 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
   String _verdict(SearchHeadroom h) {
     return switch (h.gateway) {
       null =>
-        'Run the check to see what sits between Seekarr and '
+        'Run the check to see what sits between Cupola and '
             '${widget.service.title}, and what it allows.',
       SearchGateway.direct =>
         'Direct connection — nothing between you and '

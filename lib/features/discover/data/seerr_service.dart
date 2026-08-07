@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Thrown when a request has already been acted on somewhere else.
 ///
 /// Worth a type of its own because it is the *only* way the request write
-/// actions realistically fail, and it is not an error on our side. Seekarr
+/// actions realistically fail, and it is not an error on our side. Cupola
 /// authenticates to Seerr with the instance API key, which Seerr treats as
 /// admin — so approve and decline are never refused for lack of permission,
 /// there is no per-user permission bitfield to read first, and no 403 to design

@@ -222,7 +222,7 @@ void main() {
       // ReleaseSearchLifecycle, so on macOS and tablet nothing observed the
       // lifecycle at all: appInForegroundProvider stayed permanently true, and a
       // search the OS killed while the app was away was blamed on the network
-      // instead of on leaving Seekarr.
+      // instead of on leaving Cupola.
       final harness = await _pumpShell(tester, viewport: _railViewport);
 
       expect(find.byType(NavigationRail), findsOneWidget);

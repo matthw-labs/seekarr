@@ -4,7 +4,7 @@ import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
-/// How long Seekarr waits for a release search, and how many it runs at once.
+/// How long Cupola waits for a release search, and how many it runs at once.
 ///
 /// Persisted, because both are statements about the user's own stack rather than
 /// about this visit: an instance behind a slow proxy wants a different ceiling

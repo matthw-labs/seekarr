@@ -48,7 +48,7 @@ class TrueNasVersionBanner extends ConsumerWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
-                'TrueNAS $parsed detected. Seekarr supports SCALE '
+                'TrueNAS $parsed detected. Cupola supports SCALE '
                 '$kTrueNasMinVersion or newer — some sections may be '
                 'unavailable.',
                 style: theme.textTheme.bodySmall,

@@ -238,7 +238,7 @@ class SettingsService {
     await _prefs.setBool(_kOnboardingComplete, true);
   }
 
-  /// Wipes all Seekarr-persisted data: SharedPreferences keys (service URLs,
+  /// Wipes all Cupola-persisted data: SharedPreferences keys (service URLs,
   /// credentials, region, theme, onboarding flag, legacy keys) and every
   /// secure-storage entry. Clears secure storage first so a Keychain failure
   /// leaves prefs intact and the caller can surface an error.
@@ -585,7 +585,7 @@ class SettingsService {
     if (RegExp(r'^https?://', caseSensitive: false).hasMatch(trimmed)) {
       return null;
     }
-    // Some other scheme entirely — never a working Seekarr address, and not
+    // Some other scheme entirely — never a working Cupola address, and not
     // this migration's business to rewrite.
     if (trimmed.contains('://')) return null;
 

@@ -14,7 +14,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/service_connection_row.dart';
 
-/// Every service Seekarr can talk to, and the state of each connection.
+/// Every service Cupola can talk to, and the state of each connection.
 ///
 /// This is the one place a service's setup lives. The settings home used to
 /// list configured services with their status while a second screen listed all
@@ -66,9 +66,9 @@ class SettingsConnectionsScreen extends ConsumerWidget {
             title: available.isEmpty ? 'Everything is set up' : 'Add a service',
             showChevron: false,
             subtitle: available.isEmpty
-                ? 'All ${ServiceKey.values.length} services Seekarr supports '
+                ? 'All ${ServiceKey.values.length} services Cupola supports '
                       'have an address saved.'
-                : 'Seekarr talks straight to your instance. Nothing is stored '
+                : 'Cupola talks straight to your instance. Nothing is stored '
                       'anywhere but this device.',
           ),
           if (available.isNotEmpty) ...[

@@ -127,7 +127,7 @@ class ServiceDiagnosis {
   /// exception is a component that knows something the closed vocabulary cannot
   /// hold — `SameOriginRedirectInterceptor` refusing a cross-origin redirect
   /// knows *which* origin it was sent to, and `redirected` alone can only say
-  /// "a redirect Seekarr will not follow". Rendered in place of
+  /// "a redirect Cupola will not follow". Rendered in place of
   /// [connectionFailureMessage] when present, never alongside it.
   final String? detail;
 
@@ -548,10 +548,10 @@ String connectionFailureMessage(
       // Never suggest downgrading to http:// here. A certificate that fails
       // to verify is the same signal an interception attack produces, and
       // every service can now offer the right answer (ADR-6): verify again
-      // and confirm the certificate when Seekarr offers to trust it.
+      // and confirm the certificate when Cupola offers to trust it.
       return 'The HTTPS certificate could not be verified. If '
           '${service.title} uses a self-signed certificate, test again and '
-          'confirm the certificate when Seekarr offers to trust it.';
+          'confirm the certificate when Cupola offers to trust it.';
     case ServiceFailureReason.unauthorized:
       return service.usesApiKey
           ? 'Reached ${service.title}, which rejected the API key.'
@@ -566,9 +566,9 @@ String connectionFailureMessage(
       // `messageFor` shows that instead; this is what is left when only the
       // reason survived — an unfollowable 3xx from a client that does not
       // explain itself.
-      return 'Reached the server, but it answered with a redirect Seekarr '
+      return 'Reached the server, but it answered with a redirect Cupola '
           'will not follow. A reverse proxy in front of ${service.title} is '
-          'the usual cause — point Seekarr at the address the proxy sends '
+          'the usual cause — point Cupola at the address the proxy sends '
           'the request to, or stop it redirecting the API.';
     case ServiceFailureReason.serverError:
       return '${service.title} answered with a server error. Check the '

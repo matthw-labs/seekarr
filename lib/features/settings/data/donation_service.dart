@@ -18,7 +18,11 @@ class DonationService {
 
   // ── In-App Purchase product IDs (must match App Store Connect exactly) ────
   //
-  // Bundle ID: com.matthw.1.seekarr
+  // Bundle ID: com.matthw.1.seekarr — the app's iOS identifier before the
+  // Cupola rebrand, kept verbatim here on purpose: these IDs are only safe
+  // to change once it's confirmed whether they're already live in App
+  // Store Connect (renaming an active product ID there breaks it) or free
+  // to move to com.matthwlabs.cupola.tip.* to match the new identifier.
   // Product type: Consumable (allows repeated purchases)
 
   static const String tipSmallId = 'com.matthw.1.seekarr.tip.small';

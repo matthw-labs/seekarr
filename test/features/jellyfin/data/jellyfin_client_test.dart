@@ -48,7 +48,7 @@ JellyfinClient _client(
   CapturingHttpAdapter adapter, {
   String apiKey = 'SECRET-KEY',
   String userId = _viewerId,
-  String clientName = 'Seekarr',
+  String clientName = 'Cupola',
 }) {
   final client = JellyfinClient(
     baseUrl: 'https://jf.test',
@@ -90,7 +90,7 @@ void main() {
       // either and `AuthorizationContext` reads no token at all.
       expect(
         _authorization(adapter),
-        'MediaBrowser Token="SECRET-KEY", Client="Seekarr", Device="macos", '
+        'MediaBrowser Token="SECRET-KEY", Client="Cupola", Device="macos", '
         'DeviceId="DEVICE-ID-1", Version="0.8.0"',
       );
     });
@@ -100,10 +100,10 @@ void main() {
       // The server URL-decodes each value, so a literal comma inside one would
       // split the pair and silently drop everything after it — including, for a
       // differently ordered header, the token itself.
-      await _client(adapter, clientName: 'Seekarr, Ltd "beta"').probeVersion();
+      await _client(adapter, clientName: 'Cupola, Ltd "beta"').probeVersion();
 
       final header = _authorization(adapter)!;
-      expect(header, contains('Client="Seekarr%2C%20Ltd%20%22beta%22"'));
+      expect(header, contains('Client="Cupola%2C%20Ltd%20%22beta%22"'));
       expect(header, contains('Token="SECRET-KEY"'));
       // Exactly five pairs: the encoded comma did not create a sixth.
       expect(header.split(', '), hasLength(5));

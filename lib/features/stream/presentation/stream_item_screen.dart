@@ -155,7 +155,7 @@ class _StateRow extends StatelessWidget {
 
 /// The handoff out to the real client.
 ///
-/// **Named "Open in …", never "Play".** Seekarr does not decode video, and once a
+/// **Named "Open in …", never "Play".** Cupola does not decode video, and once a
 /// resume position has been shown on this very page a button labelled Play promises
 /// playback this app cannot deliver — the tap would land the user on another app's
 /// home screen having lost the position they were just looking at. Naming the door

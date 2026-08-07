@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/theme.dart';
 
-/// Centralised gradient tokens for Seekarr.
+/// Centralised gradient tokens for Cupola.
 ///
 /// Gradients were previously hand-rolled inline across onboarding, media detail
 /// backdrops and poster scrims. Routing them through [AppGradients] keeps the

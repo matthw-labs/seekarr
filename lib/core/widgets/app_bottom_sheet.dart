@@ -7,7 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/sheet_utils.dart';
 
-/// Canonical drag handle for Seekarr bottom sheets (36×4, subtle).
+/// Canonical drag handle for Cupola bottom sheets (36×4, subtle).
 class AppSheetHandle extends StatelessWidget {
   const AppSheetHandle({super.key});
 

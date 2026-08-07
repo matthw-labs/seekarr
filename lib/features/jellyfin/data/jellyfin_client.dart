@@ -43,7 +43,7 @@ class JellyfinClient implements StreamServerClient {
   ///
   /// [clientName], [deviceName], [deviceId] and [appVersion] only decorate the
   /// `Authorization` header — Jellyfin requires none of them functionally, and
-  /// they exist so the server's Dashboard → Devices list names Seekarr instead of
+  /// they exist so the server's Dashboard → Devices list names Cupola instead of
   /// showing an anonymous row.
   JellyfinClient({
     required String baseUrl,
@@ -707,7 +707,7 @@ extension _JellyfinItemsPageX on _JellyfinItemsPage {
 }
 
 /// What Jellyfin's Dashboard → Devices list calls this app.
-const String kJellyfinClientName = 'Seekarr';
+const String kJellyfinClientName = 'Cupola';
 
 /// Sent as `Version` in the `Authorization` header. Cosmetic — it appears beside
 /// the client name in the server's device list — and tracks `pubspec.yaml`.
@@ -730,14 +730,14 @@ String defaultJellyfinDeviceName() => Platform.operatingSystem;
 /// Hashed rather than used raw so the value looks like the opaque id the API
 /// expects and carries nothing about the host.
 String defaultJellyfinDeviceId([String? deviceName]) {
-  final seed = 'seekarr.jellyfin:${deviceName ?? defaultJellyfinDeviceName()}';
+  final seed = 'cupola.jellyfin:${deviceName ?? defaultJellyfinDeviceName()}';
   return sha256.convert(seed.codeUnits).toString().substring(0, 32);
 }
 
 /// Builds the only non-deprecated Jellyfin auth header in 10.11.
 ///
 /// ```
-/// Authorization: MediaBrowser Token="…", Client="Seekarr", Device="macos",
+/// Authorization: MediaBrowser Token="…", Client="Cupola", Device="macos",
 ///                DeviceId="…", Version="0.8.0"
 /// ```
 ///

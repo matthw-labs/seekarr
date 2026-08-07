@@ -30,7 +30,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// have. [explainerBody] and [confirmation] are functions of
 /// [ReleaseSearchReach] rather than constants for exactly the reason this
 /// class's own history warns about: they used to be two hard-coded strings
-/// that quietly drifted apart — one saying "runs while Seekarr is open", the
+/// that quietly drifted apart — one saying "runs while Cupola is open", the
 /// other "running in the background" — for the same build, because neither
 /// knew which transport it was describing. A pinned origin makes the split
 /// three-way, so the fix is the same fix: derive both from the one value
@@ -47,24 +47,24 @@ class ReleaseSearchHandoffCopy {
           'leaving the app.',
     ReleaseSearchReach.whileOpenTrustedCert =>
       'Keep it running and pick the release up later in Activity. Runs '
-          'while Seekarr is open — background search cannot see the '
+          'while Cupola is open — background search cannot see the '
           'certificate trusted for this instance, so it needs the app to '
           'stay in front.',
     ReleaseSearchReach.whileOpenCleartext =>
       'Keep it running and pick the release up later in Activity. Runs '
-          'while Seekarr is open — this instance is reached over plain '
+          'while Cupola is open — this instance is reached over plain '
           'http, where a background search could be redirected into '
           'handing its API key to another host. Switching it to https '
           'restores background search.',
     ReleaseSearchReach.whileOpen =>
       'Keep it running and pick the release up later in Activity. Runs '
-          'while Seekarr is open.',
+          'while Cupola is open.',
   };
 
   static String confirmation(ReleaseSearchReach reach) =>
       reach == ReleaseSearchReach.beyondTheApp
       ? "Running in the background. You'll find it in Activity."
-      : "Still running. You'll find it in Activity — keep Seekarr open "
+      : "Still running. You'll find it in Activity — keep Cupola open "
             'until it finishes.';
 
   static const emptyStateHint =
@@ -214,7 +214,7 @@ class _ReleaseSearchSheetState extends ConsumerState<ReleaseSearchSheet> {
       title: 'Search again for this release?',
       message:
           '${widget.target.service.title} no longer has this release list, so '
-          'nothing on it can be grabbed. Seekarr will run the search on your '
+          'nothing on it can be grabbed. Cupola will run the search on your '
           'indexers again — grab the release from the new list when it lands.'
           '${lastRun == Duration.zero ? '' : ' It took ${formatElapsed(lastRun)} last time.'}',
       // Not plain "Search again": the results body behind this dialog already

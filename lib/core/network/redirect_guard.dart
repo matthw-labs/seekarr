@@ -78,7 +78,7 @@ class SameOriginRedirectInterceptor extends Interceptor {
   final int maxRedirects;
 
   /// Redirect depth so far, threaded through `RequestOptions.extra`.
-  static const _depthKey = 'seekarr.redirectDepth';
+  static const _depthKey = 'cupola.redirectDepth';
 
   @override
   Future<void> onResponse(
@@ -118,7 +118,7 @@ class SameOriginRedirectInterceptor extends Interceptor {
           error: RedirectRefused(
             'The server redirected to ${target.origin}, a different host '
             'than the one configured. The request was not resent so the '
-            'API key is not exposed. Point Seekarr directly at the '
+            'API key is not exposed. Point Cupola directly at the '
             'service, or fix the redirect on the server.',
           ),
         ),

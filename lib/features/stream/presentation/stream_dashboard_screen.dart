@@ -18,7 +18,7 @@ import 'package:cupola/features/stream/presentation/widgets/stream_session_card.
 
 /// The Stream board — one dashboard serving both Jellyfin and Plex.
 ///
-/// **What this page is.** A media server is the only service in Seekarr that knows
+/// **What this page is.** A media server is the only service in Cupola that knows
 /// about *people*: every other domain answers questions about objects (is this film
 /// owned, grabbed, subtitled, on disk), while Jellyfin and Plex are the only source
 /// of subject-and-time state — who is watching, where they stopped, what is next

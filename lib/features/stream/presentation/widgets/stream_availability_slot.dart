@@ -14,7 +14,7 @@ import 'package:cupola/features/stream/presentation/stream_lookup_provider.dart'
 ///
 /// **This is where the pipeline closes.** Radarr answers "do I own it"; a media
 /// server is the only thing that knows "can anyone play it, and has anyone
-/// started". Seekarr is the only place both facts sit on one screen, and this slot
+/// started". Cupola is the only place both facts sit on one screen, and this slot
 /// is that sentence.
 ///
 /// It is a *decoration on the arr's own record*, not a second catalogue and not a

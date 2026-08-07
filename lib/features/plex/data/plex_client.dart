@@ -15,24 +15,24 @@ import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
-/// Identifies Seekarr to the user's server. Plex shows this in
+/// Identifies Cupola to the user's server. Plex shows this in
 /// Settings → Authorized Devices, so it is a name a stranger has to recognise as
 /// theirs.
-const String kPlexProduct = 'Seekarr';
+const String kPlexProduct = 'Cupola';
 
 /// Sent as `X-Plex-Version`. Tracks `pubspec.yaml`'s `version:` by hand — the
 /// project takes no new dependencies, and `package_info_plus` would be one.
 const String kPlexProductVersion = '0.8.0';
 
 /// Sent as `X-Plex-Device-Name`, i.e. the row label in Authorized Devices.
-const String kPlexDeviceName = 'Seekarr';
+const String kPlexDeviceName = 'Cupola';
 
 /// The reason attached to a terminate call.
 ///
 /// Plex forwards this string to the player, where the viewer sees it as the
 /// explanation for their stream stopping. It is therefore an API payload rather
 /// than app chrome, which is why it lives here and not in a widget.
-const String kPlexTerminationReason = 'Stopped from Seekarr';
+const String kPlexTerminationReason = 'Stopped from Cupola';
 
 /// Poster aspect used when asking Plex's photo transcoder to resize.
 ///
@@ -321,7 +321,7 @@ class PlexClient implements StreamServerClient {
     if (inspectPlexToken(_token) == PlexTokenIssue.jsonWebToken) {
       throw const PlexException(
         'That is a temporary plex.tv sign-in token: it expires in seven days '
-        'and can only be renewed by plex.tv, which Seekarr never contacts. '
+        'and can only be renewed by plex.tv, which Cupola never contacts. '
         'Paste a device token from your server instead.',
         reason: ServiceFailureReason.unauthorized,
         tokenIssue: PlexTokenIssue.jsonWebToken,

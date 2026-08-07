@@ -1,4 +1,4 @@
-# Seekarr
+# Cupola
 
 A Flutter app for managing your self-hosted media stack from anywhere.  
 One client for **Seerr**, **Radarr**, **Sonarr**, **Lidarr**, and **qBittorrent** on macOS, iOS, and Android.
@@ -123,7 +123,7 @@ flutter run
 
 ## Configuration
 
-Seekarr ships with no default credentials. After launching the app, open **Settings** and configure each service you want to use:
+Cupola ships with no default credentials. After launching the app, open **Settings** and configure each service you want to use:
 
 - **Seerr** — Base URL + API key
 - **Radarr** — Base URL + API key
@@ -134,7 +134,7 @@ Seekarr ships with no default credentials. After launching the app, open **Setti
 
 API keys are stored securely on the device using `flutter_secure_storage` and are never transmitted outside your local network.
 
-If a service sits behind a self-signed HTTPS certificate — common for a home-lab reverse proxy — Seekarr offers to trust it the first time it's seen. Trust is scoped to the address, not the service, so two services behind the same proxy are trusted (and revoked) together. Trusted certificates can be reviewed or forgotten at any time from **Settings → Connections → Trusted certificates**.
+If a service sits behind a self-signed HTTPS certificate — common for a home-lab reverse proxy — Cupola offers to trust it the first time it's seen. Trust is scoped to the address, not the service, so two services behind the same proxy are trusted (and revoked) together. Trusted certificates can be reviewed or forgotten at any time from **Settings → Connections → Trusted certificates**.
 
 ---
 
@@ -153,7 +153,7 @@ Download the `.apk` file from the [Releases](https://github.com/matthw-labs/seek
 
 ### macOS
 
-Download the `.dmg` file from the [Releases](https://github.com/matthw-labs/seekarr/releases) page, drag Seekarr to `/Applications`, and launch it. On first run, right-click the app and choose **Open** to bypass Gatekeeper.
+Download the `.dmg` file from the [Releases](https://github.com/matthw-labs/seekarr/releases) page, drag Cupola to `/Applications`, and launch it. On first run, right-click the app and choose **Open** to bypass Gatekeeper.
 
 ### iOS
 
@@ -190,7 +190,7 @@ Contributions to improve support on these platforms are welcome.
 
 ## Architecture
 
-Seekarr follows a **feature-first layered architecture**:
+Cupola follows a **feature-first layered architecture**:
 
 ```
 lib/
@@ -244,13 +244,13 @@ For setup notes, conventions, and pull request expectations, see [CONTRIBUTING.m
 
 ## About this project
 
-Seekarr was born from a personal need: flawlessly managing a self-hosted *arr stack from a phone, from anywhere. It is built with a focus on getting the details right — polished interactions, honest error and empty states, and a test suite that keeps them that way — rather than on shipping fast.
+Cupola was born from a personal need: flawlessly managing a self-hosted *arr stack from a phone, from anywhere. It is built with a focus on getting the details right — polished interactions, honest error and empty states, and a test suite that keeps them that way — rather than on shipping fast.
 
 ---
 
 ## Support
 
-If you find Seekarr useful, consider supporting me with a donation — it helps keep the project going!
+If you find Cupola useful, consider supporting me with a donation — it helps keep the project going!
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/matthwlabs)
 
@@ -260,6 +260,6 @@ If you find Seekarr useful, consider supporting me with a donation — it helps 
 
 This project is licensed under the **[Apache License 2.0](LICENSE)**.
 
-Seekarr was previously distributed under the MIT License. That license still
+Cupola was previously distributed under the MIT License. That license still
 covers copies obtained before the change, and its original notice is preserved
 in [LICENSE-MIT](LICENSE-MIT); see [NOTICE](NOTICE) for details.

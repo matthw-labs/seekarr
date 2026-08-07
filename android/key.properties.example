@@ -3,7 +3,7 @@
 # key.properties is gitignored and must NEVER be committed.
 #
 # To generate a keystore:
-#   keytool -genkeypair -v -keystore ~/seekarr-upload.jks -alias seekarr \
+#   keytool -genkeypair -v -keystore ~/cupola-upload.jks -alias cupola \
 #     -keyalg RSA -keysize 2048 -validity 10000
 #
 # Recommended: keep the keystore outside the repo and use an absolute path.

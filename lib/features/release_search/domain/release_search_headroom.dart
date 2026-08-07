@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// What sits between Seekarr and a service, and what it costs.
+/// What sits between Cupola and a service, and what it costs.
 ///
 /// The point of naming it: a failure is only actionable if the user knows *who*
 /// gave up. "502" is not actionable; "your NPM proxy host, whose read timeout you

@@ -184,10 +184,10 @@ void main() {
         // Persisted per install: a value regenerated per launch would register a
         // new device row on the user's server every time the app opened.
         expect(headers['X-Plex-Client-Identifier'], _kClientId);
-        expect(headers['X-Plex-Product'], 'Seekarr');
+        expect(headers['X-Plex-Product'], 'Cupola');
         expect(headers['X-Plex-Version'], kPlexProductVersion);
         expect(headers['X-Plex-Platform'], 'macOS');
-        expect(headers['X-Plex-Device-Name'], 'Seekarr');
+        expect(headers['X-Plex-Device-Name'], 'Cupola');
         // Mandatory: the API answers XML without it and every parse here would
         // fail. Supplied by ApiClient, asserted so nothing quietly overrides it.
         expect(headers['Accept'], 'application/json');

@@ -412,7 +412,7 @@ class NpmClient {
     if (map['requires_2fa'] == true) {
       throw const NpmException(
         'This Nginx Proxy Manager account has two-factor authentication '
-        'enabled, which Seekarr cannot complete. Use a dedicated account '
+        'enabled, which Cupola cannot complete. Use a dedicated account '
         'without 2FA for the app.',
         reason: ServiceFailureReason.unauthorized,
       );
@@ -436,7 +436,7 @@ class NpmClient {
         : now.add(expires.difference(now) * 0.8);
   }
 
-  static const _skipAuthRetry = 'seekarr.npmSkipAuthRetry';
+  static const _skipAuthRetry = 'cupola.npmSkipAuthRetry';
 
   /// One request, with the token minted or refreshed as needed and exactly one
   /// re-auth retry.
@@ -541,7 +541,7 @@ class NpmClient {
         );
       case 404:
         return const NpmException(
-          'The Nginx Proxy Manager API is not at this address. Point Seekarr '
+          'The Nginx Proxy Manager API is not at this address. Point Cupola '
           'at the admin interface (port 81 by default).',
           reason: ServiceFailureReason.notFound,
         );

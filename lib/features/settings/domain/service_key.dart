@@ -25,7 +25,7 @@ enum ServiceKey {
 
 /// High-level grouping used to organise services across the app.
 ///
-/// Seekarr started as a media companion but is growing into a homelab hub, so
+/// Cupola started as a media companion but is growing into a homelab hub, so
 /// services are grouped by the kind of job they do. This enum is the single
 /// source of truth for that grouping — the Home dashboard, Settings and the
 /// onboarding flow all read from it, so a new service only needs a [domain]
@@ -425,7 +425,7 @@ extension ServiceKeyExtension on ServiceKey {
       // user should know they are pointing at a project that will not receive
       // fixes.
       case ServiceKey.readarr:
-        return 'Readarr development has stopped upstream. Seekarr targets its '
+        return 'Readarr development has stopped upstream. Cupola targets its '
             'last released API, so existing instances keep working, but expect '
             'no new server-side fixes.';
       case ServiceKey.jellyfin:
@@ -435,11 +435,11 @@ extension ServiceKeyExtension on ServiceKey {
             'works.';
       // Naming the *kind* of token matters more than naming the place. Plex has
       // two, and the modern one is a dead end here: a JWT expires after seven
-      // days and can only be refreshed through plex.tv, which Seekarr never
+      // days and can only be refreshed through plex.tv, which Cupola never
       // calls. Saying so up front beats a week of working software.
       case ServiceKey.plex:
         return 'Open any item in Plex Web, choose Get Info → View XML, and copy '
-            'the X-Plex-Token from the address bar. Seekarr never contacts '
+            'the X-Plex-Token from the address bar. Cupola never contacts '
             'plex.tv, so it needs a long-lived device token — not a temporary '
             'one beginning "eyJ".';
       // The single most common reason a Transmission daemon is reachable in a
@@ -458,9 +458,9 @@ extension ServiceKeyExtension on ServiceKey {
       // otherwise and deserves to know what they are handing over.
       case ServiceKey.nginxProxyManager:
         return 'Nginx Proxy Manager issues no API key — the only credential it '
-            'accepts is an account login, which Seekarr exchanges for a '
+            'accepts is an account login, which Cupola exchanges for a '
             'short-lived token it keeps in memory and never writes to disk. '
-            'Create a dedicated user for Seekarr rather than using your admin '
+            'Create a dedicated user for Cupola rather than using your admin '
             'account, and point this at the admin interface (port 81 by '
             'default), not at a hostname the proxy serves.';
       case ServiceKey.seerr:

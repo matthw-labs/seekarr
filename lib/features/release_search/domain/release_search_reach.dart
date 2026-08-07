@@ -20,11 +20,11 @@ enum ReleaseSearchReach {
   whileOpen,
 
   /// The foreground path, for a reason that is true of *this instance*: its
-  /// origin has a self-signed certificate trusted only inside Seekarr
+  /// origin has a self-signed certificate trusted only inside Cupola
   /// (ADR-6), and the native background task validates TLS against the
   /// platform trust store with no hook for an in-app pin — it cannot see
   /// that trust at all. The only way back to [beyondTheApp] is installing
-  /// the certificate on the device itself, not anything Seekarr can do.
+  /// the certificate on the device itself, not anything Cupola can do.
   whileOpenTrustedCert,
 
   /// The foreground path, for a different fact about *this instance*: it is

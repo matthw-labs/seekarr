@@ -212,7 +212,7 @@ Future<void> _showAddNzbDialog(BuildContext context, WidgetRef ref) async {
   await runNzbgetAction(
     context,
     ref,
-    action: (c) => c.append(name.isEmpty ? 'seekarr.nzb' : name, url),
+    action: (c) => c.append(name.isEmpty ? 'cupola.nzb' : name, url),
     successMessage: 'NZB added',
     failureMessage: 'Failed to add the NZB',
     invalidate: _nzbgetInvalidateAfterAction,

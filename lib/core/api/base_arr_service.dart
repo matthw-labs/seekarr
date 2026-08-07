@@ -337,7 +337,7 @@ mixin ArrActivityMixin {
   /// Removes a record from the download queue.
   ///
   /// The activity surfaces were read-only until now: this mixin exposed five
-  /// getters and no mutation, so a user who found a stalled download in Seekarr
+  /// getters and no mutation, so a user who found a stalled download in Cupola
   /// had to open the service's own web UI to do anything about it.
   ///
   /// [removeFromClient] also deletes the download from the connected client

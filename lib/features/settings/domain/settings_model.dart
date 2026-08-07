@@ -80,7 +80,7 @@ class SettingsModel {
   ///
   /// Named for what Plex calls it rather than squeezed into an `apiKey` field,
   /// though it occupies the generic credential slot in [_serviceSettingsAccess]
-  /// exactly as `qbittorrentPassword` does. Seekarr never mints this: every
+  /// exactly as `qbittorrentPassword` does. Cupola never mints this: every
   /// documented way to obtain a Plex token is a plex.tv call, and reaching for
   /// one would break the product's first principle. A pasted token is validated
   /// by the user's own server.

@@ -10,7 +10,7 @@ import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// Everything Seekarr has measured about how each instance is reached.
+/// Everything Cupola has measured about how each instance is reached.
 ///
 /// Persisted in `SharedPreferences` rather than secure storage: these are timings
 /// and a server name, not credentials, and the card that shows them says out loud

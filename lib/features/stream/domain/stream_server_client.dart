@@ -136,7 +136,7 @@ abstract interface class StreamServerClient {
   /// viewer stopped in it.
   ///
   /// This is what lets a Radarr or Sonarr detail page say "On Jellyfin · 34 min
-  /// in" instead of Seekarr shipping a second, near-identical catalogue. The join
+  /// in" instead of Cupola shipping a second, near-identical catalogue. The join
   /// is on an external database id rather than on a title, because a title match
   /// across two catalogues is a guess and this has to be a fact: Radarr carries
   /// `tmdbId`, Sonarr `tvdbId`, and both servers index the same ids
