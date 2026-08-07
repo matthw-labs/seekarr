@@ -27,6 +27,15 @@ class _KnowsWhy implements Exception, HasFailureReason {
   final ServiceFailureReason reason;
 }
 
+class _KnowsWhyAndSaysSo
+    implements Exception, HasFailureReason, HasFailureDetail {
+  const _KnowsWhyAndSaysSo(this.reason, this.failureDetail);
+  @override
+  final ServiceFailureReason reason;
+  @override
+  final String failureDetail;
+}
+
 void main() {
   group('classifyConnectionFailure', () {
     test('trusts an exception that already knows why it failed', () {
@@ -166,6 +175,77 @@ void main() {
         ServiceFailureReason.unauthorized,
       );
     });
+
+    // An interceptor that refuses a request reaches its verdict *and* has Dio
+    // wrap it in a DioException carrying whatever status happened to trigger
+    // the refusal. Re-deriving the reason from that status throws the verdict
+    // away — which is how refused redirects once all collapsed to `unknown`.
+    // The status here maps to something real now, so this asserts the verdict
+    // still wins rather than merely filling a gap.
+    test('an interceptor verdict wrapped by Dio beats the status code', () {
+      final wrapped = DioException(
+        requestOptions: RequestOptions(path: '/'),
+        type: DioExceptionType.badResponse,
+        response: Response(
+          requestOptions: RequestOptions(path: '/'),
+          statusCode: 302,
+        ),
+        error: const _KnowsWhy(ServiceFailureReason.unauthorized),
+      );
+      expect(
+        classifyConnectionFailure(wrapped),
+        ServiceFailureReason.unauthorized,
+      );
+    });
+
+    test('a wrapped verdict still wins over the caller fallback', () {
+      expect(
+        classifyConnectionFailure(
+          _wrapping(
+            const _KnowsWhy(ServiceFailureReason.unauthorized),
+            DioExceptionType.unknown,
+          ),
+          fallback: ServiceFailureReason.unreachable,
+        ),
+        ServiceFailureReason.unauthorized,
+      );
+    });
+  });
+
+  group('connectionFailureDetail', () {
+    test('reads the sentence off the failure itself', () {
+      expect(
+        connectionFailureDetail(
+          const _KnowsWhyAndSaysSo(
+            ServiceFailureReason.notFound,
+            'the proxy sent you to another host',
+          ),
+        ),
+        'the proxy sent you to another host',
+      );
+    });
+
+    test('unwraps the DioException Dio puts around it', () {
+      expect(
+        connectionFailureDetail(
+          _wrapping(
+            const _KnowsWhyAndSaysSo(ServiceFailureReason.notFound, 'why'),
+            DioExceptionType.badResponse,
+          ),
+        ),
+        'why',
+      );
+    });
+
+    test('is null for the ordinary failures that carry no sentence', () {
+      expect(connectionFailureDetail(_badResponse(401)), isNull);
+      expect(
+        connectionFailureDetail(const SocketException('no route')),
+        isNull,
+      );
+      expect(connectionFailureDetail(null), isNull);
+      expect(connectionFailureDetail('boom'), isNull);
+    });
   });
 
   group('looksUnauthorizedMessage', () {
@@ -196,7 +276,23 @@ void main() {
       expect(reasonForStatusCode(401), ServiceFailureReason.unauthorized);
       expect(reasonForStatusCode(404), ServiceFailureReason.notFound);
       expect(reasonForStatusCode(500), ServiceFailureReason.serverError);
-      expect(reasonForStatusCode(302), ServiceFailureReason.unknown);
+    });
+
+    // These used to collapse to `unknown`, which reaches the user as "Could
+    // not verify the instance. Double-check the address and credentials." —
+    // sending them to re-check a credential the server never looked at.
+    test('an unfollowable 3xx is a redirect, not an unknown', () {
+      for (final status in const [300, 301, 302, 303, 304, 307, 308]) {
+        expect(
+          reasonForStatusCode(status),
+          ServiceFailureReason.redirected,
+          reason: '$status',
+        );
+      }
+    });
+
+    test('an unmapped 4xx stays unknown', () {
+      expect(reasonForStatusCode(418), ServiceFailureReason.unknown);
     });
   });
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import 'package:seekarr/core/network/cert_trust.dart';
 import 'package:seekarr/core/network/connection_failure.dart';
 import 'package:seekarr/core/network/redirect_guard.dart';
 import 'package:seekarr/core/utils/url_utils.dart';
@@ -32,9 +33,17 @@ class UnraidException implements Exception, HasFailureReason {
 /// connect. Field names below follow the documented schema but may differ by
 /// Unraid release; confirm against the instance's SDL.
 class UnraidClient {
-  UnraidClient({required String url, required String apiKey, Dio? dio})
-    : baseUrl = UrlUtils.normalizeBaseUrl(url),
-      _apiKey = apiKey.trim() {
+  /// [certFingerprint], when non-empty, is a self-signed certificate the user
+  /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
+  /// when [dio] is injected — a caller supplying its own transport owns its
+  /// TLS behaviour too.
+  UnraidClient({
+    required String url,
+    required String apiKey,
+    Dio? dio,
+    String? certFingerprint,
+  }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
+       _apiKey = apiKey.trim() {
     _dio =
         dio ??
         Dio(
@@ -50,6 +59,11 @@ class UnraidClient {
         );
     if (dio == null) {
       _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
+      final adapter = pinnedHttpClientAdapterFor(
+        baseUrl,
+        pinnedFingerprint: certFingerprint,
+      );
+      if (adapter != null) _dio.httpClientAdapter = adapter;
     }
   }
 

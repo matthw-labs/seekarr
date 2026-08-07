@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seekarr/features/jellyfin/data/jellyfin_client.dart';
 import 'package:seekarr/features/stream/domain/models/stream_item.dart';
 import 'package:seekarr/features/stream/domain/models/stream_library.dart';
+import 'package:seekarr/features/stream/domain/models/stream_library_page.dart';
 import 'package:seekarr/features/stream/domain/models/stream_session.dart';
 
 import '../../../test_helpers/capturing_http_adapter.dart';
@@ -504,6 +505,85 @@ void main() {
       expect(adapter.callCount, 0);
     });
 
+    test(
+      'a per-viewer lens with no viewer says so rather than "empty"',
+      () async {
+        // The envelope is the whole point: `[]` and "we never asked" are the same
+        // list, and a browse that could not tell them apart told the user their
+        // library was empty when they had simply not chosen a household member.
+        final page = await _client(browseAdapter(), userId: '').getLibraryPage(
+          libraryId: _showsLibraryId,
+          lens: StreamLibraryLens.nextUp,
+        );
+
+        expect(page.outcome, StreamPageOutcome.viewerRequired);
+        expect(page.needsViewer, isTrue);
+        expect(page.failed, isFalse);
+      },
+    );
+
+    test(
+      'A–Z is answered without a viewer, being the same wall for everyone',
+      () async {
+        // `/Items?parentId=…&sortBy=SortName` takes `userId` as strictly optional
+        // and only loses `UserData` without it. Scoping A–Z to a viewer made the
+        // client refuse a request that works, and told a connected-but-unpicked
+        // user their library was empty.
+        final adapter = browseAdapter();
+        final items = await _client(adapter, userId: '').getLibraryItems(
+          libraryId: _moviesLibraryId,
+          lens: StreamLibraryLens.all,
+        );
+
+        expect(items, isNotEmpty);
+        final query = adapter.matching('/Items').last.queryParameters;
+        expect(query['sortBy'], 'SortName');
+        expect(query.containsKey('userId'), isFalse);
+        expect(query.containsKey('enableUserData'), isFalse);
+      },
+    );
+
+    test('a page carries the server’s own offset and total', () async {
+      // A pager may not advance by the page size it asked for, nor stop because
+      // the rows it received were empty: both are inferences, and
+      // `TotalRecordCount` is the fact.
+      final page = await _client(browseAdapter()).getLibraryPage(
+        libraryId: _moviesLibraryId,
+        lens: StreamLibraryLens.all,
+      );
+
+      expect(page.outcome, StreamPageOutcome.ok);
+      expect(page.items, hasLength(3));
+      // Three rows from offset zero, against a TotalRecordCount of three.
+      expect(page.nextStartIndex, 3);
+      expect(page.hasMore, isFalse);
+    });
+
+    test('a failed page is a failure, not an empty library', () async {
+      // The read path still degrades to `[]` for callers that only want rows;
+      // the envelope is what lets a browse offer a retry instead of stating
+      // that the server reports no items.
+      final client = _client(browseAdapter(statusCode: 503));
+
+      final page = await client.getLibraryPage(
+        libraryId: _moviesLibraryId,
+        lens: StreamLibraryLens.all,
+        startIndex: 100,
+      );
+
+      expect(page.failed, isTrue);
+      expect(page.items, isEmpty);
+      // Echoed back so a retry resumes where it stopped.
+      expect(page.nextStartIndex, 100);
+      expect(
+        await client.getLibraryItems(
+          libraryId: _moviesLibraryId,
+          lens: StreamLibraryLens.all,
+        ),
+        isEmpty,
+      );
+    });
+
     test('recentlyAdded still works with no viewer configured', () async {
       final adapter = browseAdapter();
       final items = await _client(adapter, userId: '').getLibraryItems(
@@ -641,14 +721,20 @@ void main() {
       expect(item.resumeOffsetMs, 1800000);
     });
 
-    test('returns null when there is no viewer to resolve', () async {
-      // `UserLibraryController.GetItem` 404s when the user cannot be resolved,
-      // and an API key resolves to nobody.
+    test('resolves without a viewer, losing only the watch state', () async {
+      // `userId` is a `Guid?` on this endpoint: omitting it costs the `UserData`
+      // block and nothing else. Refusing to call at all without one is what made
+      // a deep link into `/services/jellyfin/item/<id>` render "Not on the
+      // server" on an install where the item plainly was.
       final adapter = CapturingHttpAdapter(
         response: jsonFixtureMap('jellyfin/item_movie.json'),
       );
-      expect(await _client(adapter, userId: '').getItem(_movieId), isNull);
-      expect(adapter.callCount, 0);
+      final item = await _client(adapter, userId: '').getItem(_movieId);
+
+      expect(item, isNotNull);
+      expect(item!.title, 'Arrival');
+      expect(adapter.callCount, 1);
+      expect(adapter.lastUri!.queryParameters.containsKey('userId'), isFalse);
     });
   });
 

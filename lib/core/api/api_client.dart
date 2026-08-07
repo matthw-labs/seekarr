@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
+import 'package:seekarr/core/network/cert_trust.dart';
 import 'package:seekarr/core/network/redirect_guard.dart';
 import 'package:seekarr/core/utils/url_utils.dart';
 
@@ -17,6 +18,23 @@ const _receiveTimeout = Duration(seconds: 15);
 /// an unreachable host.
 const kSlowScanReceiveTimeout = Duration(minutes: 5);
 
+/// For interactive release search, which is synchronous on the server: Sonarr's
+/// `/release` builds one task per enabled indexer and awaits them all, so the
+/// slowest indexer gates the response and a rate-limited one can hold it for
+/// minutes. Under the default 15s ceiling those searches never returned at all.
+///
+/// Five minutes is chosen to sit *above* every common gateway ceiling — nginx
+/// defaults to 60s, Cloudflare caps at 100s and cannot be raised on a free plan
+/// — which is what makes a failure attributable: a connection that dies at 62s
+/// was cut by something in the middle, not by us, and the UI can say so. A 60s
+/// client timeout would make Seekarr indistinguishable from the proxy it is
+/// trying to blame.
+///
+/// Only [ApiClient.get]'s `receiveTimeout` is raised. `connectTimeout` stays at
+/// ten seconds, because connecting and waiting are different problems and a host
+/// that will not answer should still fail fast.
+const kReleaseSearchReceiveTimeout = Duration(minutes: 5);
+
 class ApiClient {
   final Dio _dio;
 
@@ -24,8 +42,20 @@ class ApiClient {
   /// accept a bare host, and Dio's `baseUrl` setter throws `ArgumentError` on
   /// one. Normalising here (rather than at each of the twelve call sites) means
   /// a bare host can only ever fail as a connection error.
-  ApiClient({required String baseUrl, required String apiKey})
-    : this._(baseUrl: baseUrl, authHeaders: {'X-Api-Key': apiKey});
+  ///
+  /// [pinnedCertFingerprint], when non-empty, is a self-signed certificate the
+  /// user explicitly trusted for this origin (trust-on-first-use, ADR-6) — see
+  /// [SettingsModel.pinForUrl]. Null or empty leaves this client on the
+  /// platform trust store only, exactly as before ADR-6.
+  ApiClient({
+    required String baseUrl,
+    required String apiKey,
+    String? pinnedCertFingerprint,
+  }) : this._(
+         baseUrl: baseUrl,
+         authHeaders: {'X-Api-Key': apiKey},
+         pinnedCertFingerprint: pinnedCertFingerprint,
+       );
 
   /// For a service whose credential does not travel as `X-Api-Key`.
   ///
@@ -43,11 +73,17 @@ class ApiClient {
   ApiClient.authenticatedBy({
     required String baseUrl,
     required Map<String, String> headers,
-  }) : this._(baseUrl: baseUrl, authHeaders: headers);
+    String? pinnedCertFingerprint,
+  }) : this._(
+         baseUrl: baseUrl,
+         authHeaders: headers,
+         pinnedCertFingerprint: pinnedCertFingerprint,
+       );
 
   ApiClient._({
     required String baseUrl,
     required Map<String, String> authHeaders,
+    String? pinnedCertFingerprint,
   }) : _dio = Dio(
          BaseOptions(
            baseUrl: UrlUtils.normalizeBaseUrl(baseUrl),
@@ -64,6 +100,14 @@ class ApiClient {
            },
          ),
        ) {
+    // A followed same-origin redirect goes out over this same `_dio`, so it
+    // inherits the pinned adapter automatically — no extra wiring needed for
+    // SameOriginRedirectInterceptor to keep honouring the pin.
+    final adapter = pinnedHttpClientAdapterFor(
+      _dio.options.baseUrl,
+      pinnedFingerprint: pinnedCertFingerprint,
+    );
+    if (adapter != null) _dio.httpClientAdapter = adapter;
     _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
   }
 
@@ -71,6 +115,21 @@ class ApiClient {
   /// an injected `Dio`.
   @visibleForTesting
   Dio get dio => _dio;
+
+  /// The normalised base URL, for a transport that cannot go through this Dio.
+  ///
+  /// Phase 2's background task is native code with its own HTTP stack, so it has
+  /// to be handed a URL and headers rather than a client. Exposed narrowly for
+  /// that, and it is worth knowing what such a caller gives up:
+  /// [SameOriginRedirectInterceptor] is a credential-replay guard, not a
+  /// convenience, so anything bypassing this client owes the same refusal.
+  String get baseUrl => _dio.options.baseUrl;
+
+  /// The headers this client sends, auth included.
+  Map<String, String> get headers => {
+    for (final entry in _dio.options.headers.entries)
+      entry.key: '${entry.value}',
+  };
 
   /// [receiveTimeout] overrides the client default for this request only; see
   /// [kSlowScanReceiveTimeout].

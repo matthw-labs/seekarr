@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,13 +16,14 @@ import 'package:seekarr/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';
+import '../../../test_helpers/reel_finders.dart';
 
 void main() {
   testWidgets('renders grouped global search result cards', (tester) async {
     await _pumpSearch(tester);
 
     expect(find.text('Radarr'), findsWidgets);
-    expect(find.text('1 result'), findsOneWidget);
+    expect(findLine('1 result'), findsOneWidget);
     expect(find.text('Dune'), findsOneWidget);
     expect(find.text('Movie'), findsOneWidget);
     expect(find.text('Available'), findsWidgets);
@@ -244,5 +246,8 @@ class _SearchRadarrService extends FakeRadarrService {
   _SearchRadarrService({required this.results});
 
   @override
-  Future<List<RadarrMovie>> lookupMovies(String term) async => results;
+  Future<List<RadarrMovie>> lookupMovies(
+    String term, {
+    CancelToken? cancelToken,
+  }) async => results;
 }

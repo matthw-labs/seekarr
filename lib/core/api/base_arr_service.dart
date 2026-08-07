@@ -194,11 +194,18 @@ mixin ArrActivityMixin {
   }
 
   /// Searches by term using a lookup endpoint and maps results in an isolate.
+  ///
+  /// [cancelToken] aborts the request once the search that asked for it has
+  /// been superseded: global search re-runs every service leg on each debounced
+  /// keystroke, and a discarded round should stop paying for itself rather than
+  /// run to completion. Failures — cancellation included — degrade to an empty
+  /// list, like every other browse path.
   Future<List<T>> lookupItems<T>(
     String endpoint,
     String term,
-    T Function(Map<String, dynamic>) fromJson,
-  ) async {
+    T Function(Map<String, dynamic>) fromJson, {
+    CancelToken? cancelToken,
+  }) async {
     if (term.isEmpty) {
       return [];
     }
@@ -208,6 +215,7 @@ mixin ArrActivityMixin {
       final response = await client.get(
         '/api/${config.apiVersion}/$endpoint',
         queryParameters: {'term': encodedTerm},
+        cancelToken: cancelToken,
       );
       final data = response.data as List<dynamic>;
       return await Isolate.run(
@@ -220,6 +228,10 @@ mixin ArrActivityMixin {
   }
 
   /// Fetches release candidates for interactive search.
+  ///
+  /// Takes [kReleaseSearchReceiveTimeout] rather than the client default: the
+  /// server fans out to every enabled indexer and answers only once the slowest
+  /// one has, so this is the one arr endpoint that legitimately runs for minutes.
   Future<List<dynamic>> fetchReleases(
     Map<String, dynamic> queryParameters, {
     CancelToken? cancelToken,
@@ -228,8 +240,40 @@ mixin ArrActivityMixin {
       '/api/${config.apiVersion}/release',
       queryParameters: queryParameters,
       cancelToken: cancelToken,
+      receiveTimeout: kReleaseSearchReceiveTimeout,
     );
     return response.data as List<dynamic>;
+  }
+
+  /// Describes the release-search request without performing it.
+  ///
+  /// For the Phase 2 background transport, which runs the request in native code
+  /// and therefore needs a URL and headers rather than this client.
+  ({Uri url, Map<String, String> headers}) releaseSearchRequest(
+    Map<String, dynamic> queryParameters,
+  ) {
+    final base = client.baseUrl.endsWith('/')
+        ? client.baseUrl.substring(0, client.baseUrl.length - 1)
+        : client.baseUrl;
+    return (
+      url: Uri.parse('$base/api/${config.apiVersion}/release').replace(
+        queryParameters: {
+          for (final entry in queryParameters.entries)
+            entry.key: '${entry.value}',
+        },
+      ),
+      headers: client.headers,
+    );
+  }
+
+  /// Asks for the service's own status and returns the raw response, so a caller
+  /// can read *who answered* from the headers.
+  ///
+  /// The cheapest endpoint that is guaranteed to exist and to travel the full
+  /// path, which is the point: the interesting information is the `server` and
+  /// `cf-ray` headers a reverse proxy or CDN adds on the way back, not the body.
+  Future<Response<dynamic>> probeHeaders() {
+    return client.get('/api/${config.apiVersion}/system/status');
   }
 
   /// Fetches all quality profiles.

@@ -168,6 +168,66 @@ void main() {
       expect(viewModel.runtimeStr, '45m');
     });
 
+    test('bills one cast tile per person, not per role', () {
+      // TMDB returns one credits entry per role, so an actor playing a dual
+      // role comes back twice under the same person id. The cast rail tags each
+      // tile `person_<id>`, and two Heroes with one tag assert on the next push.
+      final viewModel = DiscoverDetailViewModel.fromResponse({
+        'title': 'Dual Role',
+        'credits': {
+          'cast': [
+            {
+              'id': 7,
+              'name': 'Tatiana Maslany',
+              'character': 'Sarah',
+              'profilePath': '/tatiana.jpg',
+            },
+            {'id': 7, 'name': 'Tatiana Maslany', 'character': 'Helena'},
+            {'id': 9, 'name': 'Jordan Gavaris', 'character': 'Felix'},
+          ],
+        },
+      });
+
+      expect(viewModel.cast.map((member) => member.id), [7, 9]);
+      // The extra role is folded into the tile rather than dropped.
+      expect(viewModel.cast.first.character, 'Sarah / Helena');
+      // The duplicate carried no image; the entry that did keeps it.
+      expect(viewModel.cast.first.profilePath, '/tatiana.jpg');
+    });
+
+    test('a duplicated credit does not cost the 20th actor their place', () {
+      final cast = [
+        for (var index = 0; index < 21; index++)
+          {'id': index + 1, 'name': 'Actor $index', 'character': 'C$index'},
+      ];
+      // The lead is billed twice, as a dual role would be.
+      cast.insert(1, {'id': 1, 'name': 'Actor 0', 'character': 'Alter ego'});
+
+      final viewModel = DiscoverDetailViewModel.fromResponse({
+        'title': 'Long Cast',
+        'credits': {'cast': cast},
+      });
+
+      expect(viewModel.cast, hasLength(20));
+      expect(viewModel.cast.map((member) => member.id).toSet(), hasLength(20));
+    });
+
+    test('keeps unidentified cast entries, which cannot collide', () {
+      final viewModel = DiscoverDetailViewModel.fromResponse({
+        'title': 'No Ids',
+        'credits': {
+          'cast': [
+            {'name': 'Extra A', 'character': 'Passer-by'},
+            {'name': 'Extra B', 'character': 'Passer-by'},
+          ],
+        },
+      });
+
+      // Id 0 makes the rail untappable, so it builds no Hero and no tag —
+      // deduping these would only lose faces.
+      expect(viewModel.cast, hasLength(2));
+    });
+
     test('parses season episodes when present', () {
       final viewModel = DiscoverDetailViewModel.fromResponse({
         'name': 'Episode Test Show',

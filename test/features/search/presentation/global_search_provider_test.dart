@@ -1,7 +1,14 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// ignore: implementation_imports
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:seekarr/core/models/media_preview.dart';
+import 'package:seekarr/features/bazarr/data/bazarr_service.dart';
+import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
@@ -121,28 +128,143 @@ void main() {
     expect(sonarr.hasError, isFalse);
     expect(sonarr.results.single.title, 'Foundation');
   });
+
+  test('hands every service leg of one round the same cancel token', () async {
+    final seerr = _SearchSeerrService();
+    final radarr = _SearchRadarrService();
+    final sonarr = _SearchSonarrService();
+    final lidarr = _SearchLidarrService();
+    final bazarr = _SearchBazarrService();
+    final container = _container(
+      seerr: seerr,
+      radarr: radarr,
+      sonarr: sonarr,
+      lidarr: lidarr,
+      bazarr: bazarr,
+    );
+    addTearDown(container.dispose);
+    container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+    await container.read(globalSearchResultsProvider.future);
+
+    final token = radarr.leg.tokens.single;
+    expect(token, isNotNull);
+    for (final leg in [seerr.leg, sonarr.leg, lidarr.leg, bazarr.leg]) {
+      expect(leg.tokens.single, same(token));
+    }
+  });
+
+  test('cancels the superseded round when the query moves on', () async {
+    // Every leg parks here, so the first round is genuinely still in flight
+    // when the second query arrives — which is the only state in which
+    // cancelling means anything.
+    final gate = Completer<void>();
+    addTearDown(() {
+      if (!gate.isCompleted) gate.complete();
+    });
+    final seerr = _SearchSeerrService(gate: gate);
+    final radarr = _SearchRadarrService(gate: gate);
+    final sonarr = _SearchSonarrService(gate: gate);
+    final lidarr = _SearchLidarrService(gate: gate);
+    final bazarr = _SearchBazarrService(gate: gate);
+    final container = _container(
+      seerr: seerr,
+      radarr: radarr,
+      sonarr: sonarr,
+      lidarr: lidarr,
+      bazarr: bazarr,
+    );
+    addTearDown(container.dispose);
+
+    // A live listener is what keeps the autoDispose provider alive between the
+    // two rounds; without it the first build would be torn down on its own and
+    // the cancellation would prove nothing.
+    final sub = container.listen(globalSearchResultsProvider, (_, _) {});
+    addTearDown(sub.close);
+
+    container.read(globalSearchQueryProvider.notifier).state = 'du';
+    container.read(globalSearchResultsProvider);
+    await Future<void>.delayed(Duration.zero);
+
+    container.read(globalSearchQueryProvider.notifier).state = 'dune';
+    container.read(globalSearchResultsProvider);
+    await Future<void>.delayed(Duration.zero);
+
+    for (final leg in [
+      seerr.leg,
+      radarr.leg,
+      sonarr.leg,
+      lidarr.leg,
+      bazarr.leg,
+    ]) {
+      expect(leg.tokens, hasLength(2));
+      expect(leg.tokens.first!.isCancelled, isTrue);
+      expect(leg.tokens.last!.isCancelled, isFalse);
+    }
+  });
+
+  test(
+    'a settings write it does not depend on leaves the round alone',
+    () async {
+      // The fan-out watches the five connections, not the whole model. With the
+      // cancel token above, watching the model meant a theme-mode toggle aborted
+      // five in-flight requests and re-issued them.
+      final radarr = _SearchRadarrService();
+      final container = _container(radarr: radarr);
+      addTearDown(container.dispose);
+
+      final sub = container.listen(globalSearchResultsProvider, (_, _) {});
+      addTearDown(sub.close);
+
+      container.read(globalSearchQueryProvider.notifier).state = 'dune';
+      await container.read(globalSearchResultsProvider.future);
+      expect(radarr.leg.tokens, hasLength(1));
+
+      container.read(_testSettings.notifier).state = container
+          .read(_testSettings)
+          .copyWith(themeMode: AppThemeMode.dark);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(radarr.leg.tokens, hasLength(1));
+      expect(radarr.leg.tokens.single!.isCancelled, isFalse);
+
+      // A connection it *does* depend on still re-runs it.
+      container.read(_testSettings.notifier).state = container
+          .read(_testSettings)
+          .copyWith(radarrApiKey: 'rotated');
+      await container.read(globalSearchResultsProvider.future);
+
+      expect(radarr.leg.tokens, hasLength(2));
+    },
+  );
 }
+
+/// The settings the fan-out reads, mutable so a test can write to a field the
+/// search does not depend on.
+final _testSettings = StateProvider<SettingsModel>(
+  (ref) => const SettingsModel(
+    seerrUrl: 'http://seerr.local:5055',
+    seerrApiKey: 'key',
+    radarrUrl: 'http://radarr.local:7878',
+    radarrApiKey: 'key',
+    sonarrUrl: 'http://sonarr.local:8989',
+    sonarrApiKey: 'key',
+    lidarrUrl: 'http://lidarr.local:8686',
+    lidarrApiKey: 'key',
+  ),
+);
 
 ProviderContainer _container({
   SeerrService? seerr,
   RadarrService? radarr,
   SonarrService? sonarr,
   LidarrService? lidarr,
+  BazarrService? bazarr,
 }) {
   return ProviderContainer(
     overrides: [
-      currentSettingsProvider.overrideWith(
-        (ref) => const SettingsModel(
-          seerrUrl: 'http://seerr.local:5055',
-          seerrApiKey: 'key',
-          radarrUrl: 'http://radarr.local:7878',
-          radarrApiKey: 'key',
-          sonarrUrl: 'http://sonarr.local:8989',
-          sonarrApiKey: 'key',
-          lidarrUrl: 'http://lidarr.local:8686',
-          lidarrApiKey: 'key',
-        ),
-      ),
+      if (bazarr != null) bazarrServiceProvider.overrideWithValue(bazarr),
+      currentSettingsProvider.overrideWith((ref) => ref.watch(_testSettings)),
       seerrServiceProvider.overrideWith(
         (ref) => seerr ?? _SearchSeerrService(),
       ),
@@ -159,24 +281,56 @@ ProviderContainer _container({
   );
 }
 
+/// Records the cancel token every search leg is handed, and — when a [gate] is
+/// supplied — parks there so a round can still be in flight when the next
+/// query supersedes it.
+class _LegRecorder {
+  final List<CancelToken?> tokens = [];
+  final Completer<void>? gate;
+
+  _LegRecorder(this.gate);
+
+  Future<void> record(CancelToken? cancelToken) async {
+    tokens.add(cancelToken);
+    if (gate != null) await gate!.future;
+  }
+}
+
 class _SearchSeerrService extends FakeSeerrService {
   final List<MediaPreview> results;
+  final _LegRecorder leg;
 
-  _SearchSeerrService({this.results = const []});
+  _SearchSeerrService({this.results = const [], Completer<void>? gate})
+    : leg = _LegRecorder(gate);
 
   @override
-  Future<List<MediaPreview>> search(String query, {int page = 1}) async =>
-      results;
+  Future<List<MediaPreview>> search(
+    String query, {
+    int page = 1,
+    CancelToken? cancelToken,
+  }) async {
+    await leg.record(cancelToken);
+    return results;
+  }
 }
 
 class _SearchRadarrService extends FakeRadarrService {
   final List<RadarrMovie> results;
   final bool throwOnLookup;
+  final _LegRecorder leg;
 
-  _SearchRadarrService({this.results = const [], this.throwOnLookup = false});
+  _SearchRadarrService({
+    this.results = const [],
+    this.throwOnLookup = false,
+    Completer<void>? gate,
+  }) : leg = _LegRecorder(gate);
 
   @override
-  Future<List<RadarrMovie>> lookupMovies(String term) async {
+  Future<List<RadarrMovie>> lookupMovies(
+    String term, {
+    CancelToken? cancelToken,
+  }) async {
+    await leg.record(cancelToken);
     if (throwOnLookup) throw Exception('radarr down');
     return results;
   }
@@ -184,18 +338,50 @@ class _SearchRadarrService extends FakeRadarrService {
 
 class _SearchSonarrService extends FakeSonarrService {
   final List<SonarrSeries> results;
+  final _LegRecorder leg;
 
-  _SearchSonarrService({this.results = const []});
+  _SearchSonarrService({this.results = const [], Completer<void>? gate})
+    : leg = _LegRecorder(gate);
 
   @override
-  Future<List<SonarrSeries>> lookupSeries(String term) async => results;
+  Future<List<SonarrSeries>> lookupSeries(
+    String term, {
+    CancelToken? cancelToken,
+  }) async {
+    await leg.record(cancelToken);
+    return results;
+  }
 }
 
 class _SearchLidarrService extends FakeLidarrService {
   final List<LidarrArtist> results;
+  final _LegRecorder leg;
 
-  _SearchLidarrService({this.results = const []});
+  _SearchLidarrService({this.results = const [], Completer<void>? gate})
+    : leg = _LegRecorder(gate);
 
   @override
-  Future<List<LidarrArtist>> lookupArtists(String term) async => results;
+  Future<List<LidarrArtist>> lookupArtists(
+    String term, {
+    CancelToken? cancelToken,
+  }) async {
+    await leg.record(cancelToken);
+    return results;
+  }
+}
+
+class _SearchBazarrService extends FakeBazarrService {
+  final _LegRecorder leg;
+
+  _SearchBazarrService({Completer<void>? gate}) : leg = _LegRecorder(gate);
+
+  @override
+  Future<List<BazarrSearchHit>> searchLibrary(
+    String query, {
+    int length = 500,
+    CancelToken? cancelToken,
+  }) async {
+    await leg.record(cancelToken);
+    return const [];
+  }
 }

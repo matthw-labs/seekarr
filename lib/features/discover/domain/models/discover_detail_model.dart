@@ -1,3 +1,5 @@
+import 'package:seekarr/core/utils/url_utils.dart';
+
 class WatchProviderEntry {
   final int id;
   final String name;
@@ -70,13 +72,27 @@ class RelatedVideo {
     final site = json['site']?.toString() ?? '';
 
     return RelatedVideo(
-      url: json['url']?.toString() ?? _buildVideoUrl(site, key),
+      // The server's `url` is only taken when it is a web address. It is the
+      // one field here that ends up being *launched*, and this app hands it to
+      // the platform's external handler — where `javascript:`, `data:`,
+      // `intent:` and `file:` are all syntactically valid URIs that
+      // `Uri.tryParse` happily accepts. Anything else falls back to the builder
+      // below, which can only ever produce https, and an empty string makes the
+      // row untappable (`playableVideos` drops it).
+      url: _webUrl(json['url']) ?? _buildVideoUrl(site, key),
       key: key,
       name: json['name']?.toString() ?? 'Video',
       type: json['type']?.toString() ?? '',
       site: site,
       size: _asInt(json['size']),
     );
+  }
+
+  /// [value] as a launchable http(s) URL, or null when it is anything else.
+  static String? _webUrl(Object? value) {
+    final raw = value?.toString();
+    if (raw == null || raw.isEmpty) return null;
+    return UrlUtils.isLaunchableWebUrl(raw) ? raw : null;
   }
 
   static String _buildVideoUrl(String site, String key) {

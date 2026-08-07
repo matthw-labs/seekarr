@@ -1,6 +1,14 @@
 /// Typed models for the SABnzbd HTTP API. SABnzbd returns most numeric fields
 /// as strings, so parsing is deliberately tolerant.
+///
+/// Every size and rate label here goes through `core/utils/byte_format.dart`.
+/// This file used to carry two private formatters of its own — one for
+/// megabytes, one for bytes — which disagreed with each other on precision and
+/// with NZBGet's pair on unit thresholds, so the same quantity read differently
+/// depending on which dashboard you were looking at.
 library;
+
+import 'package:seekarr/core/utils/byte_format.dart';
 
 double _asDouble(dynamic value) {
   if (value is num) return value.toDouble();
@@ -11,12 +19,6 @@ bool _asBool(dynamic value) {
   if (value is bool) return value;
   final s = '$value'.toLowerCase();
   return s == 'true' || s == '1';
-}
-
-/// Formats a size given in megabytes into a compact human string.
-String _formatMb(double mb) {
-  if (mb >= 1024) return '${(mb / 1024).toStringAsFixed(1)} GB';
-  return '${mb.toStringAsFixed(mb >= 10 ? 0 : 1)} MB';
 }
 
 /// The download queue (`mode=queue`).
@@ -46,12 +48,9 @@ class SabnzbdQueue {
   final String timeLeft;
   final List<SabnzbdQueueSlot> slots;
 
-  String get speedLabel {
-    if (kbPerSec >= 1024) return '${(kbPerSec / 1024).toStringAsFixed(1)} MB/s';
-    return '${kbPerSec.toStringAsFixed(0)} KB/s';
-  }
+  String get speedLabel => formatKilobytesPerSecond(kbPerSec);
 
-  String get sizeLeftLabel => _formatMb(mbLeft);
+  String get sizeLeftLabel => formatMegabytes(mbLeft);
 
   factory SabnzbdQueue.fromJson(Map<String, dynamic> json) {
     final slots = (json['slots'] as List?) ?? const [];
@@ -91,7 +90,7 @@ class SabnzbdQueueSlot {
   final double mbLeft;
 
   double get progress => (percentage / 100).clamp(0, 1).toDouble();
-  String get sizeLeftLabel => _formatMb(mbLeft);
+  String get sizeLeftLabel => formatMegabytes(mbLeft);
 
   factory SabnzbdQueueSlot.fromJson(Map<String, dynamic> json) {
     return SabnzbdQueueSlot(
@@ -126,8 +125,8 @@ class SabnzbdServerStats {
   final int week;
   final int day;
 
-  String get totalLabel => _formatBytes(total);
-  String get monthLabel => _formatBytes(month);
+  String get totalLabel => formatBytes(total);
+  String get monthLabel => formatBytes(month);
 
   factory SabnzbdServerStats.fromJson(Map<String, dynamic> json) {
     return SabnzbdServerStats(
@@ -137,17 +136,6 @@ class SabnzbdServerStats {
       day: _asDouble(json['day']).round(),
     );
   }
-}
-
-String _formatBytes(int bytes) {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-  var value = bytes.toDouble();
-  var unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit++;
-  }
-  return '${value.toStringAsFixed(value >= 10 || unit == 0 ? 0 : 1)} ${units[unit]}';
 }
 
 /// A completed/failed download from history (`mode=history`).

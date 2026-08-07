@@ -54,7 +54,16 @@ enum StreamLibraryLens {
   /// may pass any `userId`. Plex cannot: its token *is* the user and `/library/*`
   /// takes no impersonation parameter, so a Plex library has exactly one
   /// perspective and its viewer chip is hidden rather than showing a list of one.
-  bool get isPerViewer => this != StreamLibraryLens.recentlyAdded;
+  ///
+  /// **[all] is not one of them**, and treating it as one was a bug rather than a
+  /// definition: an alphabetical wall of a library is the same wall whoever is
+  /// looking. Jellyfin's `/Items?parentId=…&sortBy=SortName` takes `userId` as
+  /// strictly optional and only loses `UserData` without it, so scoping A–Z to a
+  /// viewer made the client refuse the request before making it — and told a user
+  /// who had connected a server but not yet chosen a household member that their
+  /// library was empty, which is the one thing it demonstrably was not.
+  bool get isPerViewer =>
+      this != StreamLibraryLens.recentlyAdded && this != StreamLibraryLens.all;
 }
 
 @immutable

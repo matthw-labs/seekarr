@@ -43,30 +43,43 @@ void main() {
     });
   });
 
+  // formatSize/formatSpeed are thin sentinel wrappers over the shared ladders
+  // in core/utils/byte_format.dart; these tests pin the sentinels and the
+  // choice of ladder, not the arithmetic (that lives in byte_format_test).
   group('formatSize', () {
     test('returns em-dash for non-positive values', () {
       expect(formatSize(0), '—');
       expect(formatSize(-10), '—');
     });
 
-    test('formats bytes', () {
-      expect(formatSize(512), '512.0 B');
+    test('formats bytes as whole things', () {
+      expect(formatSize(512), '512 B');
     });
 
     test('formats kilobytes', () {
-      expect(formatSize(2048), '2.0 KB');
+      expect(formatSize(2048), '2.00 KB');
     });
 
     test('formats megabytes', () {
-      expect(formatSize(5 * 1024 * 1024), '5.0 MB');
+      expect(formatSize(5 * 1024 * 1024), '5.00 MB');
     });
 
     test('formats gigabytes', () {
-      expect(formatSize(2 * 1024 * 1024 * 1024), '2.0 GB');
+      expect(formatSize(2 * 1024 * 1024 * 1024), '2.00 GB');
     });
 
     test('formats terabytes', () {
-      expect(formatSize(1024 * 1024 * 1024 * 1024), '1.0 TB');
+      expect(formatSize(1024 * 1024 * 1024 * 1024), '1.00 TB');
+    });
+
+    test('takes the precise ladder, keeping a tenth of a terabyte', () {
+      // TrueNAS pools go through this formatter too, and "46 TB" for a 45.5 TB
+      // pool loses the digit the storage screen exists to show.
+      expect(formatSize((45.5 * 1024 * 1024 * 1024 * 1024).round()), '45.5 TB');
+    });
+
+    test('climbs past TB instead of stopping there', () {
+      expect(formatSize(1024 * 1024 * 1024 * 1024 * 1024), '1.00 PB');
     });
   });
 
@@ -80,8 +93,11 @@ void main() {
       expect(formatSpeed(2048), '2.0 KB/s');
     });
 
-    test('formats MB/s', () {
-      expect(formatSpeed(52 * 1024 * 1024), '52.0 MB/s');
+    test('takes the compact ladder, matching the other services KPI cells', () {
+      // SABnzbd and NZBGet render their rates from the same compact ladder, and
+      // all three land in the same /services grid.
+      expect(formatSpeed(52 * 1024 * 1024), '52 MB/s');
+      expect(formatSpeed(512), '512 B/s');
     });
 
     test('formats GB/s', () {

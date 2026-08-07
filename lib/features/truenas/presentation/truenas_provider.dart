@@ -23,7 +23,7 @@ final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
     currentSettingsProvider.select((s) => s.truenasApiKey),
   );
   final certFingerprint = ref.watch(
-    currentSettingsProvider.select((s) => s.truenasCertFingerprint),
+    currentSettingsProvider.select((s) => s.pinForUrl(s.truenasUrl)),
   );
   if (url.isEmpty || apiKey.isEmpty) {
     throw const TrueNasException('TrueNAS not configured');
@@ -31,7 +31,7 @@ final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
   final client = TrueNasWsClient(
     baseUrl: url,
     apiKey: apiKey,
-    certFingerprint: certFingerprint.isEmpty ? null : certFingerprint,
+    certFingerprint: certFingerprint,
   );
   ref.onDispose(client.close);
   return client;

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/platform/secure_clipboard.dart';
 import 'package:seekarr/core/service_theme.dart';
 import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
@@ -15,14 +18,16 @@ import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/core/widgets/status_badge.dart';
+import 'package:seekarr/features/release_search/presentation/widgets/search_headroom_card.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
 import 'package:seekarr/features/settings/data/service_verification.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/connection_presentation.dart';
+import 'package:seekarr/features/stream/presentation/widgets/jellyfin_viewer_picker.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:seekarr/features/settings/presentation/widgets/cert_trust_content.dart';
 import 'package:seekarr/features/settings/presentation/widgets/cert_trust_dialog.dart';
-import 'package:seekarr/features/truenas/domain/truenas_version.dart';
 
 /// One service's address and credentials, and the state of that connection.
 ///
@@ -33,7 +38,15 @@ import 'package:seekarr/features/truenas/domain/truenas_version.dart';
 class ServiceSettingsScreen extends ConsumerStatefulWidget {
   final ServiceKey service;
 
-  const ServiceSettingsScreen({super.key, required this.service});
+  /// Injectable so a widget test can stay off a real socket — see
+  /// [CertificateProber].
+  final CertificateProber certificateProber;
+
+  const ServiceSettingsScreen({
+    super.key,
+    required this.service,
+    this.certificateProber = probeUntrustedCertificate,
+  });
 
   @override
   ConsumerState<ServiceSettingsScreen> createState() =>
@@ -61,15 +74,15 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   ServiceKey get service => widget.service;
 
-  bool get isQbittorrent => service == ServiceKey.qbittorrent;
-  bool get isDockge => service == ServiceKey.dockge;
-  bool get isNzbget => service == ServiceKey.nzbget;
-  bool get isTrueNas => service == ServiceKey.truenas;
-  bool get isUnraid => service == ServiceKey.unraid;
-  bool get isReadarr => service == ServiceKey.readarr;
+  bool get isPlex => service == ServiceKey.plex;
 
   /// Services authenticated with username/password rather than an API key.
-  bool get usesCredentials => isQbittorrent || isDockge || isNzbget;
+  ///
+  /// The registry owns this fact — see [ServiceKeyExtension.usesApiKey]. Spelled
+  /// out here as its own three-way check, adding a credential-authenticated
+  /// service meant this screen and the persistence layer could disagree about
+  /// which fields the service even has.
+  bool get usesCredentials => !service.usesApiKey;
 
   @override
   void initState() {
@@ -145,23 +158,30 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       );
       var result = await diagnoseService(service, candidate);
 
-      // TLS exception flow: when a pinning-capable service failed in a way a
-      // certificate could explain, offer to trust it and test again. Skipped
-      // once the server has answered — probing for a certificate after a
-      // rejected API key is a round trip that can only come back null.
+      // TLS exception flow: when the failure could be explained by a
+      // certificate, offer to trust it and test again. Every service can
+      // reach this since ADR-6. Skipped once the server has answered —
+      // probing for a certificate after a rejected API key is a round trip
+      // that can only come back null.
       if (mounted &&
           result.isDisconnected &&
-          supportsCertPinning(service) &&
           certProbeWorthwhile(result.reason)) {
-        final cert = await probeUntrustedCertificate(
-          candidate.urlFor(service),
-          pinnedFingerprint: candidate.certFingerprintFor(service),
+        final url = candidate.urlFor(service);
+        final previousPin = candidate.pinForUrl(url);
+        final probe = await widget.certificateProber(
+          url,
+          pinnedFingerprint: previousPin ?? '',
         );
-        if (cert != null && mounted) {
+        if (probe != null && mounted) {
           final trust = await showCertTrustDialog(
             context,
-            serviceTitle: service.title,
-            certificate: cert,
+            origin: UrlUtils.certOrigin(url) ?? url,
+            probe: probe,
+            previousFingerprint: previousPin,
+            sharedWith: candidate
+                .servicesSharingOriginOf(url)
+                .where((s) => s != service)
+                .toList(),
           );
           if (trust && mounted) {
             await ref
@@ -169,7 +189,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                 .updateSettings(
                   ref
                       .read(currentSettingsProvider)
-                      .copyWithCertFingerprint(service, cert.fingerprint),
+                      .copyWithTrustedCertificate(
+                        url: url,
+                        fingerprint: probe.certificate.fingerprint,
+                      ),
                 );
             if (!mounted) return;
             result = await diagnoseService(
@@ -212,21 +235,27 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final current = ref.read(currentSettingsProvider);
-    var updated = _updateServiceSettings(current);
+    // Captured before the write: an edited URL moves this service off an origin
+    // whose certificate may have been pinned, and `_maybePromptCertTrust` below
+    // can only ever *add* a pin. Left behind, the entry outlives the address —
+    // and because `pinForUrl` is keyed purely by origin, any service later
+    // pointed back at it would silently reuse the stale trust with no prompt.
+    final priorUrl = current.urlFor(service);
+    var updated = _updateServiceSettings(
+      current,
+    ).copyWithoutUnusedCertificate(priorUrl);
 
     final notifier = ref.read(settingsProvider.notifier);
     await notifier.updateSettings(updated);
     if (!mounted) return;
 
-    // For TLS-pinning services, offer to trust a self-signed certificate so the
-    // connection is authenticated rather than blindly accepted. Only prompts
-    // when the failure is specifically an untrusted certificate; a reachable
-    // server or an unrelated failure just saves as before.
-    if (supportsCertPinning(service)) {
-      final pinned = await _maybePromptCertTrust(updated, notifier);
-      if (!mounted) return;
-      if (pinned != null) updated = pinned;
-    }
+    // Offer to trust a self-signed certificate so the connection is
+    // authenticated rather than blindly accepted. Only prompts when the
+    // failure is specifically an untrusted certificate; a reachable server or
+    // an unrelated failure just saves as before.
+    final pinned = await _maybePromptCertTrust(updated, notifier);
+    if (!mounted) return;
+    if (pinned != null) updated = pinned;
 
     if (!mounted) return;
     Navigator.of(context).pop();
@@ -240,19 +269,32 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   ) async {
     setState(() => _saving = true);
     try {
-      final result = await diagnoseServiceWithCertProbe(service, updated);
+      final result = await diagnoseServiceWithCertProbe(
+        service,
+        updated,
+        probe: widget.certificateProber,
+      );
       if (!mounted) return null;
-      final cert = result.untrustedCertificate;
-      if (cert == null) return null;
+      final probe = result.certificateProbe;
+      if (probe == null) return null;
 
+      final url = updated.urlFor(service);
       final trust = await showCertTrustDialog(
         context,
-        serviceTitle: service.title,
-        certificate: cert,
+        origin: UrlUtils.certOrigin(url) ?? url,
+        probe: probe,
+        previousFingerprint: updated.pinForUrl(url),
+        sharedWith: updated
+            .servicesSharingOriginOf(url)
+            .where((s) => s != service)
+            .toList(),
       );
       if (!mounted || !trust) return null;
 
-      final pinned = updated.copyWithCertFingerprint(service, cert.fingerprint);
+      final pinned = updated.copyWithTrustedCertificate(
+        url: url,
+        fingerprint: probe.certificate.fingerprint,
+      );
       await notifier.updateSettings(pinned);
       return pinned;
     } finally {
@@ -275,9 +317,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   /// Writes this service's fields onto [current].
   ///
-  /// Every credential-authenticated service goes through its own `copyWith`,
-  /// which is what makes clearing work: routing Dockge or NZBGet through the
-  /// API-key path left their saved username and password behind.
+  /// Which of the two shapes to write is the registry's answer — one branch on
+  /// the capability rather than a per-service chain. Routing a
+  /// credential-authenticated service through the API-key path is what used to
+  /// leave a saved username and password behind on a clear.
   SettingsModel _writeService(
     SettingsModel current, {
     required String url,
@@ -285,22 +328,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     required String username,
     required String password,
   }) {
-    if (isQbittorrent) {
-      return current.copyWithQbittorrent(
-        url: url,
-        username: username,
-        password: password,
-      );
-    }
-    if (isDockge) {
-      return current.copyWithDockge(
-        url: url,
-        username: username,
-        password: password,
-      );
-    }
-    if (isNzbget) {
-      return current.copyWithNzbget(
+    if (usesCredentials) {
+      return current.copyWithCredentials(
+        service,
         url: url,
         username: username,
         password: password,
@@ -322,13 +352,20 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
     if (!result.confirmed || !mounted) return;
 
-    final cleared = _writeService(
-      ref.read(currentSettingsProvider),
-      url: '',
-      apiKey: '',
-      username: '',
-      password: '',
-    );
+    final before = ref.read(currentSettingsProvider);
+    final priorUrl = before.urlFor(service);
+    final cleared =
+        _writeService(before, url: '', apiKey: '', username: '', password: '')
+            // The `{url, apiKey}` pair is not all of what described that server:
+            // Jellyfin's chosen viewer sits outside it, and carrying it over to a
+            // *different* Jellyfin binds every per-viewer query to a user id that
+            // does not exist there.
+            .copyWithoutServiceExtras(service)
+            // Forget this origin's pin too, but only when nothing else configured
+            // still reaches it — removing Sonarr must never break Radarr's trust
+            // in the same reverse proxy.
+            .copyWithoutUnusedCertificate(priorUrl);
+
     await ref.read(settingsProvider.notifier).updateSettings(cleared);
     if (!mounted) return;
 
@@ -374,12 +411,15 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           ),
           children: [
             _buildHeader(context, isConfigured: isConfigured),
-            if (_setupNote != null) ...[
+            // Setup guidance is registry data, alongside the default port and
+            // the credential breadcrumb this screen already reads from there.
+            if (service.setupNote case final note?) ...[
               const SizedBox(height: AppSpacing.md),
-              _buildInfoNote(context, _setupNote!),
+              _buildInfoNote(context, note),
             ],
             const SizedBox(height: AppSpacing.xl),
             _buildUrlField(),
+            _buildTrustedCertificateIndicator(settings),
             const SizedBox(height: AppSpacing.lg),
             if (usesCredentials) _buildUsernameField() else _buildApiKeyField(),
             if (usesCredentials) ...[
@@ -392,6 +432,23 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               const SizedBox(height: AppSpacing.md),
               _buildTestResult(context, _testResult!),
             ],
+            // Directly under the connection test, because the ceiling is a
+            // property of *this instance's path* — a stack can easily have Sonarr
+            // behind a proxy and Radarr direct over Tailscale.
+            if (SearchHeadroomCard.appliesTo(widget.service)) ...[
+              const SizedBox(height: AppSpacing.lg),
+              SearchHeadroomCard(service: widget.service),
+            ],
+            // A capability check, the same shape as `appliesTo` two lines up:
+            // the picker belongs to any service whose library has to be entered
+            // through a person, not to "Jellyfin" by name. Only once a
+            // connection exists, because the viewer list comes from `/Users` on
+            // the server — offering it before there is a server to ask would be
+            // a control that can only fail.
+            if (service.needsViewerSelection && isConfigured) ...[
+              const SizedBox(height: AppSpacing.xxl),
+              const JellyfinViewerPicker(),
+            ],
             if (isConfigured) ...[
               const SizedBox(height: AppSpacing.xxl),
               _buildRemoveRow(context),
@@ -400,31 +457,6 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         ),
       ),
     );
-  }
-
-  /// Per-service setup guidance, where the API needs turning on or the project
-  /// itself carries a caveat worth stating before the user types anything.
-  String? get _setupNote {
-    if (isTrueNas) {
-      return 'Requires TrueNAS SCALE $kTrueNasMinVersion or newer. Create an '
-          'API key under Credentials → Local Users, and use the https:// '
-          'address of the web UI.';
-    }
-    if (isUnraid) {
-      return 'Enable the Unraid API first: Settings → Management Access → '
-          'Developer Options → turn on the GraphQL sandbox, then create an API '
-          'key under API Keys. Without this the endpoint will not respond.';
-    }
-    if (isReadarr) {
-      // Readarr development stopped upstream. Saying so here is the honest
-      // thing: the integration works against the last released API, but the
-      // user should know they are pointing at a project that will not receive
-      // fixes.
-      return 'Readarr development has stopped upstream. Seekarr targets its '
-          'last released API, so existing instances keep working, but expect no '
-          'new server-side fixes.';
-    }
-    return null;
   }
 
   /// The service, its host, and the state of the saved connection.
@@ -546,11 +578,12 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         '${service.title} answered as expected.',
       ServiceConnectionStatus.notConfigured =>
         'Fill in the address and credentials first.',
+      // `messageFor`, not `connectionFailureMessage`: a failure that already
+      // reached its own verdict (a refused cross-origin redirect naming where
+      // it was sent) says so verbatim, and everything else falls back to the
+      // reason-derived sentence exactly as before.
       ServiceConnectionStatus.disconnected ||
-      ServiceConnectionStatus.checking => connectionFailureMessage(
-        service,
-        result.reason,
-      ),
+      ServiceConnectionStatus.checking => result.messageFor(service),
     };
 
     // A live region rather than an announcement: this panel appears below the
@@ -692,8 +725,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           controller: _urlController,
           decoration: InputDecoration(
             labelText: 'Server URL',
-            hintText: 'https://',
-            helperText: warning,
+            hintText: 'https://your-server:${service.defaultPort}',
+            // The default port comes from the registry, so this screen and
+            // onboarding cannot disagree about it. The cleartext warning wins
+            // the helper slot when it fires — a live problem outranks a hint.
+            helperText:
+                warning ??
+                "${service.title}'s default port is "
+                    '${service.defaultPort}.',
             helperMaxLines: 3,
             helperStyle: warning == null
                 ? null
@@ -714,12 +753,123 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
   }
 
+  /// A standing confirmation that this address's origin has a trusted
+  /// self-signed certificate, with a way to revoke it.
+  ///
+  /// Rebuilds on every keystroke of the URL field — [settings] is captured
+  /// from the enclosing build, but the origin a trust decision applies to
+  /// depends on what is actually typed, which the saved value may no longer
+  /// match. Renders nothing for the overwhelming majority of services, which
+  /// reach a certificate the OS already trusts and have never pinned one.
+  Widget _buildTrustedCertificateIndicator(SettingsModel settings) {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _urlController,
+      builder: (context, value, _) {
+        final rawUrl = value.text;
+        final pin = settings.pinForUrl(rawUrl);
+        if (pin == null) return const SizedBox.shrink();
+
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        final origin = displayOrigin(UrlUtils.certOrigin(rawUrl) ?? rawUrl);
+        final sharedWith = settings
+            .servicesSharingOriginOf(rawUrl)
+            .where((s) => s != service)
+            .toList();
+
+        return Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.sm),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(
+                  Icons.verified_user_outlined,
+                  size: 14,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  sharedWith.isEmpty
+                      ? 'Trusted self-signed certificate for $origin.'
+                      : 'Trusted self-signed certificate for $origin — also '
+                            'covers ${sharedWith.map((s) => s.title).join(', ')}.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => _forgetCertificate(rawUrl),
+                style: TextButton.styleFrom(
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
+                ),
+                child: const Text('Forget'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Revokes the trusted certificate for [rawUrl]'s origin, after naming
+  /// every other configured service the revocation also affects.
+  Future<void> _forgetCertificate(String rawUrl) async {
+    final settings = ref.read(currentSettingsProvider);
+    final sharedWith = settings
+        .servicesSharingOriginOf(rawUrl)
+        .where((s) => s != service)
+        .toList();
+
+    final result = await showAppConfirmDialog(
+      context: context,
+      icon: Icons.gpp_bad_outlined,
+      title: 'Forget this certificate?',
+      message: sharedWith.isEmpty
+          ? 'The next connection to this address will need to be trusted '
+                'again.'
+          : 'This also affects ${sharedWith.map((s) => s.title).join(', ')} '
+                '— the next connection from any of them will need to be '
+                'trusted again.',
+      confirmLabel: 'Forget',
+      destructive: true,
+      // Reversible — the next connection re-offers the trust prompt — so the
+      // default "This cannot be undone." would overstate the stakes.
+      dangerNote: '',
+    );
+    if (!result.confirmed || !mounted) return;
+
+    final updated = settings.copyWithTrustedCertificate(
+      url: rawUrl,
+      fingerprint: '',
+    );
+    await ref.read(settingsProvider.notifier).updateSettings(updated);
+    if (!mounted) return;
+    SnackBarHelper.info(context, 'Certificate forgotten');
+  }
+
   Widget _buildApiKeyField() {
+    final credentialPath = service.credentialPath;
     return TextFormField(
       controller: _apiKeyController,
       decoration: InputDecoration(
-        labelText: 'API Key',
-        hintText: 'Enter your API key',
+        labelText: service.credentialLabel,
+        hintText: isPlex ? 'X-Plex-Token' : 'Enter your API key',
+        // Where the credential lives inside the service's own interface. Same
+        // registry fact onboarding shows under the same field, so someone who
+        // set this up once recognises the breadcrumb when they come back to fix
+        // it.
+        helperText: credentialPath == null
+            ? null
+            : '${service.title} → $credentialPath',
+        helperMaxLines: 2,
         suffixIcon: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -754,11 +904,18 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   Widget _buildUsernameField() {
     return TextFormField(
       controller: _usernameController,
-      decoration: const InputDecoration(
-        labelText: 'Username',
-        hintText: 'Optional',
+      decoration: InputDecoration(
+        labelText: service.usernameLabel,
+        // Optional for the download clients, which commonly run without auth
+        // behind a reverse proxy. Nginx Proxy Manager is the exception: there
+        // is no anonymous mode, and its login needs an email address.
+        hintText: service == ServiceKey.nginxProxyManager
+            ? 'The email you sign in with'
+            : 'Optional',
       ),
-      keyboardType: TextInputType.text,
+      keyboardType: service == ServiceKey.nginxProxyManager
+          ? TextInputType.emailAddress
+          : TextInputType.text,
       textInputAction: TextInputAction.next,
       autocorrect: false,
     );
@@ -779,19 +936,86 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   String? _validateApiKey(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'API Key is required';
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return isPlex ? 'Plex token is required' : 'API Key is required';
+    }
+
+    // A Plex JSON Web Token expires after seven days and can only be renewed by
+    // calling plex.tv, which this app never does. Accepting one would produce
+    // software that works for a week and then fails with a 401 the user has no
+    // way to interpret — so it is refused at the point of paste, where the
+    // message can still say what to paste instead.
+    if (isPlex && trimmed.startsWith('eyJ')) {
+      return 'That is a temporary token — it expires in 7 days and Seekarr '
+          'cannot renew it. Paste a device token instead.';
     }
 
     return null;
   }
 
-  void _copyApiKey() {
+  /// How long a copied credential is left on the clipboard.
+  ///
+  /// Long enough to switch apps and paste, short enough that it is not still
+  /// sitting there an hour later. Password managers land in the same range.
+  static const Duration _copiedCredentialLifetime = Duration(seconds: 45);
+
+  Future<void> _copyApiKey() async {
     final apiKey = _apiKeyController.text.trim();
-    if (apiKey.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: apiKey));
-      SnackBarHelper.info(context, 'API key copied to clipboard');
+    if (apiKey.isEmpty) return;
+
+    // Two layers, in order of how much they actually protect. The host's own
+    // sensitive-clip flags come first — they are the only thing that keeps the
+    // key out of Android's copy preview and off Universal Clipboard — and a
+    // plain copy is the fallback for every platform and OS version that has no
+    // such flag, because a copy button that refuses to copy is worse than an
+    // unhardened one. Either way the timed clear below still runs.
+    final hardened = await SecureClipboard.copySecret(
+      apiKey,
+      expiresIn: _copiedCredentialLifetime,
+    );
+    if (!hardened) {
+      await Clipboard.setData(ClipboardData(text: apiKey));
     }
+    if (!mounted) return;
+    // The wording is part of the mitigation, not chrome: the clipboard is a
+    // shared surface — Android 13+ renders a preview of what was copied, and on
+    // Apple platforms the general pasteboard syncs to the user's other devices
+    // through Universal Clipboard — so the honest thing is to say the key left
+    // the app and when it will be taken back.
+    SnackBarHelper.info(
+      context,
+      'API key copied — the clipboard is cleared in '
+      '${_copiedCredentialLifetime.inSeconds} seconds',
+    );
+    unawaited(_expireCopiedCredential(apiKey));
+  }
+
+  /// Takes [secret] back off the clipboard once it has had time to be pasted.
+  ///
+  /// Runs whether or not [SecureClipboard] hardened the copy, and it is the only
+  /// half of this that runs at all on Android 12 and below, where there is no
+  /// `EXTRA_IS_SENSITIVE` to set. Of the flagged platforms only iOS can expire a
+  /// clip by itself, so this stays the thing that bounds how long the key sits
+  /// there everywhere else.
+  ///
+  /// Static, and deliberately not tied to this widget's lifetime: leaving the
+  /// screen is not a reason to leave a credential on the clipboard.
+  ///
+  /// The read-back only *spares* a clipboard it can actually see holding
+  /// something else — the user copying over the key in the meantime, which is
+  /// worth not destroying. An unreadable clipboard is cleared, not spared:
+  /// since Android 10 `getPrimaryClip` answers null to any app that does not
+  /// have window focus, and 45 seconds after the copy the user is by
+  /// construction in the app they left to paste into. Treating that null as
+  /// "something else is on the clipboard" is what used to make this never fire
+  /// on Android in exactly the case it exists for, under a SnackBar promising
+  /// it would.
+  static Future<void> _expireCopiedCredential(String secret) async {
+    await Future<void>.delayed(_copiedCredentialLifetime);
+    final current = await Clipboard.getData(Clipboard.kTextPlain);
+    if (current != null && current.text != secret) return;
+    await Clipboard.setData(const ClipboardData(text: ''));
   }
 }
 

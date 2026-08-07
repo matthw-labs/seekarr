@@ -1,3 +1,5 @@
+import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
+
 class ServiceRoutes {
   ServiceRoutes._();
 
@@ -139,9 +141,17 @@ class ServiceRoutes {
   // ── Prowlarr ──────────────────────────────────────────────────────────────
   static const prowlarrLibrary = '$prowlarr/library';
   static const prowlarrIndexerBase = '$prowlarr/indexer';
+  static const prowlarrSettings = '$prowlarr/settings';
+  static const prowlarrSyncProfiles = '$prowlarrSettings/sync-profiles';
+  static const prowlarrTags = '$prowlarrSettings/tags';
 
   /// Indexer detail, e.g. `/services/prowlarr/indexer/3`.
   static String prowlarrIndexer(int id) => '$prowlarrIndexerBase/$id';
+
+  /// One of the field-driven settings sections, e.g.
+  /// `/services/prowlarr/settings/apps`.
+  static String prowlarrSettingsSection(ProwlarrProviderKind kind) =>
+      '$prowlarrSettings/${kind.routeSegment}';
 
   // ── Readarr ─────────────────────────────────────────────────────────────
   static const readarrLibrary = '$readarr/library';

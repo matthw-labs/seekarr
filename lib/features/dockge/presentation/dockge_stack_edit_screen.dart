@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
+import 'package:seekarr/features/dockge/domain/models/dockge_stack_detail.dart';
 import 'package:seekarr/features/dockge/presentation/dockge_actions.dart';
 import 'package:seekarr/features/dockge/presentation/dockge_provider.dart';
 
@@ -62,6 +64,13 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
   String get _effectiveName =>
       widget.isNew ? _nameCtrl.text.trim() : widget.name!;
 
+  /// Whether the editor holds the stack's real contents.
+  ///
+  /// Always true when adding: the editor starts from the default template. When
+  /// editing it stays false until the existing compose files have loaded, and
+  /// that gate is the difference between saving a stack and erasing one.
+  bool get _hasContent => widget.isNew || _prefilled;
+
   Future<void> _submit({required bool deploy}) async {
     final name = _effectiveName;
     if (name.isEmpty) {
@@ -73,6 +82,23 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
         context,
         'Stack name may only contain lowercase letters, numbers, '
         'dashes and underscores, and must start with a letter or number',
+      );
+      return;
+    }
+    // Both guards below exist because neither `deployStack` nor `saveStack`
+    // validates the YAML: whatever is in the field is written over the stack's
+    // compose.yaml, and `deploy` then runs `up -d` against the result. An
+    // editor that never loaded, or one the user emptied, would silently destroy
+    // a working stack. The buttons are disabled in the first case; this is the
+    // guard that actually has to hold.
+    if (!_hasContent) {
+      SnackBarHelper.error(context, 'Still loading the current compose file');
+      return;
+    }
+    if (!widget.isNew && _yamlCtrl.text.trim().isEmpty) {
+      SnackBarHelper.error(
+        context,
+        'compose.yaml is empty — that would wipe the stack',
       );
       return;
     }
@@ -107,8 +133,10 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
   @override
   Widget build(BuildContext context) {
     // Prefill from the existing stack once.
-    if (!_prefilled && !widget.isNew) {
-      final detailAsync = ref.watch(dockgeStackDetailProvider(widget.name!));
+    final detailAsync = widget.isNew
+        ? null
+        : ref.watch(dockgeStackDetailProvider(widget.name!));
+    if (detailAsync != null && !_prefilled) {
       detailAsync.whenData((detail) {
         _yamlCtrl.text = detail.composeYAML;
         _envCtrl.text = detail.composeENV;
@@ -122,59 +150,85 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
         title: Text(widget.isNew ? 'New stack' : 'Edit ${widget.name}'),
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        // An empty editor is indistinguishable from a stack with no services,
+        // and Save/Deploy would write it back as the truth. Until the real
+        // compose file is in hand, show the load state instead of the editor.
+        child: (detailAsync != null && !_prefilled)
+            ? _loadState(detailAsync)
+            : _editor(context),
+      ),
+    );
+  }
+
+  Widget _loadState(AsyncValue<DockgeStackDetail> detail) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: [
+        if (detail.hasError)
+          AppErrorState(
+            error: detail.error!,
+            onRetry: () =>
+                ref.invalidate(dockgeStackDetailProvider(widget.name!)),
+          )
+        else
+          AppSkeleton.detailBody(),
+      ],
+    );
+  }
+
+  Widget _editor(BuildContext context) {
+    final canSubmit = !_busy && _hasContent;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      children: [
+        if (widget.isNew) ...[
+          _Label('Stack name'),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _nameCtrl,
+            decoration: _inputDecoration(context, 'my-stack'),
+            autocorrect: false,
+            enableSuggestions: false,
+          ),
+          const SizedBox(height: 16),
+        ],
+        _Label('compose.yaml'),
+        const SizedBox(height: 6),
+        _CodeField(controller: _yamlCtrl, minLines: 14),
+        const SizedBox(height: 16),
+        _Label('.env (optional)'),
+        const SizedBox(height: 6),
+        _CodeField(controller: _envCtrl, minLines: 4),
+        const SizedBox(height: 24),
+        Row(
           children: [
-            if (widget.isNew) ...[
-              _Label('Stack name'),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _nameCtrl,
-                decoration: _inputDecoration(context, 'my-stack'),
-                autocorrect: false,
-                enableSuggestions: false,
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: canSubmit ? () => _submit(deploy: false) : null,
+                icon: const Icon(Icons.save_outlined, size: 18),
+                label: const Text('Save'),
               ),
-              const SizedBox(height: 16),
-            ],
-            _Label('compose.yaml'),
-            const SizedBox(height: 6),
-            _CodeField(controller: _yamlCtrl, minLines: 14),
-            const SizedBox(height: 16),
-            _Label('.env (optional)'),
-            const SizedBox(height: 6),
-            _CodeField(controller: _envCtrl, minLines: 4),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _busy ? null : () => _submit(deploy: false),
-                    icon: const Icon(Icons.save_outlined, size: 18),
-                    label: const Text('Save'),
-                  ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: canSubmit ? () => _submit(deploy: true) : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.dockge,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _busy ? null : () => _submit(deploy: true),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.dockge,
-                    ),
-                    icon: _busy
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.rocket_launch_rounded, size: 18),
-                    label: const Text('Deploy'),
-                  ),
-                ),
-              ],
+                icon: _busy
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.rocket_launch_rounded, size: 18),
+                label: const Text('Deploy'),
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 

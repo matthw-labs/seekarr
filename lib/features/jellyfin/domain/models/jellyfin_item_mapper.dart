@@ -347,11 +347,20 @@ StreamSession? jellyfinStreamSessionFromJson(Map<String, dynamic> session) {
     deviceLabel: _deviceLabel(session),
     posterPath: jellyfinPosterPath(nowPlaying),
     playMethod: playMethod,
-    // Only a transcode has reasons; a direct play that carried a stale array
-    // would render an explanation for something that is not happening.
-    transcodeReasons: playMethod.isTranscode
-        ? jellyfinTranscodeReasonPhrases(transcoding?['TranscodeReasons'])
-        : const [],
+    // A direct stream has reasons too, and dropping them was the bug: Jellyfin
+    // remuxes *because of something* — an unsupported container, an external
+    // subtitle track — and reports it in the same `TranscodeReasons` array. The
+    // model says so at `StreamSession.transcodeReasons`, and Plex has always
+    // passed its decisions through unconditionally, so the byte-identical
+    // session explained itself on one server and not the other.
+    //
+    // Only a direct play is gated, and on the play method rather than on the
+    // array being empty: nothing is being done to the file, so an array that
+    // arrived anyway (a stale session row mid-transition) would explain
+    // something that is not happening.
+    transcodeReasons: playMethod == StreamPlayMethod.directPlay
+        ? const []
+        : jellyfinTranscodeReasonPhrases(transcoding?['TranscodeReasons']),
     bitrate: bitrate,
     bitrateIsNominal: transcodeBitrate == null,
     progress: jellyfinFractionFromTicks(

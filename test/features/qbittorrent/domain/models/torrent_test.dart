@@ -242,7 +242,7 @@ void main() {
 
     test('sizeFormatted shows em-dash when zero', () {
       expect(build(size: 0).sizeFormatted, '—');
-      expect(build(size: 1024).sizeFormatted, '1.0 KB');
+      expect(build(size: 1024).sizeFormatted, '1.00 KB');
     });
 
     test('dlSpeedFormatted and upSpeedFormatted', () {

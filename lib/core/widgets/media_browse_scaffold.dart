@@ -33,6 +33,73 @@ typedef MediaBrowseRefreshCallback = void Function(WidgetRef ref);
 
 enum MediaBrowseFilter { all, available, missing, inQueue }
 
+/// Which library chip a resolved status belongs under.
+///
+/// Three buckets rather than two predicates, and that is the whole point: a pair
+/// of independent predicates is how [MediaAvailability.unknown] and
+/// [MediaAvailability.deleted] came to match *neither* Available nor Missing, so
+/// a freshly added Sonarr series — `sonarrSeriesAvailability` returns `unknown`
+/// whenever the server omits `statistics` — was visible under `All` and under
+/// nothing else. A bucket is exhaustive over [MediaAvailability] by
+/// construction, so a state added later cannot silently fall out of the library.
+enum MediaBrowseBucket {
+  /// Something is on disk: Available, Upgrade Available, Partial.
+  onDisk,
+
+  /// Something the user can act on is not on disk.
+  gap,
+
+  /// Not out yet — the one state that deliberately answers to no chip but
+  /// `All`, because an unreleased title is not a gap anyone can close.
+  unreleased,
+}
+
+/// The bucket for [status], exhaustively.
+///
+/// A null status means the screen supplied no extractor, or the feature could
+/// not resolve one: it lands in [MediaBrowseBucket.gap], which is what the
+/// pre-refactor `_browseStatusFor` did with its terminal `_ => missing` case.
+MediaBrowseBucket mediaBrowseBucketOf(MediaStatusInfo? status) {
+  if (status == null) return MediaBrowseBucket.gap;
+
+  return switch (status.availability) {
+    MediaAvailability.available ||
+    MediaAvailability.upgradable ||
+    // Partial counts as on disk: part of it genuinely is, and the page shows
+    // the count. It is deliberately not also a gap — a title cannot answer to
+    // two chips or the two lists stop being a partition.
+    MediaAvailability.partial => MediaBrowseBucket.onDisk,
+    MediaAvailability.missing ||
+    // Not tracked, gone from the service, or never reported: nothing is on
+    // disk, so the operator finds it where they look for what is not there.
+    MediaAvailability.notTracked ||
+    MediaAvailability.deleted ||
+    MediaAvailability.unknown => MediaBrowseBucket.gap,
+    MediaAvailability.unavailable => MediaBrowseBucket.unreleased,
+  };
+}
+
+/// Whether an item with [status] is shown under [filter].
+///
+/// Pure and top-level so the partition can be asserted rung by rung instead of
+/// only through a pumped scaffold.
+bool mediaBrowseFilterMatches(
+  MediaBrowseFilter filter,
+  MediaStatusInfo? status,
+) {
+  return switch (filter) {
+    MediaBrowseFilter.all => true,
+    MediaBrowseFilter.available =>
+      mediaBrowseBucketOf(status) == MediaBrowseBucket.onDisk,
+    MediaBrowseFilter.missing =>
+      mediaBrowseBucketOf(status) == MediaBrowseBucket.gap,
+    // Orthogonal to the buckets on purpose: what is moving is a different
+    // question from what is on disk, and a downloading title belongs in both
+    // In Queue and Missing.
+    MediaBrowseFilter.inQueue => status?.isInPipeline ?? false,
+  };
+}
+
 /// Shared scaffold for media library browse screens.
 ///
 /// Provides the shared AppBar, search bar, navigation refresh listener,
@@ -393,22 +460,12 @@ class _MediaBrowseScaffoldState<T>
       });
 
     return sortedItems
-        .where((item) {
-          final status = widget.statusExtractor?.call(item);
-          return switch (_selectedFilter) {
-            MediaBrowseFilter.all => true,
-            MediaBrowseFilter.available =>
-              status != null &&
-                  (status.isAvailable ||
-                      status.availability == MediaAvailability.partial),
-            // Deliberately excludes `unavailable`: an unreleased title is not a
-            // gap the user can act on.
-            MediaBrowseFilter.missing =>
-              status == null ||
-                  status.availability == MediaAvailability.missing,
-            MediaBrowseFilter.inQueue => status?.isInPipeline ?? false,
-          };
-        })
+        .where(
+          (item) => mediaBrowseFilterMatches(
+            _selectedFilter,
+            widget.statusExtractor?.call(item),
+          ),
+        )
         .toList(growable: false);
   }
 

@@ -361,9 +361,7 @@ class _LibraryRow extends StatelessWidget {
                   library.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.titleSmall,
                 ),
                 Text(
                   _subtitleFor(library),

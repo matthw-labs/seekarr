@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:seekarr/core/utils/byte_format.dart';
+
 /// Sort options for releases in Interactive Search.
 enum ReleaseSortType {
   score('CF Score', Icons.star_rounded),
@@ -172,20 +174,19 @@ Set<String> extractAvailableIndexers(List<dynamic> releases) {
   return releases.map((r) => r['indexer'] as String? ?? 'Unknown').toSet();
 }
 
-/// Formats a byte size into a human-readable string.
+/// Formats a release's byte size for the interactive-search list.
+///
+/// Delegates to the shared [formatBytesPrecise] ladder. This used to be its own
+/// fifth copy of the byte formatter, with a per-rung precision (one decimal at
+/// KB and MB, two at GB) and no rung above GB — so a 2 TiB season pack printed
+/// as `2048.00 GB`.
 ///
 /// Examples:
 /// - 512 -> "512 B"
-/// - 1024 -> "1.0 KB"
+/// - 1024 -> "1.00 KB"
 /// - 1073741824 -> "1.00 GB"
-String formatReleaseSize(int bytes) {
-  if (bytes < 1024) return '$bytes B';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-  if (bytes < 1024 * 1024 * 1024) {
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-}
+/// - 2199023255552 -> "2.00 TB"
+String formatReleaseSize(int bytes) => formatBytesPrecise(bytes);
 
 /// Formats age in minutes into a human-readable string.
 ///

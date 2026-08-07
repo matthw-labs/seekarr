@@ -26,6 +26,7 @@ final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
     password: settings.qbittorrentPassword.isNotEmpty
         ? settings.qbittorrentPassword
         : null,
+    certFingerprint: settings.pinForUrl(settings.qbittorrentUrl),
   );
   return QbittorrentService(client);
 });

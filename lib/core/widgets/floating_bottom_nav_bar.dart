@@ -23,11 +23,25 @@ class FloatingNavDestination {
   /// Accent color used for the selected pill.
   final Color accentColor;
 
+  /// Count of things waiting on this destination, or zero for none.
+  ///
+  /// Painted in the destination's **own accent**, never a status tone: a green or
+  /// amber pill living in permanent chrome reads as stack health, which is
+  /// exactly what the section accents exist to keep separate from the closed
+  /// status vocabulary.
+  final int badgeCount;
+
+  /// Spoken alongside the label, because a number drawn on an icon is invisible
+  /// to a screen reader.
+  final String? badgeSemanticLabel;
+
   const FloatingNavDestination({
     required this.icon,
     required this.selectedIcon,
     required this.label,
     required this.accentColor,
+    this.badgeCount = 0,
+    this.badgeSemanticLabel,
   });
 }
 
@@ -777,7 +791,11 @@ class _NavBarItem extends StatelessWidget {
       button: true,
       container: true,
       excludeSemantics: true,
-      label: '${destination.label}\n$indexLabel',
+      // The badge draws a number the screen reader cannot see, so the count
+      // joins the spoken label rather than living only in the paint.
+      label: destination.badgeSemanticLabel == null
+          ? '${destination.label}\n$indexLabel'
+          : '${destination.label}, ${destination.badgeSemanticLabel}\n$indexLabel',
       selected: isSelected,
       enabled: true,
       onTap: onTap,
@@ -811,15 +829,19 @@ class _NavBarItem extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    AnimatedSwitcher(
-                      duration: AppAnimation.durationSm,
-                      child: Icon(
-                        isSelected
-                            ? destination.selectedIcon
-                            : destination.icon,
-                        key: ValueKey(isSelected),
-                        color: itemColor,
-                        size: iconSize,
+                    _BadgedIcon(
+                      count: destination.badgeCount,
+                      accent: destination.accentColor,
+                      child: AnimatedSwitcher(
+                        duration: AppAnimation.durationSm,
+                        child: Icon(
+                          isSelected
+                              ? destination.selectedIcon
+                              : destination.icon,
+                          key: ValueKey(isSelected),
+                          color: itemColor,
+                          size: iconSize,
+                        ),
                       ),
                     ),
                     // Flexible so the label ellipsises when the row is tighter
@@ -858,6 +880,65 @@ class _NavBarItem extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A count on a navigation icon.
+///
+/// Deliberately the destination's own accent rather than a status tone — see
+/// [FloatingNavDestination.badgeCount]. Excluded from semantics because the
+/// destination already speaks the count in its label; a second node would read
+/// the number twice.
+class _BadgedIcon extends StatelessWidget {
+  const _BadgedIcon({
+    required this.count,
+    required this.accent,
+    required this.child,
+  });
+
+  final int count;
+  final Color accent;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (count <= 0) return child;
+    final colorScheme = Theme.of(context).colorScheme;
+    return ExcludeSemantics(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          child,
+          Positioned(
+            top: -4,
+            right: -6,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 15),
+              height: 15,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colorScheme.surface, width: 1.5),
+              ),
+              child: Text(
+                count > 9 ? '9+' : '$count',
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.weight(FontWeight.w800)
+                    .tabular
+                    .copyWith(
+                      // Measured against the fill rather than assumed: white on
+                      // the section cyan is 2.4:1, the dark ink is 6.6:1.
+                      color: ServiceTheme.foregroundOn(accent),
+                      height: 1,
+                    ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

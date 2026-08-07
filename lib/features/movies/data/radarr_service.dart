@@ -12,7 +12,11 @@ final radarrServiceProvider = Provider<RadarrService>((ref) {
     throw Exception('Radarr not configured');
   }
   return RadarrService(
-    ApiClient(baseUrl: settings.radarrUrl, apiKey: settings.radarrApiKey),
+    ApiClient(
+      baseUrl: settings.radarrUrl,
+      apiKey: settings.radarrApiKey,
+      pinnedCertFingerprint: settings.pinForUrl(settings.radarrUrl),
+    ),
   );
 });
 
@@ -99,8 +103,21 @@ class RadarrService with ArrActivityMixin {
   }
 
   /// Searches for movies by term using the lookup API.
-  Future<List<RadarrMovie>> lookupMovies(String term) async {
-    return lookupItems('movie/lookup', term, RadarrMovie.fromJson);
+  ///
+  /// [cancelToken] aborts the request once the search that asked for it has
+  /// been superseded — see [ArrActivityMixin.lookupItems], which owns the
+  /// empty-term guard, the isolate mapping and the degrade-to-`[]` rule the
+  /// three arr lookups share.
+  Future<List<RadarrMovie>> lookupMovies(
+    String term, {
+    CancelToken? cancelToken,
+  }) {
+    return lookupItems(
+      'movie/lookup',
+      term,
+      RadarrMovie.fromJson,
+      cancelToken: cancelToken,
+    );
   }
 
   /// Finds a movie in the library by its TMDB ID.

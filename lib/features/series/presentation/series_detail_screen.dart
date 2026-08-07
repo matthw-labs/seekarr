@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/api/quality_profile_mixin.dart';
 import 'package:seekarr/core/app_animation.dart';
 import 'package:seekarr/core/utils/rating_display.dart';
@@ -12,6 +13,11 @@ import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/presentation/widgets/arr_media_extras_section.dart';
+import 'package:seekarr/features/release_search/domain/release_search_target.dart';
+import 'package:seekarr/features/release_search/presentation/release_search_entry.dart';
+import 'package:seekarr/features/release_search/presentation/widgets/release_search_indicators.dart';
+import 'package:seekarr/features/release_search/presentation/widgets/release_search_status_card.dart';
+import 'package:seekarr/features/stream/presentation/widgets/stream_availability_slot.dart';
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/series/domain/models/sonarr_episode.dart';
@@ -139,6 +145,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         episodesAsync,
         series.id > 0 ? series.id : widget.seriesId,
         series.tmdbId,
+        series.tvdbId,
       ),
     );
   }
@@ -208,6 +215,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     AsyncValue<List<SonarrEpisode>> episodesAsync,
     int seriesId,
     int tmdbId,
+    int tvdbId,
   ) {
     final accent = ServiceKey.sonarr.accent;
     final total = viewModel.episodeCount ?? 0;
@@ -267,11 +275,42 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
           MediaDetailSlot.lazy(
             label: 'Seasons',
             count: total > 0 ? '$onDisk of $total on disk' : null,
+            // State at the point of intent: a live search for this title's
+            // primary target rewrites what the action would have promised. The
+            // caller owns this box's gutter — see MediaDetailSlot.leadingBox.
+            leadingBox: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: ReleaseSearchStatusCard(
+                target: sonarrSeasonTarget(
+                  seriesId: widget.seriesId,
+                  seasonNumber: null,
+                  label: truncateTitle(viewModel.title),
+                ),
+              ),
+            ),
             // A lazy sliver mid-page: a 250-episode season builds the rows on
             // screen instead of all 250 inside one box adapter.
             sliver: SeriesSeasonsList(
               seasons: viewModel.seasons,
               episodesAsync: episodesAsync,
+              // State only at the granularity it was launched: a season header
+              // shows its own search, an episode row its own — never each
+              // other's.
+              seasonIndicator: (seasonNumber) => ReleaseSearchRowChip(
+                target: ReleaseSearchTarget.season(
+                  seriesId: widget.seriesId,
+                  seasonNumber: seasonNumber,
+                  label: 'Season $seasonNumber',
+                ),
+              ),
+              episodeIndicator: (episode) => ReleaseSearchRowDot(
+                target: ReleaseSearchTarget.episode(
+                  episodeId: episode.id,
+                  seriesId: widget.seriesId,
+                  seasonNumber: episode.seasonNumber,
+                  label: 'Episode ${episode.episodeNumber}',
+                ),
+              ),
               onSearchSeason: (seasonNumber) =>
                   _searchSeason(context, seasonNumber),
               onInteractiveSearchSeason: (seasonNumber) =>
@@ -282,10 +321,11 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                   ),
               onSearchEpisode: (episodeId) =>
                   _searchEpisode(context, episodeId),
-              onInteractiveSearchEpisode: (episodeId) =>
+              onInteractiveSearchEpisode: (episodeId, seasonNumber) =>
                   _interactiveSearchEpisode(
                     context,
                     episodeId,
+                    seasonNumber: seasonNumber,
                     title: viewModel.title,
                   ),
               searchingSeasons: _searchingSeasons,
@@ -334,13 +374,24 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
             child: MediaChipSection.neutral(values: viewModel.genres),
           ),
       ],
-      // See the movie screen: two labelled slots, each omitted when empty.
-      related: arrMediaExtrasSlots(
-        ref,
-        tmdbId: tmdbId,
-        mediaType: 'tv',
-        accent: accent,
-      ),
+      // See the movie screen: labelled slots, each omitted when empty.
+      related: [
+        // Sonarr's own identifier is the TVDB one, so the join goes through that
+        // rather than through `tmdbId`: both servers index it, and matching on a
+        // title across two catalogues would be a guess.
+        ...streamAvailabilitySlots(
+          ref,
+          accent: accent,
+          tvdbId: tvdbId == 0 ? null : '$tvdbId',
+          tmdbId: tmdbId == 0 ? null : '$tmdbId',
+        ),
+        ...arrMediaExtrasSlots(
+          ref,
+          tmdbId: tmdbId,
+          mediaType: 'tv',
+          accent: accent,
+        ),
+      ],
     );
   }
 
@@ -417,26 +468,20 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     required String title,
     int? seasonNumber,
   }) async {
-    HapticFeedback.selectionClick();
-    final sonarrService = ref.read(sonarrServiceProvider);
-    await InteractiveSearchSheet.showAsync(
-      context: context,
-      accent: ServiceKey.sonarr.accent,
-      // The sheet titles itself "Releases" and this lands in the subtitle, so
-      // "Releases for X" said it twice. Capped: the subtitle has no maxLines, and
-      // a long show name plus a season suffix used to grow the header until it
-      // crowded out the list.
-      title: seasonNumber != null
-          ? '${truncateTitle(title)} · Season $seasonNumber'
-          : truncateTitle(title),
-      fetchReleases: (token) => sonarrService.getReleases(
+    // The sheet titles itself "Releases" and this lands in the subtitle, so
+    // "Releases for X" said it twice. Capped: the subtitle has no maxLines, and
+    // a long show name plus a season suffix used to grow the header until it
+    // crowded out the list.
+    await showReleaseSearch(
+      context,
+      ref,
+      sonarrSeasonTarget(
         seriesId: widget.seriesId,
-        seasonNumber: seasonNumber ?? 1,
-        cancelToken: token,
+        seasonNumber: seasonNumber,
+        label: seasonNumber != null
+            ? '${truncateTitle(title)} · Season $seasonNumber'
+            : truncateTitle(title),
       ),
-      onGrabRelease: (guid, indexerId) async {
-        await sonarrService.grabRelease(guid: guid, indexerId: indexerId);
-      },
     );
   }
 
@@ -504,21 +549,23 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     BuildContext context,
     int episodeId, {
     required String title,
+    required int seasonNumber,
   }) async {
-    HapticFeedback.selectionClick();
-    final sonarrService = ref.read(sonarrServiceProvider);
-    await InteractiveSearchSheet.showAsync(
-      context: context,
-      accent: ServiceKey.sonarr.accent,
-      // "Episode Releases" under a heading that already reads "Releases" named
-      // neither the show nor which scope was searched. This says both, in the
-      // same shape as the series and season sheets.
-      title: '${truncateTitle(title)} · one episode',
-      fetchReleases: (token) =>
-          sonarrService.getReleases(episodeId: episodeId, cancelToken: token),
-      onGrabRelease: (guid, indexerId) async {
-        await sonarrService.grabRelease(guid: guid, indexerId: indexerId);
-      },
+    // "Episode Releases" under a heading that already reads "Releases" named
+    // neither the show nor which scope was searched. This says both, in the
+    // same shape as the series and season sheets.
+    //
+    // seriesId and seasonNumber travel with the target so this episode can be
+    // recognised as part of a season that may already be searching.
+    await showReleaseSearch(
+      context,
+      ref,
+      ReleaseSearchTarget.episode(
+        episodeId: episodeId,
+        seriesId: widget.seriesId,
+        seasonNumber: seasonNumber,
+        label: '${truncateTitle(title)} · one episode',
+      ),
     );
   }
 

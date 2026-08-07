@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_history_format.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider_list_screen.dart'
+    show prowlarrSyncLevelLabel;
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_indexer_tile.dart';
 import 'package:seekarr/features/prowlarr/presentation/widgets/prowlarr_list_shimmer.dart';
@@ -16,8 +20,10 @@ import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
-/// Prowlarr service dashboard: indexer overview, usage stats and recent
-/// activity. Read-only (Fase 3); indexer actions land in a later phase.
+/// Prowlarr service dashboard: indexer overview, usage stats, recent activity
+/// and the write actions the web UI puts on its indexer page — add an indexer,
+/// test them all, push them to the connected apps. Per-indexer editing lives in
+/// the library and detail screens.
 class ProwlarrScreen extends ConsumerWidget {
   const ProwlarrScreen({
     super.key,
@@ -126,6 +132,7 @@ class _ProwlarrDashboard extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           _HealthBanner(healthAsync: healthAsync),
+          const _QuickActions(),
           SectionHeader(
             title: 'Indexers',
             showChevron: true,
@@ -133,6 +140,18 @@ class _ProwlarrDashboard extends ConsumerWidget {
           ),
           const SizedBox(height: 2),
           _IndexerList(indexersAsync: indexersAsync, disabledIds: disabledIds),
+          const SizedBox(height: 8),
+          SectionHeader(
+            title: 'Apps',
+            showChevron: true,
+            onTap: () => context.push(
+              ServiceRoutes.prowlarrSettingsSection(
+                ProwlarrProviderKind.application,
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
+          const _AppsList(),
           const SizedBox(height: 8),
           const SectionHeader(title: 'Recent Activity', showChevron: false),
           const SizedBox(height: 2),
@@ -213,6 +232,131 @@ class _HealthBanner extends StatelessWidget {
   }
 }
 
+/// The three actions the web UI keeps one click away on its indexer page.
+class _QuickActions extends ConsumerWidget {
+  const _QuickActions();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () => addIndexerFlow(context, ref),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Add'),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => syncAppIndexersFlow(context, ref),
+              icon: const Icon(Icons.sync_rounded, size: 18),
+              label: const Text('Sync apps'),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => testAllIndexersFlow(context, ref),
+              icon: const Icon(Icons.network_check_rounded, size: 18),
+              label: const Text('Test all'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Applications Prowlarr pushes its indexers to, with their sync level.
+class _AppsList extends ConsumerWidget {
+  const _AppsList();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ref
+        .watch(prowlarrApplicationsProvider)
+        .when(
+          data: (apps) {
+            if (apps.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Text('No applications connected to Prowlarr.'),
+              );
+            }
+            return Column(
+              children: [
+                for (final app in apps)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.xs,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(11),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        border: Border.all(color: colorScheme.outlineVariant),
+                        borderRadius: AppRadius.borderRadiusMd,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              // Applications carry no `enable` flag of their
+                              // own — a sync level of `disabled` is "off".
+                              color: app.isActive
+                                  ? AppColors.success
+                                  : colorScheme.onSurfaceVariant,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Text(
+                              app.name ?? app.implementation ?? 'Application',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.titleSmall!.weight(FontWeight.w600),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (app.syncLevel != null)
+                            Text(
+                              prowlarrSyncLevelLabel(app.syncLevel!),
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+          loading: () => const ProwlarrListShimmer(count: 2),
+          error: (error, _) => _ErrorRetry(
+            message: 'Failed to load applications',
+            onRetry: () => ref.invalidate(prowlarrApplicationsProvider),
+          ),
+        );
+  }
+}
+
 class _IndexerList extends ConsumerWidget {
   const _IndexerList({required this.indexersAsync, required this.disabledIds});
 
@@ -240,7 +384,7 @@ class _IndexerList extends ConsumerWidget {
           children: sorted
               .take(5)
               .map(
-                (indexer) => ProwlarrIndexerTile(
+                (indexer) => ProwlarrIndexerTile.preview(
                   indexer: indexer,
                   failing: disabledIds.contains(indexer.id),
                 ),

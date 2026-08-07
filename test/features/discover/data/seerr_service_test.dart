@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:seekarr/features/discover/data/seerr_service.dart';
@@ -93,6 +94,18 @@ void main() {
       await service.search('star wars & friends');
       final q = client.lastGetQueryParameters!['query'] as String;
       expect(q, Uri.encodeComponent('star wars & friends'));
+    });
+
+    test('forwards the cancel token to ApiClient', () async {
+      // The other three global-search legs pin this at service level; Seerr's
+      // only cover was a fake that overrode `search` outright, so dropping the
+      // forwarding here left the whole suite green.
+      client.getResponseData = {'results': const []};
+      final cancelToken = CancelToken();
+
+      await service.search('dune', cancelToken: cancelToken);
+
+      expect(client.lastGetCancelToken, same(cancelToken));
     });
 
     test('returns empty list on network error', () async {

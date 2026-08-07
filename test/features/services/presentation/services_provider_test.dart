@@ -93,6 +93,77 @@ void main() {
       // displayed the count gave way to the stack matrix's live signal.
       expect(summary.versionLabel, 'v5.4.6');
     });
+
+    // What this provider watches decides how much of the network it touches:
+    // one family entry per service, each opening a connection and waiting out a
+    // multi-second timeout. Watching the whole SettingsModel meant every write —
+    // a theme toggle included, and a single Save can write twice — re-probed
+    // every configured service at once.
+    test(
+      'an unrelated settings change does not re-probe the service',
+      () async {
+        final status = _CountingStatusClient();
+        final container = _mutableSettingsContainer(
+          initial: _secureRadarr,
+          statusClient: status,
+        );
+
+        await container.read(serviceSummaryProvider(ServiceKey.radarr).future);
+        expect(status.calls, 1);
+
+        container
+            .read(_settingsHolderProvider.notifier)
+            .set(_secureRadarr.copyWith(themeMode: AppThemeMode.light));
+        await container.read(serviceSummaryProvider(ServiceKey.radarr).future);
+
+        expect(
+          status.calls,
+          1,
+          reason: 'reachability does not depend on the theme',
+        );
+      },
+    );
+
+    test('trusting a certificate for the origin re-probes the service', () async {
+      // The subtlest field in the watched key, and the one whose absence would
+      // be worst: answering the trust prompt is precisely the moment the probe
+      // can start succeeding, so a summary that did not re-run would sit on
+      // "offline" until something else happened to invalidate it.
+      final status = _CountingStatusClient();
+      final container = _mutableSettingsContainer(
+        initial: _secureRadarr,
+        statusClient: status,
+      );
+
+      await container.read(serviceSummaryProvider(ServiceKey.radarr).future);
+      container
+          .read(_settingsHolderProvider.notifier)
+          .set(
+            _secureRadarr.copyWithTrustedCertificate(
+              url: _secureRadarr.radarrUrl,
+              fingerprint: 'ab:cd:ef',
+            ),
+          );
+      await container.read(serviceSummaryProvider(ServiceKey.radarr).future);
+
+      expect(status.calls, 2);
+    });
+
+    test('another service moving does not re-probe this one', () async {
+      final status = _CountingStatusClient();
+      final container = _mutableSettingsContainer(
+        initial: _secureRadarr,
+        statusClient: status,
+      );
+
+      await container.read(serviceSummaryProvider(ServiceKey.radarr).future);
+      container
+          .read(_settingsHolderProvider.notifier)
+          .set(_secureRadarr.copyWith(sonarrUrl: 'https://sonarr.local:8989'));
+      await container.read(serviceSummaryProvider(ServiceKey.radarr).future);
+
+      expect(status.calls, 1);
+    });
   });
 
   group('serviceSummaryProvider Bazarr', () {
@@ -239,6 +310,74 @@ void main() {
       expect(items.last.title, 'Release 3');
     });
 
+    // The provider fans out to seven services at once, so what it watches
+    // decides how often the whole stack gets polled. Watching the entire
+    // SettingsModel meant a theme-mode toggle — a value no queue can depend on —
+    // re-ran all seven fetches.
+    test('an unrelated settings change does not re-poll the queue', () async {
+      final radarr = _CountingQueueRadarrService();
+      final container = _mutableSettingsContainer(
+        initial: _bothArrs,
+        radarrService: radarr,
+      );
+
+      await container.read(servicesQueueProvider.future);
+      expect(radarr.calls, 1);
+
+      container
+          .read(_settingsHolderProvider.notifier)
+          .set(_bothArrs.copyWith(themeMode: AppThemeMode.light));
+      await container.read(servicesQueueProvider.future);
+
+      expect(radarr.calls, 1, reason: 'the queue does not depend on the theme');
+    });
+
+    test('a change to a source service does re-poll the queue', () async {
+      // The other half: narrowing the watch must not make it deaf. Repointing
+      // Radarr has to invalidate, or the preview keeps showing the old server's
+      // queue.
+      final radarr = _CountingQueueRadarrService();
+      final container = _mutableSettingsContainer(
+        initial: _bothArrs,
+        radarrService: radarr,
+      );
+
+      await container.read(servicesQueueProvider.future);
+      container
+          .read(_settingsHolderProvider.notifier)
+          .set(_bothArrs.copyWith(radarrUrl: 'http://moved.local:7878'));
+      await container.read(servicesQueueProvider.future);
+
+      expect(radarr.calls, 2);
+    });
+
+    test('trusting a certificate for a source re-polls the queue', () async {
+      // Every field of the watched key has to earn its place, and this is the
+      // one a narrowing pass is most likely to drop: the pin is what lets a
+      // self-signed host answer at all, so a queue that ignored it would stay
+      // empty after the user answered the trust prompt.
+      final radarr = _CountingQueueRadarrService();
+      final container = _mutableSettingsContainer(
+        initial: _secureRadarr,
+        radarrService: radarr,
+      );
+
+      await container.read(servicesQueueProvider.future);
+      expect(radarr.calls, 1);
+
+      container
+          .read(_settingsHolderProvider.notifier)
+          .set(
+            _secureRadarr.copyWithTrustedCertificate(
+              url: _secureRadarr.radarrUrl,
+              fingerprint: 'ab:cd:ef',
+            ),
+          );
+      await container.read(servicesQueueProvider.future);
+
+      expect(radarr.calls, 2);
+    });
+
     test('keeps queue available when one service fails', () async {
       final container = _container(
         settings: _bothArrs,
@@ -253,6 +392,50 @@ void main() {
       expect(items, hasLength(1));
       expect(items.single.service, ServiceKey.sonarr);
       expect(items.single.title, 'Shogun');
+    });
+  });
+
+  group('servicesRecentlyAddedProvider', () {
+    // The rail's own rebuild is what is under test, not its sources: the fakes
+    // below are static overrides, so a rebuild reuses their cached results and
+    // only the identity of the freshly sorted list can tell the two apart.
+    test('an unrelated settings change does not rebuild the rail', () async {
+      final container = _mutableSettingsContainer(
+        initial: _secureRadarr,
+        radarrService: _MoviesRadarrService([buildMovie(title: 'Dune')]),
+      );
+
+      final first = await container.read(servicesRecentlyAddedProvider.future);
+      expect(first, hasLength(1));
+
+      container
+          .read(_settingsHolderProvider.notifier)
+          .set(_secureRadarr.copyWith(themeMode: AppThemeMode.light));
+      final second = await container.read(servicesRecentlyAddedProvider.future);
+
+      expect(
+        identical(first, second),
+        isTrue,
+        reason: 'the rail does not depend on the theme',
+      );
+    });
+
+    test('repointing a source rebuilds the rail', () async {
+      // The other half: the poster URLs are built from the source's own base
+      // URL and key, so a rail that ignored a move would keep pointing its
+      // images at the old server.
+      final container = _mutableSettingsContainer(
+        initial: _secureRadarr,
+        radarrService: _MoviesRadarrService([buildMovie(title: 'Dune')]),
+      );
+
+      final first = await container.read(servicesRecentlyAddedProvider.future);
+      container
+          .read(_settingsHolderProvider.notifier)
+          .set(_secureRadarr.copyWith(radarrUrl: 'https://moved.local:7878'));
+      final second = await container.read(servicesRecentlyAddedProvider.future);
+
+      expect(identical(first, second), isFalse);
     });
   });
 
@@ -342,8 +525,11 @@ ProviderContainer _container({
       if (statusClient != null)
         serviceStatusClientFactoryProvider.overrideWith(
           (ref) =>
-              ({required String baseUrl, required String apiKey}) =>
-                  statusClient,
+              ({
+                required String baseUrl,
+                required String apiKey,
+                String? pinnedCertFingerprint,
+              }) => statusClient,
         ),
       radarrServiceProvider.overrideWith(
         (ref) => radarrService ?? FakeRadarrService(),
@@ -376,6 +562,96 @@ class _ThrowingMoviesRadarrService extends FakeRadarrService {
   @override
   Future<List<RadarrMovie>> getMovies() async =>
       throw Exception('movies failed');
+}
+
+/// A settings source the test can move, so `select` can be observed doing its
+/// job. The production chain is `currentSettingsProvider` → `settingsProvider`,
+/// whose notifier needs SharedPreferences; this stands in for that one link.
+final _settingsHolderProvider =
+    NotifierProvider<_SettingsHolder, SettingsModel>(_SettingsHolder.new);
+
+class _SettingsHolder extends Notifier<SettingsModel> {
+  @override
+  SettingsModel build() => const SettingsModel();
+
+  void set(SettingsModel next) => state = next;
+}
+
+ProviderContainer _mutableSettingsContainer({
+  required SettingsModel initial,
+  RadarrService? radarrService,
+  ApiClient? statusClient,
+}) {
+  final container = ProviderContainer(
+    overrides: [
+      currentSettingsProvider.overrideWith(
+        (ref) => ref.watch(_settingsHolderProvider),
+      ),
+      if (statusClient != null)
+        serviceStatusClientFactoryProvider.overrideWith(
+          (ref) =>
+              ({
+                required String baseUrl,
+                required String apiKey,
+                String? pinnedCertFingerprint,
+              }) => statusClient,
+        ),
+      radarrServiceProvider.overrideWith(
+        (ref) => radarrService ?? FakeRadarrService(),
+      ),
+      sonarrServiceProvider.overrideWith((ref) => FakeSonarrService()),
+      lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+      bazarrServiceProvider.overrideWith((ref) => FakeBazarrService()),
+    ],
+  );
+  addTearDown(container.dispose);
+  container.read(_settingsHolderProvider.notifier).set(initial);
+  return container;
+}
+
+/// One HTTPS-addressed Radarr, so `pinForUrl` has an origin to key a trusted
+/// certificate on — [UrlUtils.certOrigin] answers null for plain HTTP, and a
+/// test that pinned against an `http://` URL would silently assert nothing.
+const _secureRadarr = SettingsModel(
+  radarrUrl: 'https://radarr.local:7878',
+  radarrApiKey: 'key',
+);
+
+class _CountingStatusClient extends ApiClient {
+  _CountingStatusClient()
+    : super(baseUrl: 'https://status.example.com', apiKey: 'key');
+
+  int calls = 0;
+
+  @override
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
+    Duration? receiveTimeout,
+  }) async {
+    calls++;
+    return Response(
+      requestOptions: RequestOptions(path: path),
+      statusCode: 200,
+      data: const {'version': '5.4.6'},
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+class _CountingQueueRadarrService extends FakeRadarrService {
+  int calls = 0;
+
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    calls++;
+    return const [];
+  }
 }
 
 class _QueueRadarrService extends FakeRadarrService {

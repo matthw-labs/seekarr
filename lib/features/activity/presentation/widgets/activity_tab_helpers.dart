@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/api/base_arr_service.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
@@ -7,12 +8,13 @@ import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/app_empty_state.dart';
 import 'package:seekarr/core/widgets/app_error_state.dart';
 import 'package:seekarr/core/widgets/app_skeleton.dart';
-import 'package:seekarr/core/widgets/interactive_search_sheet.dart';
 import 'package:seekarr/features/activity/presentation/activity_screen.dart';
 import 'package:seekarr/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:seekarr/features/activity/presentation/widgets/segment_selector.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/music/data/lidarr_service.dart';
+import 'package:seekarr/features/release_search/domain/release_search_target.dart';
+import 'package:seekarr/features/release_search/presentation/release_search_entry.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
@@ -73,9 +75,14 @@ Future<void> runWantedAutoSearch(
   }
 }
 
+/// Opens interactive search for a Wanted row.
+///
+/// Takes a [WidgetRef] rather than a service because the single entry point
+/// resolves the service from the target — which is also what makes this row obey
+/// the same adoption and cache rules as the detail screens.
 Future<void> showWantedInteractiveSearch(
   BuildContext context,
-  ArrActivityMixin service,
+  WidgetRef ref,
   ServiceType serviceType,
   Map<String, dynamic> item, {
   String? title,
@@ -91,38 +98,27 @@ Future<void> showWantedInteractiveSearch(
     title ?? stringOrNull(item['title']) ?? _fallbackLabel(serviceType),
   );
 
-  final ReleaseFetcher? fetchReleases = switch (serviceType) {
-    ServiceType.movies => (token) => (service as RadarrService).getReleases(
-      itemId,
-      cancelToken: token,
+  final target = switch (serviceType) {
+    ServiceType.movies => ReleaseSearchTarget.movie(
+      movieId: itemId,
+      label: sheetTitle,
     ),
-    ServiceType.series => (token) => (service as SonarrService).getReleases(
+    // A Wanted row knows the episode but not its season, so this target cannot
+    // be matched to a running season search — the containment check requires
+    // both, and guessing would adopt a job that does not cover this episode.
+    ServiceType.series => ReleaseSearchTarget.episode(
       episodeId: itemId,
-      cancelToken: token,
+      label: sheetTitle,
     ),
-    ServiceType.music => (token) => (service as LidarrService).getReleases(
+    ServiceType.music => ReleaseSearchTarget.album(
       albumId: itemId,
-      cancelToken: token,
+      label: sheetTitle,
     ),
     ServiceType.discover => null,
   };
-  if (fetchReleases == null) return;
+  if (target == null) return;
 
-  final accent = switch (serviceType) {
-    ServiceType.movies => ServiceKey.radarr.accent,
-    ServiceType.series => ServiceKey.sonarr.accent,
-    ServiceType.music => ServiceKey.lidarr.accent,
-    ServiceType.discover => null,
-  };
-
-  await InteractiveSearchSheet.showAsync(
-    context: context,
-    accent: accent,
-    title: sheetTitle,
-    fetchReleases: fetchReleases,
-    onGrabRelease: (guid, indexerId) =>
-        service.grabReleaseByGuid(guid: guid, indexerId: indexerId),
-  );
+  await showReleaseSearch(context, ref, target);
 }
 
 String _fallbackLabel(ServiceType serviceType) {

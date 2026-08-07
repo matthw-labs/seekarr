@@ -7,7 +7,7 @@ import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/route_utils.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
-import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
+import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
@@ -73,7 +73,11 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
                 _BazarrWantedTab(kind: _BazarrWantedTabKind.movies),
               ],
             )
-          : const _BazarrNotConfiguredNotice(),
+          // The shared placeholder, not a private copy. A deep link into Wanted
+          // with Bazarr unconfigured used to render a bare sentence with no
+          // icon, no button and no route — the dead end the dashboard's own
+          // copy of this state was replaced to stop being.
+          : NotConfiguredPlaceholder.forService(ServiceKey.bazarr),
     );
   }
 }
@@ -434,26 +438,6 @@ class _BazarrWantedError extends StatelessWidget {
               label: const Text('Retry'),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BazarrNotConfiguredNotice extends StatelessWidget {
-  const _BazarrNotConfiguredNotice();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Text(
-          'Bazarr is not configured yet.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
         ),
       ),
     );

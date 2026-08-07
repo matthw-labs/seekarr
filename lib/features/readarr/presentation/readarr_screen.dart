@@ -32,48 +32,11 @@ class ReadarrScreen extends ConsumerWidget {
       accent: AppColors.readarr,
       appBar: showAppBar ? const GlassAppBar(title: Text('Readarr')) : null,
       body: SafeArea(
+        // The shared placeholder, not a private copy — see the note on the
+        // Unraid dashboard, which had grown the same widget independently.
         child: isConfigured
             ? _ReadarrDashboard(topPadding: topPadding)
-            : _ReadarrNotConfigured(
-                onOpenSettings: () => context.go(
-                  '/settings/service/${ServiceKey.readarr.routeParam}',
-                ),
-              ),
-      ),
-    );
-  }
-}
-
-class _ReadarrNotConfigured extends StatelessWidget {
-  const _ReadarrNotConfigured({required this.onOpenSettings});
-
-  final VoidCallback onOpenSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.menu_book_rounded,
-              size: 48,
-              color: AppColors.readarr,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Readarr is not configured yet.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onOpenSettings,
-              child: const Text('Open settings'),
-            ),
-          ],
-        ),
+            : NotConfiguredPlaceholder.forService(ServiceKey.readarr),
       ),
     );
   }

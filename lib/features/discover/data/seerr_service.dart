@@ -33,7 +33,11 @@ final seerrServiceProvider = Provider<SeerrService>((ref) {
     throw Exception('Seerr not configured');
   }
   return SeerrService(
-    ApiClient(baseUrl: settings.seerrUrl, apiKey: settings.seerrApiKey),
+    ApiClient(
+      baseUrl: settings.seerrUrl,
+      apiKey: settings.seerrApiKey,
+      pinnedCertFingerprint: settings.pinForUrl(settings.seerrUrl),
+    ),
   );
 });
 
@@ -331,7 +335,16 @@ class SeerrService {
 
   /// Searches for movies and TV shows by query string.
   /// Filters out 'person' results to only return movies and TV shows.
-  Future<List<MediaPreview>> search(String query, {int page = 1}) async {
+  ///
+  /// [cancelToken] aborts the request once the search that asked for it has
+  /// been superseded: global search re-runs every service leg on each debounced
+  /// keystroke, and a discarded round should stop paying for itself rather than
+  /// run to completion.
+  Future<List<MediaPreview>> search(
+    String query, {
+    int page = 1,
+    CancelToken? cancelToken,
+  }) async {
     if (query.isEmpty) return [];
     try {
       // URL-encode the query to handle spaces and special characters
@@ -339,6 +352,7 @@ class SeerrService {
       final response = await _client.get(
         '/api/v1/search',
         queryParameters: {'query': encodedQuery, 'page': page},
+        cancelToken: cancelToken,
       );
       final results = response.data['results'] as List<dynamic>;
       // Filter out 'person' results - only keep movies and TV shows

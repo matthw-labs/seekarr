@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:seekarr/core/api/api_client.dart';
@@ -73,6 +74,22 @@ void main() {
       expect(items, hasLength(2));
     });
 
+    test('lookupItems forwards the cancel token to ApiClient', () async {
+      // The three arr lookups delegate here now, so this is where the
+      // superseded-search abort either happens or silently does not.
+      client.getResponseData = <dynamic>[];
+      final cancelToken = CancelToken();
+
+      await service.lookupItems(
+        'movie/lookup',
+        'dune',
+        TestItem.fromJson,
+        cancelToken: cancelToken,
+      );
+
+      expect(client.lastGetCancelToken, same(cancelToken));
+    });
+
     test('lookupItems returns empty list on error', () async {
       client.getException = Exception('boom');
 
@@ -114,6 +131,35 @@ void main() {
         'title': 'Movie',
         'qualityProfileId': 4,
       });
+    });
+
+    test(
+      'fetchReleases raises the receive timeout for the slow search',
+      () async {
+        // The server fans out to every enabled indexer and answers only once the
+        // slowest has, so this is the one arr GET that legitimately runs for
+        // minutes. Under the client's 15s default it never returned at all.
+        client.getResponseData = [
+          {'guid': 'a', 'indexerId': 1},
+        ];
+
+        final releases = await service.fetchReleases({'movieId': 7});
+
+        expect(client.lastGetPath, '/api/v3/release');
+        expect(client.lastGetQueryParameters, {'movieId': 7});
+        expect(client.lastGetReceiveTimeout, kReleaseSearchReceiveTimeout);
+        expect(releases, hasLength(1));
+      },
+    );
+
+    test('the release search timeout clears every common gateway ceiling', () {
+      // Not an arbitrary number: it has to sit above nginx's 60s default and
+      // Cloudflare's unraisable 100s cap, because that is what makes a failure
+      // attributable to the proxy rather than to us.
+      expect(
+        kReleaseSearchReceiveTimeout,
+        greaterThan(const Duration(seconds: 100)),
+      );
     });
 
     test('grabReleaseByGuid posts release payload', () async {

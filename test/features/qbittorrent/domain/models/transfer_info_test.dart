@@ -60,7 +60,7 @@ void main() {
         upRateLimit: 0,
         altSpeedEnabled: false,
       );
-      expect(info.dlSpeedFormatted, '52.0 MB/s');
+      expect(info.dlSpeedFormatted, '52 MB/s');
       expect(info.upSpeedFormatted, '1.0 KB/s');
     });
   });

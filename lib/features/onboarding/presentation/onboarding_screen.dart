@@ -3,74 +3,55 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_animation.dart';
-import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/network/connection_failure.dart';
-import 'package:seekarr/core/text_scale.dart';
-import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/core/widgets/pressable_scale.dart';
+import 'package:seekarr/core/widgets/ambient_background.dart';
+import 'package:seekarr/core/widgets/service_ring.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
+import 'package:seekarr/features/onboarding/presentation/widgets/onboarding_parts.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
 import 'package:seekarr/features/settings/data/service_verification.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
-import 'package:seekarr/features/settings/presentation/widgets/cert_trust_dialog.dart';
-import 'package:seekarr/features/truenas/domain/truenas_version.dart';
 
-// ─── Design tokens (pixel-faithful to prototype) ───────────────────────────
-//
-// This screen is deliberately always-dark, independent of the app's themeMode:
-// it is the product's first impression and its own visual moment, the way a
-// welcome screen usually is. That is why it carries a local palette instead of
-// reading `colorScheme` — but every value is named here rather than inlined at
-// the point of use, and anything with an app-wide equivalent (the brand indigo,
-// the success green, the font family, animation durations, the pill radius)
-// defers to the shared token so the two can never drift apart.
-//
-// The local palette is *colour only*. Type comes off the shared ramp
-// (`Theme.of(context).textTheme`), so the size, weight, leading and tracking of
-// every string here are the app's — a locally authored `fontSize` was how this
-// screen ended up with eight sizes and twelve hand-computed `letterSpacing`
-// values that no other screen shared. The colours below are applied on top.
-const _bg = Color(0xFF07080D);
-const _border = Color(0xFF283247);
-const _fg = Color(0xFFF3F6FF);
-const _muted = Color(0xFF98A3B9);
-const _muted2 = Color(0xFF647089);
-const _accent = AppColors.primary; // brand indigo — single source of truth
-const _success = AppColors.success;
-const _screenPad = EdgeInsets.fromLTRB(22, 22, 22, 32);
-
-/// Corner radii specific to this screen's prototype. They sit between the
-/// app-wide steps (`AppRadius.md` 12 / `lg` 16 / `xl` 28), so they are named
-/// locally rather than rounded onto a token that would change the look.
-final _radiusChip = BorderRadius.circular(14);
-final _radiusPanel = BorderRadius.circular(22);
-
-/// Widest the onboarding column is allowed to get. Beyond this a form field's
-/// label and its control drift too far apart to read as a pair.
-const _contentMaxWidth = 560.0;
-
-/// Service accent, sourced from the app-wide [ServiceKey.accent] so onboarding
-/// matches the rest of the app (previously Seerr was mistakenly tinted green).
-Color _serviceColor(ServiceKey service) => service.accent;
-
-// ─── Main screen ────────────────────────────────────────────────────────────
+/// First run, in four beats: the claim, the choice, one service at a time, and
+/// what it actually achieved.
+///
+/// The flow's length is the user's — two fixed beats plus one page per chosen
+/// service plus the close — which is why progress is the ring closing rather
+/// than a fixed bar of segments.
 class OnboardingScreen extends ConsumerStatefulWidget {
-  const OnboardingScreen({super.key});
+  const OnboardingScreen({
+    super.key,
+    this.certificateProber = probeUntrustedCertificate,
+  });
+
+  /// Injectable so a widget test can stay off a real socket — see
+  /// [CertificateProber].
+  final CertificateProber certificateProber;
 
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
+    with SingleTickerProviderStateMixin {
+  static const _doorPage = 0;
+  static const _pickPage = 1;
+  static const _firstWalkPage = 2;
+
   final _pageController = PageController();
 
-  // Step-2 per-service state
-  final Map<ServiceKey, bool> _enabled = {
-    for (final k in ServiceKey.values) k: false,
-  };
+  /// The ring's entrance. One authored moment on the door, then stillness.
+  late final AnimationController _entrance = AnimationController(
+    vsync: this,
+    duration: AppAnimation.durationXl,
+  );
+
+  final Set<ServiceKey> _picked = {};
+
   final Map<ServiceKey, TextEditingController> _urlCtrl = {
     for (final k in ServiceKey.values) k: TextEditingController(),
   };
@@ -83,165 +64,264 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final Map<ServiceKey, TextEditingController> _passwordCtrl = {
     for (final k in ServiceKey.values) k: TextEditingController(),
   };
-  final Map<ServiceKey, ServiceConnectionStatus?> _verifyStatus = {
-    for (final k in ServiceKey.values) k: null,
-  };
 
-  /// Why the last verification failed, so the error copy can name the cause.
-  final Map<ServiceKey, ServiceFailureReason?> _verifyReason = {
-    for (final k in ServiceKey.values) k: null,
-  };
-  final Map<ServiceKey, bool> _verifying = {
-    for (final k in ServiceKey.values) k: false,
-  };
+  final Map<ServiceKey, ServiceConnectionStatus?> _status = {};
+  final Map<ServiceKey, ServiceFailureReason?> _reason = {};
 
-  /// Self-signed certificate fingerprints the user chose to trust during
-  /// onboarding, persisted to settings on continue. Only TrueNAS and Dockge
-  /// (the WebSocket clients) support pinning.
+  /// The verbatim sentence a failure carried, for the few that carry one — see
+  /// `ServiceDiagnosis.detail`. Kept beside [_reason] rather than folded into it
+  /// so the walk renders the same words the settings screen does.
+  final Map<ServiceKey, String?> _failureDetail = {};
+  final Map<ServiceKey, bool> _verifying = {};
+
+  /// Self-signed fingerprints the user chose to trust, persisted on save
+  /// (ADR-6) — one per service's *origin*, so two services typed at the same
+  /// host:port share the value a save later stores under one key.
+  ///
+  /// Never read directly: go through [_pinFor], which is what ties an entry to
+  /// [_certOriginOf].
   final Map<ServiceKey, String> _certFingerprint = {};
+
+  /// The TLS origin each [_certFingerprint] entry was decided against.
+  ///
+  /// A trust decision is about a certificate a *specific host* presented, so it
+  /// stops applying the moment the address does. Without this, resuming a walk
+  /// with a pinned service and then editing its address carried the old host's
+  /// fingerprint onto the new one: `_save` writes every ready service, not only
+  /// the one on screen, so paging forward was enough. Because a pin is keyed by
+  /// origin alone, that bogus entry then failed the handshake closed for every
+  /// service later pointed at the new host, with no trust prompt to explain it.
+  final Map<ServiceKey, String> _certOriginOf = {};
+
+  /// A certificate probe the last test ran into, waiting for the user to
+  /// trust it inside the step rather than in a dialog that lands on top of
+  /// the failure. Carries whether this origin already had a *different* pin
+  /// (ADR-6) — that is a certificate change, not a first trust, and the card
+  /// escalates rather than offering it as routine.
+  final Map<ServiceKey, UntrustedCertificateProbe> _pendingCert = {};
+
+  /// The field values a verification result belongs to. Editing an address after
+  /// a successful check would otherwise leave a green verdict standing for an
+  /// instance that is no longer the one configured.
+  final Map<ServiceKey, String> _verifiedAgainst = {};
+
+  /// Services the user explicitly walked past. They keep their place in the ring
+  /// but are not written to settings.
+  final Set<ServiceKey> _skipped = {};
 
   @override
   void initState() {
     super.initState();
-    // Resume, rather than restart. Continue on step 2 saves immediately, so an
-    // interrupted setup left settings on disk that this screen then showed as
-    // empty — and finishing a second time with every toggle off wrote those
-    // empty fields back over the real configuration.
+    // Resume, rather than restart. Saving happens as the walk proceeds, so an
+    // interrupted setup leaves settings on disk that this screen must show —
+    // otherwise finishing a second time writes empty fields over a real
+    // configuration.
     final settings = ref.read(currentSettingsProvider);
     for (final k in ServiceKey.values) {
       final url = settings.urlFor(k);
       if (url.isEmpty) continue;
-      _enabled[k] = true;
+      _picked.add(k);
       _urlCtrl[k]!.text = url;
-      if (k == ServiceKey.qbittorrent) {
-        _usernameCtrl[k]!.text = settings.qbittorrentUsername;
-        _passwordCtrl[k]!.text = settings.qbittorrentPassword;
-      } else if (k == ServiceKey.dockge) {
-        _usernameCtrl[k]!.text = settings.dockgeUsername;
-        _passwordCtrl[k]!.text = settings.dockgePassword;
-      } else if (k == ServiceKey.nzbget) {
-        _usernameCtrl[k]!.text = settings.nzbgetUsername;
-        _passwordCtrl[k]!.text = settings.nzbgetPassword;
-      } else {
+      // Which fields a service even has is the registry's answer, so a new
+      // credential-authenticated service resumes correctly without an arm here.
+      if (k.usesApiKey) {
         _apiKeyCtrl[k]!.text = settings.apiKeyFor(k);
+      } else {
+        _usernameCtrl[k]!.text = settings.usernameFor(k);
+        _passwordCtrl[k]!.text = settings.passwordFor(k);
       }
-      if (supportsCertPinning(k)) {
-        final pin = settings.certFingerprintFor(k);
-        if (pin.isNotEmpty) _certFingerprint[k] = pin;
+      final pin = settings.pinForUrl(url);
+      final origin = UrlUtils.certOrigin(url);
+      if (pin != null && origin != null) {
+        _certFingerprint[k] = pin;
+        _certOriginOf[k] = origin;
       }
     }
+    // Reduce Motion removes the animator rather than shortening it: the ring
+    // simply starts seated.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _entrance.value = 1;
+      } else {
+        _entrance.forward();
+      }
+    });
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    for (final c in _urlCtrl.values) c.dispose();
-    for (final c in _apiKeyCtrl.values) c.dispose();
-    for (final c in _usernameCtrl.values) c.dispose();
-    for (final c in _passwordCtrl.values) c.dispose();
+    _entrance.dispose();
+    for (final c in _urlCtrl.values) {
+      c.dispose();
+    }
+    for (final c in _apiKeyCtrl.values) {
+      c.dispose();
+    }
+    for (final c in _usernameCtrl.values) {
+      c.dispose();
+    }
+    for (final c in _passwordCtrl.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  bool _isServiceReady(ServiceKey k) {
-    if (!_enabled[k]!) return false;
+  // ── The walk ──────────────────────────────────────────────────────────────
+
+  /// Chosen services in registry order — the same order the ring draws.
+  List<ServiceKey> get _walk =>
+      ServiceRing.order.where(_picked.contains).toList(growable: false);
+
+  int get _closePage => _firstWalkPage + _walk.length;
+
+  bool _isReady(ServiceKey k) {
+    if (!_picked.contains(k) || _skipped.contains(k)) return false;
     if (_urlCtrl[k]!.text.trim().isEmpty) return false;
     if (!k.usesApiKey) return true;
     return _apiKeyCtrl[k]!.text.trim().isNotEmpty;
   }
 
-  List<ServiceKey> get _configuredServices =>
-      ServiceKey.values.where(_isServiceReady).toList();
+  List<ServiceKey> get _configured =>
+      ServiceRing.order.where(_isReady).toList(growable: false);
 
-  /// The field values a verification result belongs to.
+  List<ServiceKey> get _answering => _configured
+      .where((k) => _status[k] == ServiceConnectionStatus.connected)
+      .toList(growable: false);
+
+  List<ServiceKey> get _silent => _configured
+      .where((k) => _status[k] != ServiceConnectionStatus.connected)
+      .toList(growable: false);
+
+  /// The ring's state, derived rather than stored: one map, four beats.
+  Map<ServiceKey, ServiceRingState> get _ringStates => {
+    for (final k in _picked)
+      k: switch (_status[k]) {
+        ServiceConnectionStatus.connected => ServiceRingState.connected,
+        null => ServiceRingState.picked,
+        _ => _isReady(k) ? ServiceRingState.silent : ServiceRingState.picked,
+      },
+  };
+
+  /// The fingerprint [k]'s *currently typed* address is trusted under, or null.
   ///
-  /// Editing an address after a successful check would otherwise leave a green
-  /// "Reachable" standing for an instance that is no longer the one configured.
-  final Map<ServiceKey, String> _verifiedAgainst = {};
+  /// The gate on [_certFingerprint]: a pin only applies while the address still
+  /// resolves to the origin the user accepted the certificate for. Retyping the
+  /// old address brings its pin back, which is right — the trust decision was
+  /// about that host and still holds.
+  String? _pinFor(ServiceKey k) {
+    final pin = _certFingerprint[k];
+    if (pin == null) return null;
+    final origin = UrlUtils.certOrigin(_urlCtrl[k]!.text);
+    return origin != null && origin == _certOriginOf[k] ? pin : null;
+  }
 
-  String _fieldsFingerprint(ServiceKey k) => [
+  String _fingerprintOf(ServiceKey k) => [
     _urlCtrl[k]!.text.trim(),
     _apiKeyCtrl[k]!.text.trim(),
     _usernameCtrl[k]!.text.trim(),
     _passwordCtrl[k]!.text,
-    _certFingerprint[k] ?? '',
-  ].join('\u0000');
+    _pinFor(k) ?? '',
+  ].join(' ');
 
-  /// Whether [service] still needs a check before the summary can say anything
-  /// about it.
-  bool _needsCheck(ServiceKey service) =>
-      _verifyStatus[service] == null ||
-      _verifiedAgainst[service] != _fieldsFingerprint(service);
+  bool _needsCheck(ServiceKey k) =>
+      _status[k] == null || _verifiedAgainst[k] != _fingerprintOf(k);
 
-  /// Checks every configured service the user did not verify by hand.
-  ///
-  /// The summary step is the last chance to learn that an address or a key is
-  /// wrong while the fields are still one tap away; without this, someone who
-  /// never pressed Verify finished setup with no idea whether any of it works.
-  /// Runs non-interactively: a certificate-trust dialog per service, stacked ten
-  /// deep, is not something to spring on someone reading a summary.
-  Future<void> _autoVerifyConfigured() async {
-    final pending = _configuredServices.where(_needsCheck).toList();
-    if (pending.isEmpty) return;
-    await Future.wait(
-      pending.map((service) => _doVerify(service, interactive: false)),
-    );
+  /// Every service in this walk whose typed address shares [service]'s TLS
+  /// origin — the set a trust decision on it actually covers, computed from
+  /// the in-progress form fields rather than saved settings, since several
+  /// services can be typed in the same walk before anything is saved.
+  List<ServiceKey> _servicesSharingOrigin(ServiceKey service) {
+    final origin = UrlUtils.certOrigin(_urlCtrl[service]!.text);
+    if (origin == null) return [service];
+    return ServiceKey.values
+        .where((k) {
+          final url = _urlCtrl[k]!.text.trim();
+          return url.isNotEmpty && UrlUtils.certOrigin(url) == origin;
+        })
+        .toList(growable: false);
   }
 
-  Future<void> _doVerify(ServiceKey service, {bool interactive = true}) async {
-    setState(() => _verifying[service] = true);
+  // ── Address help ──────────────────────────────────────────────────────────
+
+  /// Fills the address from the host of whichever service was configured before
+  /// this one, on this service's own default port.
+  ///
+  /// On a home lab one box usually runs everything, so after the first service
+  /// the rest are a tap plus a pasted key. Never overwrites a typed value.
+  void _prefillAddress(ServiceKey service) {
+    if (_urlCtrl[service]!.text.trim().isNotEmpty) return;
+    final host = _lastKnownHost(exclude: service);
+    if (host == null) return;
+    _urlCtrl[service]!.text = 'https://$host:${service.defaultPort}';
+  }
+
+  String? _lastKnownHost({required ServiceKey exclude}) {
+    for (final k in _walk.reversed) {
+      if (k == exclude) continue;
+      final raw = _urlCtrl[k]!.text.trim();
+      if (raw.isEmpty) continue;
+      final host = Uri.tryParse(UrlUtils.normalizeBaseUrl(raw))?.host ?? '';
+      if (host.isNotEmpty) return host;
+    }
+    return null;
+  }
+
+  /// Puts this service's default port on whatever host is already typed.
+  void _suggestPort(ServiceKey service) {
+    final controller = _urlCtrl[service]!;
+    final host =
+        Uri.tryParse(UrlUtils.normalizeBaseUrl(controller.text))?.host ?? '';
+    final target = host.isEmpty ? _lastKnownHost(exclude: service) ?? '' : host;
+    if (target.isEmpty) return;
+    setState(() {
+      controller.text = 'https://$target:${service.defaultPort}';
+    });
+  }
+
+  // ── Verification ──────────────────────────────────────────────────────────
+
+  Future<void> _test(ServiceKey service) async {
+    setState(() {
+      _verifying[service] = true;
+      _pendingCert.remove(service);
+    });
     try {
-      await _runVerify(service, interactive: interactive);
+      await _runTest(service);
     } finally {
-      // A throw anywhere above used to leave the button spinning for the rest
-      // of the session with nothing to explain it — a client constructor that
-      // rejects the address raises rather than returning a failed status.
+      // A throw anywhere above used to leave the button spinning for the rest of
+      // the session: a client constructor that rejects the address raises rather
+      // than returning a failed status.
       if (mounted) setState(() => _verifying[service] = false);
     }
   }
 
-  Future<void> _runVerify(ServiceKey service, {bool interactive = true}) async {
-    var result = await diagnoseCredentials(
+  Future<void> _runTest(ServiceKey service) async {
+    final result = await diagnoseCredentials(
       service,
       url: _urlCtrl[service]!.text,
       apiKey: _apiKeyCtrl[service]!.text,
       username: _usernameCtrl[service]!.text,
       password: _passwordCtrl[service]!.text,
-      certFingerprint: _certFingerprint[service] ?? '',
+      certFingerprint: _pinFor(service) ?? '',
+      // Plex's persisted per-install identity. Minted once by `SettingsService`
+      // and read rather than generated here, because a fresh value registers
+      // another "device" row on the user's server.
+      clientIdentifier: ref.read(currentSettingsProvider).plexClientId,
     );
 
-    // TLS exception flow: if a pinning-capable service failed specifically
-    // because of an untrusted certificate, offer to trust it, then re-verify.
-    //
-    // Skipped when the failure is already attributed to something else: probing
-    // for a certificate after the server rejected our API key is a wasted round
-    // trip that can only return null.
-    if (interactive &&
-        result.status == ServiceConnectionStatus.disconnected &&
-        certProbeWorthwhile(result.reason) &&
-        supportsCertPinning(service) &&
-        mounted) {
-      final cert = await probeUntrustedCertificate(
+    // A TLS failure resolves *in the step*: probe for the certificate and let
+    // the card offer to trust it. Probing after the server rejected a key is
+    // a wasted round trip that can only return null. Every service can reach
+    // this since ADR-6 — there is no pinning-capability gate left to check.
+    UntrustedCertificateProbe? certProbe;
+    if (result.status == ServiceConnectionStatus.disconnected &&
+        certProbeWorthwhile(result.reason)) {
+      certProbe = await widget.certificateProber(
         _urlCtrl[service]!.text,
-        pinnedFingerprint: _certFingerprint[service] ?? '',
+        pinnedFingerprint: _pinFor(service) ?? '',
       );
-      if (cert != null && mounted) {
-        final trust = await showCertTrustDialog(
-          context,
-          serviceTitle: service.title,
-          certificate: cert,
-        );
-        if (trust && mounted) {
-          _certFingerprint[service] = cert.fingerprint;
-          result = await diagnoseCredentials(
-            service,
-            url: _urlCtrl[service]!.text,
-            apiKey: _apiKeyCtrl[service]!.text,
-            username: _usernameCtrl[service]!.text,
-            password: _passwordCtrl[service]!.text,
-            certFingerprint: cert.fingerprint,
-          );
-        }
-      }
     }
 
     if (!mounted) return;
@@ -251,94 +331,122 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       HapticFeedback.lightImpact();
     }
     setState(() {
-      _verifyStatus[service] = result.status;
-      _verifyReason[service] = result.reason;
-      _verifiedAgainst[service] = _fieldsFingerprint(service);
+      _status[service] = result.status;
+      _reason[service] = result.reason;
+      _failureDetail[service] = result.detail;
+      _verifiedAgainst[service] = _fingerprintOf(service);
+      if (certProbe != null) _pendingCert[service] = certProbe;
     });
   }
 
-  Future<void> _saveAndContinue() async {
+  Future<void> _trustCertificate(ServiceKey service) async {
+    final probe = _pendingCert[service];
+    if (probe == null) return;
+    // Recorded against the address the certificate was actually presented by,
+    // so a later edit of that address drops the pin rather than carrying it to
+    // a host that never presented it — see [_certOriginOf].
+    final origin = UrlUtils.certOrigin(_urlCtrl[service]!.text);
+    if (origin == null) return;
+    setState(() {
+      _certFingerprint[service] = probe.certificate.fingerprint;
+      _certOriginOf[service] = origin;
+      _pendingCert.remove(service);
+    });
+    await _test(service);
+  }
+
+  /// Checks every configured service the user did not test by hand.
+  ///
+  /// The close is the last chance to learn that an address or a key is wrong
+  /// while the fields are still one tap away. Runs non-interactively: the result
+  /// is information, not a gate.
+  Future<void> _testUntested() async {
+    final pending = _configured.where(_needsCheck).toList();
+    if (pending.isEmpty) return;
+    await Future.wait(pending.map(_test));
+  }
+
+  // ── Persistence ───────────────────────────────────────────────────────────
+
+  /// Writes what this walk actually configured, and **only** that.
+  ///
+  /// Additive on purpose: a service the user skipped, left half-filled, or
+  /// unpicked is not written at all. It used to be written *blank*, which
+  /// deleted the saved address and the secure credential of a service that was
+  /// working — reachable from the settings screen's "Revisit onboarding", which
+  /// promises in as many words that nothing about your services is changed or
+  /// removed, and from "Skip for now" on the very first beat. Removing a
+  /// connection is a deliberate, confirmed action and lives in the settings
+  /// screen; walking past one here means "not now", never "delete it".
+  ///
+  /// On a first run this is indistinguishable from the old behaviour, because
+  /// there is nothing on disk to preserve.
+  Future<bool> _save() async {
     final current = ref.read(currentSettingsProvider);
     var updated = current;
+
+    // Addresses this walk moves a service *away from*. Their pins can only be
+    // reconsidered once every URL has settled, so they are collected here and
+    // resolved in the pass below.
+    final abandonedUrls = <String>[];
+
     for (final k in ServiceKey.values) {
-      if (_isServiceReady(k)) {
-        // Store the scheme the client will actually use. Saving the bare host
-        // the user typed left the settings form showing a value its own
-        // (stricter) validator rejects.
-        final url = UrlUtils.normalizeBaseUrl(_urlCtrl[k]!.text);
-        if (k == ServiceKey.qbittorrent) {
-          updated = updated.copyWithQbittorrent(
-            url: url,
-            username: _usernameCtrl[k]!.text.trim(),
-            password: _passwordCtrl[k]!.text,
-          );
-        } else if (k == ServiceKey.dockge) {
-          updated = updated.copyWithDockge(
-            url: url,
-            username: _usernameCtrl[k]!.text.trim(),
-            password: _passwordCtrl[k]!.text,
-          );
-        } else if (k == ServiceKey.nzbget) {
-          updated = updated.copyWithNzbget(
-            url: url,
-            username: _usernameCtrl[k]!.text.trim(),
-            password: _passwordCtrl[k]!.text,
-          );
-        } else {
-          updated = updated.copyWithService(
-            k,
-            url: url,
-            apiKey: _apiKeyCtrl[k]!.text.trim(),
-          );
-        }
-      } else {
-        if (k == ServiceKey.qbittorrent) {
-          updated = updated.copyWithQbittorrent(
-            url: '',
-            username: '',
-            password: '',
-          );
-        } else if (k == ServiceKey.dockge) {
-          updated = updated.copyWithDockge(url: '', username: '', password: '');
-        } else if (k == ServiceKey.nzbget) {
-          updated = updated.copyWithNzbget(url: '', username: '', password: '');
-        } else {
-          updated = updated.copyWithService(k, url: '', apiKey: '');
-        }
-      }
-      // Persist (or clear) any trusted self-signed certificate fingerprint.
-      if (supportsCertPinning(k)) {
-        updated = updated.copyWithCertFingerprint(
-          k,
-          _isServiceReady(k) ? (_certFingerprint[k] ?? '') : '',
-        );
-      }
+      if (!_isReady(k)) continue;
+      // Store the scheme the client will actually use: saving the bare host
+      // the user typed left the settings form showing a value its own
+      // stricter validator rejects.
+      final url = UrlUtils.normalizeBaseUrl(_urlCtrl[k]!.text);
+      final priorUrl = current.urlFor(k);
+      if (priorUrl.isNotEmpty && priorUrl != url) abandonedUrls.add(priorUrl);
+      updated = k.usesApiKey
+          ? updated.copyWithService(
+              k,
+              url: url,
+              apiKey: _apiKeyCtrl[k]!.text.trim(),
+            )
+          : updated.copyWithCredentials(
+              k,
+              url: url,
+              username: _usernameCtrl[k]!.text.trim(),
+              password: _passwordCtrl[k]!.text,
+            );
     }
+
+    // Trust-map bookkeeping runs as its own pass, once every service's final
+    // URL is known — an abandoned address's pin is only forgotten when no
+    // configured service still reaches its origin, and that can only be
+    // answered after the loop above has settled every URL, including services
+    // later than `k` in registry order.
+    for (final k in ServiceKey.values) {
+      if (!_isReady(k)) continue;
+      // [_pinFor], not the raw map: this loop runs for every ready service, not
+      // just the one on screen, so an address edited after a trust decision
+      // would otherwise file the old host's fingerprint under the new one.
+      final pin = _pinFor(k);
+      if (pin == null) continue;
+      updated = updated.copyWithTrustedCertificate(
+        url: updated.urlFor(k),
+        fingerprint: pin,
+      );
+    }
+    for (final priorUrl in abandonedUrls) {
+      updated = updated.copyWithoutUnusedCertificate(priorUrl);
+    }
+
     try {
       await ref.read(settingsProvider.notifier).updateSettings(updated);
+      return true;
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) return false;
       SnackBarHelper.error(
         context,
         "Couldn't save your services. Please try again. ($e)",
       );
-      return;
+      return false;
     }
-    if (!mounted) return;
-    // Rebuild before showing the summary. Typing into a field changes only its
-    // controller, so nothing rebuilt this screen between the last toggle and
-    // Continue — and the Ready step was still holding the list of configured
-    // services from back then. Anyone who filled in a URL and key without
-    // touching a toggle afterwards was told "No services configured" on the
-    // final step, with their settings saved correctly all along.
-    setState(() {});
-    _goToStep(2);
-    // Not awaited: the summary is on screen while the checks run, and "Let's go"
-    // stays usable throughout — the result is information, not a gate.
-    _autoVerifyConfigured();
   }
 
-  /// Marks onboarding complete — triggers router redirect to /services.
+  /// Marks onboarding complete — triggers the router redirect to /services.
   Future<void> _finish() async {
     HapticFeedback.mediumImpact();
     try {
@@ -352,1698 +460,232 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
-  void _goToStep(int step) {
+  // ── Navigation ────────────────────────────────────────────────────────────
+
+  /// The beat on screen. Held in state rather than read off the controller
+  /// because `PageController.page` is fractional mid-flight, and the ring above
+  /// the pager needs the destination to aim at, not the halfway point.
+  int _page = _doorPage;
+
+  void _goTo(int page) {
+    if (!_pageController.hasClients) return;
+    setState(() => _page = page);
     _pageController.animateToPage(
-      step,
+      page,
       duration: AppAnimation.durationMd,
-      curve: Curves.easeInOutCubic,
+      curve: AppAnimation.standardCurve,
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Read here, above the Scaffold — see [_keyboardVisible].
-    final keyboardUp = _keyboardVisible(context);
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
-      child: Scaffold(
-        backgroundColor: _bg,
-        body: Stack(
-          children: [
-            // Background gradient (matches prototype radial gradients)
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment(-0.9, -0.9),
-                    radius: 1.1,
-                    colors: [Color(0x1F6366F1), Colors.transparent],
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment(0.9, -0.9),
-                    radius: 1.0,
-                    colors: [Color(0x148B5CF6), Colors.transparent],
-                  ),
-                ),
-              ),
-            ),
-            // Content
-            //
-            // Capped and centred: onboarding is a single column of form fields,
-            // and on an iPad or a wide desktop window an unconstrained column
-            // stretched labels and their toggles ~800pt apart, breaking the
-            // proximity that pairs them, and made the Continue button the width
-            // of the screen.
-            SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                  child: PageView(
-                    controller: _pageController,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      _WelcomeStep(onContinue: () => _goToStep(1)),
-                      _ServicesStep(
-                        compactHeader: keyboardUp,
-                        enabled: _enabled,
-                        urlCtrl: _urlCtrl,
-                        apiKeyCtrl: _apiKeyCtrl,
-                        usernameCtrl: _usernameCtrl,
-                        passwordCtrl: _passwordCtrl,
-                        verifyStatus: _verifyStatus,
-                        verifyReason: _verifyReason,
-                        verifying: _verifying,
-                        onToggle: (k, v) => setState(() {
-                          _enabled[k] = v;
-                          if (!v) {
-                            _verifyStatus[k] = null;
-                            _verifyReason[k] = null;
-                          }
-                        }),
-                        onVerify: _doVerify,
-                        onBack: () => _goToStep(0),
-                        onContinue: _saveAndContinue,
-                      ),
-                      _ReadyStep(
-                        configuredServices: _configuredServices,
-                        verifyStatus: _verifyStatus,
-                        verifying: _verifying,
-                        onReviewSettings: () async => _goToStep(1),
-                        onFinish: _finish,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Progress bar ────────────────────────────────────────────────────────────
-class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.step});
-  final int step; // 0-based
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(3, (i) {
-        final active = i <= step;
-        return Expanded(
-          child: Container(
-            margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
-            height: 4,
-            decoration: BoxDecoration(
-              borderRadius: AppRadius.borderRadiusFull,
-              gradient: active
-                  ? const LinearGradient(colors: [_accent, Color(0xFF818CF8)])
-                  : null,
-              color: active ? null : const Color(0x14FFFFFF),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-/// Scrolls [context]'s widget into view inside its **nearest** scroll view only.
-///
-/// `Scrollable.ensureVisible` walks every enclosing scrollable, and this screen
-/// is a horizontal `PageView` of vertical lists: revealing a card also dragged
-/// the PageView back to that card's page. With the summary step's automatic
-/// checks, ten finishing verifications cancelled the transition to step 3 and
-/// pinned onboarding on step 2.
-void _revealInOwnScrollView(BuildContext context, {required double alignment}) {
-  final position = Scrollable.maybeOf(context)?.position;
-  final target = context.findRenderObject();
-  if (position == null || target == null) return;
-  position.ensureVisible(
-    target,
-    alignment: alignment,
-    duration: AppAnimation.durationMd,
-    curve: Curves.easeInOutCubic,
-  );
-}
-
-/// Whether the software keyboard is currently covering part of the screen.
-///
-/// Must be read from above the [Scaffold]: its body is wrapped in
-/// `MediaQuery.removeViewInsets(removeBottom: true)` whenever
-/// `resizeToAvoidBottomInset` is on, so inside the body this is always 0.
-bool _keyboardVisible(BuildContext context) =>
-    MediaQuery.viewInsetsOf(context).bottom > 0;
-
-/// The "Step N of 3" eyebrow above each step's headline. Also the only text that
-/// tells a screen reader where it is in the flow — the progress bar is decorative.
-class _StepLabel extends StatelessWidget {
-  const _StepLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    // The one sanctioned overline on the screen: a single kicker introducing the
-    // step, so it takes the shared eyebrow voice (11pt, w700, +1.4 tracking)
-    // rather than a locally tracked label.
-    //
-    // Deliberately *not* uppercased, against the Eyebrow Rule's usual pairing.
-    // The rule wants uppercase because +1.4 tracking is the air caps need at
-    // 11pt; here the string is a sentence with a number in it ("Step 2 of 3"),
-    // it is the only text telling a screen reader where it is in the flow, and
-    // nine widget tests navigate by finding it. Shouting it buys a hair of
-    // optical consistency and costs the flow's one landmark.
-    return Text(text, style: AppTheme.eyebrow(_muted2));
-  }
-}
-
-// ─── Step 1: Welcome ─────────────────────────────────────────────────────────
-class _WelcomeStep extends StatelessWidget {
-  const _WelcomeStep({required this.onContinue});
-  final VoidCallback onContinue;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: _screenPad,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _ProgressBar(step: 0),
-          const SizedBox(height: 18),
-          // Steps 2 and 3 name themselves; this one used to leave the position
-          // in the flow to the progress bar alone, which says nothing out loud.
-          const _StepLabel('Step 1 of 3'),
-          const SizedBox(height: 14),
-          Expanded(child: SingleChildScrollView(child: _HeroCard())),
-          const SizedBox(height: 16),
-          _PrimaryButton(label: 'Continue', onPressed: onContinue),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: _radiusPanel,
-        border: Border.all(color: const Color(0x3D6366F1), width: 1),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0x296366F1), Color(0xEB111521)],
-        ),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // "S" logo mark
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              borderRadius: _radiusChip,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [_accent, Color(0xF28B5CF6)],
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x28FFFFFF),
-                  blurRadius: 0,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            // The logotype, not a heading: `titleLarge` (22) is the role whose
-            // cap-height fills a 44pt tile the way the mark is drawn.
-            child: Text(
-              'S',
-              style: textTheme.titleLarge!
-                  .weight(FontWeight.w800)
-                  .copyWith(color: _fg),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // `displaySmall` (36), not the step-heading role the other two steps
-          // use: this is the product's opening claim, alone inside a framed
-          // panel with nothing to compete with, and it is a display line rather
-          // than a heading over content. It is also the closest role to the 34pt
-          // it was authored at, so the first impression keeps its scale.
-          Text(
-            'Your whole homelab, managed from one place.',
-            style: textTheme.displaySmall!
-                .weight(FontWeight.w800)
-                .copyWith(color: _fg),
-          ),
-          const SizedBox(height: 12),
-          // Prose, at the widest measure on the screen — `bodyLarge`, whose 1.55
-          // leading is the value this paragraph was already hand-setting.
-          Text(
-            'Seekarr is the control surface for the services you run yourself — media, downloads and infrastructure — in one UI, from wherever you are.',
-            style: textTheme.bodyLarge!.copyWith(color: _muted),
-          ),
-          const SizedBox(height: 22),
-          // Stack preview — compact rows
-          _StackRow(
-            color: Color(0xFFF59E0B),
-            name: 'Radarr',
-            sub: 'Movie library and download management',
-          ),
-          const SizedBox(height: 12),
-          _StackDivider(),
-          const SizedBox(height: 12),
-          _StackRow(
-            color: AppColors.seerr,
-            name: 'Seerr',
-            sub: 'Requests and discovery across your stack',
-          ),
-          const SizedBox(height: 12),
-          _StackDivider(),
-          const SizedBox(height: 12),
-          _StackRow(
-            color: AppColors.truenas,
-            name: 'TrueNAS',
-            sub: 'Storage, apps and datasets on your NAS',
-          ),
-          const SizedBox(height: 12),
-          _StackDivider(),
-          const SizedBox(height: 12),
-          _StackRow(
-            color: null, // gradient dot for "And others"
-            name: 'And others',
-            sub: 'Connect more services as support grows',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StackDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return const Divider(height: 1, color: Color(0x14FFFFFF));
-  }
-}
-
-class _StackRow extends StatelessWidget {
-  const _StackRow({required this.color, required this.name, required this.sub});
-  final Color? color; // null → gradient dot
-  final String name;
-  final String sub;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Row(
-      children: [
-        _ServiceDot(color: color),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Row primary / supporting line: the same pair of roles the
-              // service cards and the summary rows use, so all three lists of
-              // services on this screen read at one scale.
-              Text(
-                name,
-                style: textTheme.titleSmall!
-                    .weight(FontWeight.w700)
-                    .copyWith(color: _fg),
-              ),
-              const SizedBox(height: 3),
-              Text(sub, style: textTheme.bodySmall!.copyWith(color: _muted2)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ServiceDot extends StatelessWidget {
-  const _ServiceDot({required this.color});
-  final Color? color; // null → gradient
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 12,
-      height: 12,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-        gradient: color == null
-            ? const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [_accent, _success],
-              )
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: (color ?? _accent).withValues(alpha: 0.25),
-            blurRadius: 4,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Step 2: Services ────────────────────────────────────────────────────────
-class _ServicesStep extends StatelessWidget {
-  const _ServicesStep({
-    required this.compactHeader,
-    required this.enabled,
-    required this.urlCtrl,
-    required this.apiKeyCtrl,
-    required this.usernameCtrl,
-    required this.passwordCtrl,
-    required this.verifyStatus,
-    required this.verifyReason,
-    required this.verifying,
-    required this.onToggle,
-    required this.onVerify,
-    required this.onBack,
-    required this.onContinue,
-  });
-
-  /// Drops the headline and its paragraph, for when the keyboard is up.
-  final bool compactHeader;
-
-  final Map<ServiceKey, bool> enabled;
-  final Map<ServiceKey, TextEditingController> urlCtrl;
-  final Map<ServiceKey, TextEditingController> apiKeyCtrl;
-  final Map<ServiceKey, TextEditingController> usernameCtrl;
-  final Map<ServiceKey, TextEditingController> passwordCtrl;
-  final Map<ServiceKey, ServiceConnectionStatus?> verifyStatus;
-  final Map<ServiceKey, ServiceFailureReason?> verifyReason;
-  final Map<ServiceKey, bool> verifying;
-  final void Function(ServiceKey, bool) onToggle;
-  final Future<void> Function(ServiceKey) onVerify;
-  final VoidCallback onBack;
-  final Future<void> Function() onContinue;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: _screenPad,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _ProgressBar(step: 1),
-          const SizedBox(height: 18),
-          // The heading scrolls with the list. Pinned above it, the headline and
-          // its paragraph grew past the whole screen at an accessibility
-          // reading size — 812px of overflow on a 4.7" phone — because only the
-          // list below them could scroll.
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _StepLabel('Step 2 of 3'),
-                  // The headline and its paragraph stand down while the keyboard is up.
-                  // They are 150pt of chrome above the fields, and the keyboard has
-                  // already cut the visible area to a sliver.
-                  if (!compactHeader) ...[
-                    const SizedBox(height: 8),
-                    // `headlineMedium` (28), not the hero's `displaySmall`: this
-                    // is a screen-level heading introducing a long scrolling
-                    // form, and it is exactly the line that documented 812px of
-                    // overflow at an accessibility reading size. The heading role
-                    // says "you are here"; the display role is reserved for the
-                    // opening claim on step 1.
-                    Text(
-                      'Connect the services you already host.',
-                      style: textTheme.headlineMedium!
-                          .weight(FontWeight.w800)
-                          .copyWith(color: _fg),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Every service depends on its own self-hosted instance. Seekarr helps you manage them with one unified UI, from wherever you are.',
-                      style: textTheme.bodyLarge!.copyWith(color: _muted),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  for (final domain in ServiceDomain.values)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _OnboardingDomainSection(
-                        label: domain.label,
-                        initiallyExpanded: domain == ServiceDomain.media,
-                        enabledCount: domain.services
-                            .where((k) => enabled[k]!)
-                            .length,
-                        serviceCards: [
-                          for (final k in domain.services)
-                            _ServiceCard(
-                              serviceKey: k,
-                              isEnabled: enabled[k]!,
-                              urlCtrl: urlCtrl[k]!,
-                              apiKeyCtrl: apiKeyCtrl[k]!,
-                              usernameCtrl: usernameCtrl[k]!,
-                              passwordCtrl: passwordCtrl[k]!,
-                              verifyStatus: verifyStatus[k],
-                              verifyReason: verifyReason[k],
-                              verifying: verifying[k]!,
-                              onToggle: (v) => onToggle(k, v),
-                              onVerify: () => onVerify(k),
-                            ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _StepFooter(
-            secondary: _SecondaryButton(label: 'Back', onPressed: onBack),
-            primary: _AsyncButton(
-              label: 'Continue',
-              filled: true,
-              onPressed: onContinue,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Collapsible domain group for the onboarding connect step. Styled with the
-/// onboarding's dark tokens (rather than the shared Material [DomainSection])
-/// so it matches the surrounding gradient UI. Media starts expanded; the other
-/// domains start collapsed to keep the initial scroll short.
-class _OnboardingDomainSection extends StatefulWidget {
-  const _OnboardingDomainSection({
-    required this.label,
-    required this.serviceCards,
-    required this.enabledCount,
-    this.initiallyExpanded = false,
-  });
-
-  final String label;
-  final List<Widget> serviceCards;
-  final int enabledCount;
-  final bool initiallyExpanded;
-
-  @override
-  State<_OnboardingDomainSection> createState() =>
-      _OnboardingDomainSectionState();
-}
-
-class _OnboardingDomainSectionState extends State<_OnboardingDomainSection> {
-  late bool _expanded = widget.initiallyExpanded;
-
-  void _toggle() {
-    setState(() => _expanded = !_expanded);
-    if (!_expanded) return;
-    // Expanding a section below the fold used to reveal it off-screen, behind
-    // the footer buttons — the tap looked like it had done nothing.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  Future<void> _enterWalk() async {
+    if (_walk.isEmpty) {
+      // Nothing chosen is a legitimate outcome; the close says so plainly.
+      await _save();
       if (!mounted) return;
-      _revealInOwnScrollView(context, alignment: 0.05);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Column(
-      children: [
-        Semantics(
-          button: true,
-          expanded: _expanded,
-          label: widget.label,
-          value: widget.enabledCount > 0
-              ? '${widget.enabledCount} connected'
-              : null,
-          excludeSemantics: true,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _toggle,
-            child: Padding(
-              // 44pt total: the row's content is 19pt, so the padding is what
-              // makes the header reach the iOS minimum target.
-              padding: const EdgeInsets.symmetric(
-                vertical: 12.5,
-                horizontal: 2,
-              ),
-              child: Row(
-                children: [
-                  AnimatedRotation(
-                    turns: _expanded ? 0.25 : 0.0,
-                    duration: AppAnimation.durationSm,
-                    child: const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: _muted,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    // Not the eyebrow voice: there is one of these per domain,
-                    // and a tracked overline repeated down a step reads as
-                    // noise rather than as a kicker. `labelSmall` in the dim
-                    // tone, which is what the uppercase group headers become.
-                    child: Text(
-                      widget.label.toUpperCase(),
-                      style: textTheme.labelSmall!
-                          .weight(FontWeight.w700)
-                          .copyWith(color: _muted2),
-                    ),
-                  ),
-                  if (widget.enabledCount > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: AppRadius.borderRadiusFull,
-                        color: const Color(0x1F22C55E),
-                      ),
-                      // A count that changes as toggles flip, so it is tabular:
-                      // the badge stops resizing under the number.
-                      child: Text(
-                        '${widget.enabledCount} on',
-                        style: textTheme.labelSmall!
-                            .weight(FontWeight.w800)
-                            .tabular
-                            .copyWith(color: const Color(0xFFBFE9CA)),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Collapsed sections build nothing: with AnimatedCrossFade every card in
-        // every section was built on the first frame of the step, whether or not
-        // its section was open.
-        AnimatedSize(
-          duration: AppAnimation.durationSm,
-          alignment: Alignment.topCenter,
-          child: _expanded
-              ? Column(
-                  children: [
-                    for (final card in widget.serviceCards)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: card,
-                      ),
-                  ],
-                )
-              : const SizedBox(width: double.infinity),
-        ),
-      ],
-    );
-  }
-}
-
-class _ServiceCard extends StatelessWidget {
-  const _ServiceCard({
-    required this.serviceKey,
-    required this.isEnabled,
-    required this.urlCtrl,
-    required this.apiKeyCtrl,
-    required this.usernameCtrl,
-    required this.passwordCtrl,
-    required this.verifyStatus,
-    required this.verifyReason,
-    required this.verifying,
-    required this.onToggle,
-    required this.onVerify,
-  });
-
-  final ServiceKey serviceKey;
-  final bool isEnabled;
-  final TextEditingController urlCtrl;
-  final TextEditingController apiKeyCtrl;
-  final TextEditingController usernameCtrl;
-  final TextEditingController passwordCtrl;
-  final ServiceConnectionStatus? verifyStatus;
-  final ServiceFailureReason? verifyReason;
-  final bool verifying;
-  final ValueChanged<bool> onToggle;
-  final VoidCallback onVerify;
-
-  Color get _color => _serviceColor(serviceKey);
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return AnimatedContainer(
-      duration: AppAnimation.durationSm,
-      decoration: BoxDecoration(
-        borderRadius: _radiusPanel,
-        border: Border.all(
-          color: isEnabled ? _color.withValues(alpha: 0.28) : _border,
-        ),
-        color: isEnabled ? const Color(0xD5111521) : const Color(0x94111521),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Header row — one control, the full width of the card.
-          //
-          // The row says "tap to connect", but only the 46pt switch answered a
-          // tap; the name, the subtitle and the space between them did nothing.
-          // Semantics wraps the whole row for the same reason: assistive
-          // technology now sees a single switch with its on/off state instead of
-          // three labels and an unnamed gesture.
-          Semantics(
-            toggled: isEnabled,
-            label: '${serviceKey.title} enabled',
-            container: true,
-            excludeSemantics: true,
-            onTap: () => onToggle(!isEnabled),
-            child: GestureDetector(
-              onTap: () => onToggle(!isEnabled),
-              behavior: HitTestBehavior.opaque,
-              child: Row(
-                children: [
-                  _ServiceDot(color: _color),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          serviceKey.title,
-                          style: textTheme.titleSmall!
-                              .weight(FontWeight.w700)
-                              .copyWith(color: _fg),
-                        ),
-                        const SizedBox(height: 2),
-                        // A state line, not prose: `labelSmall` keeps it at the
-                        // 11pt it was authored at and at label leading, which is
-                        // what a fixed-height row wants.
-                        Text(
-                          // "Not enabled on this setup" read as an external
-                          // constraint rather than the user's own choice.
-                          isEnabled ? 'Enabled' : 'Off — tap to connect',
-                          style: textTheme.labelSmall!.copyWith(color: _muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
-                    ),
-                    child: Center(
-                      child: _Toggle(isOn: isEnabled, color: _color),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Inline config, built only when the service is on.
-          //
-          // This was an AnimatedCrossFade, which builds both children: every one
-          // of the thirteen cards carried a live config panel — twenty-six text
-          // fields and their validator listeners — to show at most one.
-          AnimatedSize(
-            duration: AppAnimation.durationSm,
-            alignment: Alignment.topCenter,
-            child: isEnabled
-                ? _ServiceConfig(
-                    serviceKey: serviceKey,
-                    urlCtrl: urlCtrl,
-                    apiKeyCtrl: apiKeyCtrl,
-                    usernameCtrl: usernameCtrl,
-                    passwordCtrl: passwordCtrl,
-                    verifyStatus: verifyStatus,
-                    verifyReason: verifyReason,
-                    verifying: verifying,
-                    onVerify: onVerify,
-                  )
-                : const SizedBox(width: double.infinity),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Toggle extends StatelessWidget {
-  const _Toggle({required this.isOn, required this.color});
-  final bool isOn;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: AppAnimation.durationSm,
-      width: 46,
-      height: 28,
-      decoration: BoxDecoration(
-        borderRadius: AppRadius.borderRadiusFull,
-        border: Border.all(
-          color: isOn ? color.withValues(alpha: 0.4) : const Color(0x14FFFFFF),
-        ),
-        color: isOn ? color.withValues(alpha: 0.36) : const Color(0x14FFFFFF),
-      ),
-      child: Stack(
-        children: [
-          AnimatedPositioned(
-            duration: AppAnimation.durationSm,
-            curve: Curves.easeInOut,
-            left: isOn ? 18 : 3,
-            top: 3,
-            child: Container(
-              width: 20,
-              height: 20,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x22000000),
-                    blurRadius: 4,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ServiceConfig extends StatefulWidget {
-  const _ServiceConfig({
-    required this.serviceKey,
-    required this.urlCtrl,
-    required this.apiKeyCtrl,
-    required this.usernameCtrl,
-    required this.passwordCtrl,
-    required this.verifyStatus,
-    required this.verifyReason,
-    required this.verifying,
-    required this.onVerify,
-  });
-
-  final ServiceKey serviceKey;
-  final TextEditingController urlCtrl;
-  final TextEditingController apiKeyCtrl;
-  final TextEditingController usernameCtrl;
-  final TextEditingController passwordCtrl;
-  final ServiceConnectionStatus? verifyStatus;
-  final ServiceFailureReason? verifyReason;
-  final bool verifying;
-  final VoidCallback onVerify;
-
-  @override
-  State<_ServiceConfig> createState() => _ServiceConfigState();
-}
-
-class _ServiceConfigState extends State<_ServiceConfig> {
-  @override
-  void didUpdateWidget(_ServiceConfig oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // A finished verification adds a badge and a line of explanation at the
-    // bottom of the panel — which, on a card near the fold, appeared behind the
-    // footer buttons. Scroll the outcome of the tap into view.
-    if (oldWidget.verifying && !widget.verifying) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _revealInOwnScrollView(context, alignment: 0.9);
-      });
+      setState(() {});
+      _goTo(_closePage);
+      return;
     }
+    setState(() => _prefillAddress(_walk.first));
+    _goTo(_firstWalkPage);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final serviceKey = widget.serviceKey;
-    final urlCtrl = widget.urlCtrl;
-    final apiKeyCtrl = widget.apiKeyCtrl;
-    final usernameCtrl = widget.usernameCtrl;
-    final passwordCtrl = widget.passwordCtrl;
-    final verifyStatus = widget.verifyStatus;
-    final verifyReason = widget.verifyReason;
-    final verifying = widget.verifying;
-    final onVerify = widget.onVerify;
-    final textTheme = Theme.of(context).textTheme;
-    // Every note in this panel is a sentence of explanation, so they share one
-    // role: `bodySmall`, the smallest running-text role (the 11pt they were
-    // authored at is below the ramp's floor for prose).
-    final noteStyle = textTheme.bodySmall!;
-
-    return Column(
-      children: [
-        const Divider(height: 28, color: Color(0x0FFFFFFF)),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: AppRadius.borderRadiusLg,
-            color: const Color(0xFF0A0C14),
-            border: Border.all(color: const Color(0x12FFFFFF)),
-          ),
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${serviceKey.title} configuration',
-                style: textTheme.titleSmall!
-                    .weight(FontWeight.w700)
-                    .copyWith(color: _fg),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Point Seekarr to your ${serviceKey.title} instance and confirm it answers correctly.',
-                style: noteStyle.copyWith(color: _muted),
-              ),
-              const SizedBox(height: 12),
-              _ConfigField(label: 'Base URL', controller: urlCtrl, isUrl: true),
-              if (serviceKey.usesApiKey) ...[
-                const SizedBox(height: 10),
-                _ConfigField(
-                  label: 'API key',
-                  controller: apiKeyCtrl,
-                  isPassword: true,
-                ),
-              ] else if (serviceKey == ServiceKey.qbittorrent ||
-                  serviceKey == ServiceKey.dockge ||
-                  serviceKey == ServiceKey.nzbget) ...[
-                const SizedBox(height: 10),
-                _ConfigField(
-                  label: 'Username (optional)',
-                  controller: usernameCtrl,
-                  hint: 'Enter username',
-                ),
-                const SizedBox(height: 10),
-                _ConfigField(
-                  label: 'Password (optional)',
-                  controller: passwordCtrl,
-                  isPassword: true,
-                  hint: 'Enter password',
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Leave credentials empty if your ${serviceKey.title} instance does not require authentication.',
-                  style: noteStyle.copyWith(color: _muted),
-                ),
-              ],
-              if (serviceKey == ServiceKey.readarr) ...[
-                const SizedBox(height: 10),
-                // The settings screen says this; setup — where the choice is
-                // actually made — said nothing.
-                Text(
-                  'Readarr development has stopped upstream. Existing instances '
-                  'keep working against its last released API, but expect no '
-                  'new server-side fixes.',
-                  style: noteStyle.copyWith(color: _muted),
-                ),
-              ],
-              if (serviceKey == ServiceKey.truenas) ...[
-                const SizedBox(height: 10),
-                Text(
-                  'Requires TrueNAS SCALE $kTrueNasMinVersion or newer.',
-                  style: noteStyle.copyWith(color: _muted),
-                ),
-              ],
-              if (serviceKey == ServiceKey.unraid) ...[
-                const SizedBox(height: 10),
-                Text(
-                  'Enable the Unraid API first (Settings → Management Access → '
-                  'Developer Options → GraphQL sandbox) and create an API key. '
-                  'The endpoint stays silent until it is enabled.',
-                  style: noteStyle.copyWith(color: _muted),
-                ),
-              ],
-              if (verifyStatus == ServiceConnectionStatus.notConfigured) ...[
-                const SizedBox(height: 10),
-                Text(
-                  serviceKey.usesApiKey
-                      ? 'Enter the base URL and the API key, then verify.'
-                      : 'Enter the base URL, then verify.',
-                  style: noteStyle.copyWith(color: AppColors.warning),
-                ),
-              ],
-              if (verifyStatus == ServiceConnectionStatus.disconnected) ...[
-                const SizedBox(height: 10),
-                Text(
-                  connectionFailureMessage(serviceKey, verifyReason),
-                  style: noteStyle.copyWith(color: const Color(0xFFFCA5A5)),
-                ),
-              ],
-              const SizedBox(height: 12),
-              // Verify row
-              Row(
-                children: [
-                  Expanded(
-                    child: _VerifyButton(verifying: verifying, onTap: onVerify),
-                  ),
-                  const SizedBox(width: 10),
-                  _VerifyStatusBadge(
-                    status: verifyStatus,
-                    verifying: verifying,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ConfigField extends StatefulWidget {
-  const _ConfigField({
-    required this.label,
-    required this.controller,
-    this.isUrl = false,
-    this.isPassword = false,
-    this.hint,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final bool isUrl;
-  final bool isPassword;
-
-  /// Overrides the placeholder. Credential fields must pass this — the default
-  /// only makes sense for the API-key field.
-  final String? hint;
-
-  @override
-  State<_ConfigField> createState() => _ConfigFieldState();
-}
-
-class _ConfigFieldState extends State<_ConfigField> {
-  String? _error;
-  String? _warning;
-
-  /// Secrets start hidden but must be checkable: a 32-character key typed on a
-  /// phone keyboard is unverifiable behind dots, and the settings screen already
-  /// offers this.
-  bool _revealed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.isUrl) {
-      widget.controller.addListener(_validate);
-      _validate();
+  /// Saves what has been entered so far, then moves on. Saving per service
+  /// rather than once at the end is what makes an interrupted setup resumable.
+  Future<void> _advanceFrom(ServiceKey service) async {
+    final index = _walk.indexOf(service);
+    await _save();
+    if (!mounted) return;
+    if (index >= 0 && index + 1 < _walk.length) {
+      final next = _walk[index + 1];
+      setState(() => _prefillAddress(next));
+      _goTo(_firstWalkPage + index + 1);
+      return;
     }
+    setState(() {});
+    _goTo(_closePage);
+    // Not awaited: the close is on screen while the checks run, and the way out
+    // stays usable throughout.
+    _testUntested();
   }
 
-  @override
-  void dispose() {
-    if (widget.isUrl) widget.controller.removeListener(_validate);
-    super.dispose();
-  }
-
-  /// Validates the address as it is typed.
-  ///
-  /// Without this a malformed URL reached the client, which could only report
-  /// "Unreachable" — sending the user to hunt for a network fault when the real
-  /// problem was a typo. A cleartext address outside the local network is
-  /// flagged as a warning rather than an error: it is a supported choice, just
-  /// one worth knowing about.
-  void _validate() {
-    final raw = widget.controller.text;
-    final error = raw.trim().isEmpty
-        ? null // don't scold an untouched field
-        : UrlUtils.validateServiceHost(raw);
-    final warning = error == null ? UrlUtils.cleartextWarning(raw) : null;
-    if (error == _error && warning == _warning) return;
+  void _skip(ServiceKey service) {
     setState(() {
-      _error = error;
-      _warning = warning;
+      _skipped.add(service);
+      _status.remove(service);
+      _reason.remove(service);
+      _failureDetail.remove(service);
+      _pendingCert.remove(service);
     });
+    _advanceFrom(service);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _field(context),
-        if (_error != null || _warning != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 6, left: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  _error != null
-                      ? Icons.error_outline_rounded
-                      : Icons.info_outline_rounded,
-                  size: 13,
-                  color: _error != null ? AppColors.error : AppColors.warning,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    _error ?? _warning!,
-                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: _error != null
-                          ? AppColors.error
-                          : AppColors.warning,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
+  void _backFrom(ServiceKey service) {
+    final index = _walk.indexOf(service);
+    _goTo(index <= 0 ? _pickPage : _firstWalkPage + index - 1);
   }
 
-  Widget _field(BuildContext context) {
-    final label = widget.label;
-    final controller = widget.controller;
-    final isUrl = widget.isUrl;
-    final isPassword = widget.isPassword;
-    final hint = widget.hint;
-    final textTheme = Theme.of(context).textTheme;
-    // The value the user types is running text, so it comes off `bodyMedium`;
-    // the placeholder takes the same role so the line does not jump size when
-    // the field goes from empty to filled.
-    final valueStyle = textTheme.bodyMedium!;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: AppRadius.borderRadiusLg,
-        border: Border.all(
-          color: _error != null
-              ? AppColors.error.withValues(alpha: 0.6)
-              : const Color(0x12FFFFFF),
-        ),
-        color: const Color(0xB8080A10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // One per field, so — like the domain headers — an uppercase
-          // `labelSmall` rather than the eyebrow voice. 11pt is also the ramp's
-          // floor: 10pt has no role.
-          Text(
-            label.toUpperCase(),
-            style: textTheme.labelSmall!
-                .weight(FontWeight.w700)
-                .copyWith(color: _muted2),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  obscureText: isPassword && !_revealed,
-                  keyboardType: isUrl ? TextInputType.url : TextInputType.text,
-                  textInputAction: isUrl
-                      ? TextInputAction.next
-                      : TextInputAction.done,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  // Smart substitutions are off as well as autocorrect: iOS
-                  // otherwise rewrites `--` and quotes inside a typed address.
-                  smartDashesType: SmartDashesType.disabled,
-                  smartQuotesType: SmartQuotesType.disabled,
-                  style: valueStyle.copyWith(color: const Color(0xFFDDE4FA)),
-                  decoration: InputDecoration(
-                    // https by default: the clients normalise a scheme-less host
-                    // to TLS, and the old http:// placeholder taught the
-                    // opposite.
-                    hintText: isUrl
-                        ? 'https://your-server:port'
-                        : (hint ?? 'Enter API key'),
-                    hintStyle: valueStyle.copyWith(color: _muted2),
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    isDense: false,
-                    // Every state is borderless: the surrounding container draws
-                    // the frame. `border` alone left the app-wide
-                    // `focusedBorder` — a 2px indigo outline — painting a second
-                    // box inside this one on focus.
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                ),
-              ),
-              if (isPassword)
-                Semantics(
-                  button: true,
-                  label: _revealed ? 'Hide $label' : 'Show $label',
-                  child: IconButton(
-                    onPressed: () => setState(() => _revealed = !_revealed),
-                    icon: Icon(
-                      _revealed
-                          ? Icons.visibility_off_rounded
-                          : Icons.visibility_rounded,
-                      size: 18,
-                      color: _muted,
-                    ),
-                    // 44pt hit target inside a 13pt-padded field.
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
-                    ),
-                    padding: EdgeInsets.zero,
-                    tooltip: _revealed ? 'Hide $label' : 'Show $label',
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
+  Future<void> _skipEverything() async {
+    await _save();
+    if (!mounted) return;
+    setState(() {});
+    _goTo(_closePage);
   }
-}
 
-class _VerifyButton extends StatelessWidget {
-  const _VerifyButton({required this.verifying, required this.onTap});
-  final bool verifying;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return PressableScale(
-      onTap: verifying ? null : onTap,
-      semanticLabel: 'Verify service',
-      semanticValue: verifying ? 'Verifying' : null,
-      excludeChildSemantics: true,
-      child: Container(
-        // 44pt: the iOS minimum target, which 42 missed.
-        height: 44,
-        decoration: BoxDecoration(
-          borderRadius: _radiusChip,
-          border: Border.all(color: const Color(0x14FFFFFF)),
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0x0FFFFFFF), Color(0x05FFFFFF)],
-          ),
-        ),
-        alignment: Alignment.center,
-        child: verifying
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: _muted),
-              )
-            : Text(
-                'Verify service',
-                // A button label, so `labelLarge` — the same role the app's own
-                // button themes use, and the one the step footer's buttons take.
-                style: Theme.of(context).textTheme.labelLarge!
-                    .weight(FontWeight.w700)
-                    .copyWith(color: _fg),
-              ),
-      ),
-    );
-  }
-}
-
-class _VerifyStatusBadge extends StatelessWidget {
-  const _VerifyStatusBadge({required this.status, required this.verifying});
-  final ServiceConnectionStatus? status;
-  final bool verifying;
-
-  @override
-  Widget build(BuildContext context) {
-    if (verifying ||
-        status == null ||
-        status == ServiceConnectionStatus.checking) {
-      return const SizedBox(width: 90, height: 42);
+  void _fix(ServiceKey service) {
+    final index = _walk.indexOf(service);
+    if (index < 0) {
+      _goTo(_pickPage);
+      return;
     }
-
-    // An unfilled form is its own outcome. Reporting it as "Unreachable" — the
-    // old binary — blamed the network for a field the user simply had not typed
-    // into yet, and left nothing to act on.
-    final (label, background, foreground) = switch (status!) {
-      ServiceConnectionStatus.checking => ('', Colors.transparent, _muted),
-      ServiceConnectionStatus.connected => (
-        'Reachable',
-        const Color(0x1F22C55E),
-        const Color(0xFFBFE9CA),
-      ),
-      ServiceConnectionStatus.notConfigured => (
-        'Incomplete',
-        const Color(0x1FF59E0B),
-        const Color(0xFFFCD9A0),
-      ),
-      ServiceConnectionStatus.disconnected => (
-        'Unreachable',
-        const Color(0x1FEF4444),
-        const Color(0xFFFCA5A5),
-      ),
-    };
-    return Container(
-      width: 90,
-      height: 42,
-      decoration: BoxDecoration(borderRadius: _radiusChip, color: background),
-      alignment: Alignment.center,
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall!
-            .weight(FontWeight.w800)
-            .copyWith(color: foreground),
-      ),
-    );
+    setState(() => _skipped.remove(service));
+    _goTo(_firstWalkPage + index);
   }
-}
 
-// ─── Step 3: Ready ────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
 
-/// Row subtitle on the summary step.
-///
-/// "Configured" alone said only that fields were filled in; it never said
-/// whether the instance answers.
-String _readySubtitle({
-  required bool checking,
-  required ServiceConnectionStatus? status,
-}) {
-  if (checking) return 'Checking the connection…';
-  return switch (status) {
-    ServiceConnectionStatus.connected => 'Connected',
-    ServiceConnectionStatus.disconnected => 'Configured, but not answering',
-    _ => 'Configured',
-  };
-}
-
-/// ONLINE / OFFLINE / spinner for one row of the summary.
-class _ReadyStatusChip extends StatelessWidget {
-  const _ReadyStatusChip({required this.checking, required this.status});
-  final bool checking;
-  final ServiceConnectionStatus? status;
-
-  @override
-  Widget build(BuildContext context) {
-    if (checking) {
-      return const SizedBox(
-        width: 16,
-        height: 16,
-        child: CircularProgressIndicator(strokeWidth: 2, color: _muted),
-      );
-    }
-    final (label, background, foreground) = switch (status) {
-      ServiceConnectionStatus.connected => (
-        'ONLINE',
-        const Color(0x1F22C55E),
-        const Color(0xFFBFE9CA),
-      ),
-      ServiceConnectionStatus.disconnected => (
-        'OFFLINE',
-        const Color(0x1FEF4444),
-        const Color(0xFFFCA5A5),
-      ),
-      _ => (null, Colors.transparent, _muted),
-    };
-    if (label == null) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        borderRadius: AppRadius.borderRadiusFull,
-        color: background,
-      ),
-      // ONLINE / OFFLINE: already-uppercase status text, one per row, so it is a
-      // badge label rather than an overline.
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall!
-            .weight(FontWeight.w800)
-            .copyWith(color: foreground),
-      ),
-    );
-  }
-}
-
-class _ReadyStep extends StatelessWidget {
-  const _ReadyStep({
-    required this.configuredServices,
-    required this.verifyStatus,
-    required this.verifying,
-    required this.onReviewSettings,
-    required this.onFinish,
-  });
-
-  final List<ServiceKey> configuredServices;
-  final Map<ServiceKey, ServiceConnectionStatus?> verifyStatus;
-
-  /// Services whose check is still in flight, so the row can say so rather than
-  /// looking like a verdict that has not arrived.
-  final Map<ServiceKey, bool> verifying;
-  final Future<void> Function() onReviewSettings;
-  final Future<void> Function() onFinish;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: _screenPad,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _ProgressBar(step: 2),
-          const SizedBox(height: 18),
-          // Heading and card scroll together, and only the footer is pinned.
-          //
-          // Both halves of this used to be fixed: nine connected services
-          // overflowed by 151px and pushed "Let's go" off the screen, and the
-          // headline at an accessibility reading size did the same on its own.
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _StepLabel('Step 3 of 3'),
-                  const SizedBox(height: 8),
-                  // Same step-heading role as step 2, for the same reason: a
-                  // screen-level heading over a scrolling summary.
-                  Text(
-                    configuredServices.isEmpty
-                        ? 'Ready when you are.'
-                        : "You're all set.",
-                    style: textTheme.headlineMedium!
-                        .weight(FontWeight.w800)
-                        .copyWith(color: _fg),
-                  ),
-                  const SizedBox(height: 12),
-                  // Congratulating someone on connecting nothing read as a bug.
-                  // The empty case is legitimate — you can add services later —
-                  // so it gets copy that says what actually happened.
-                  Text(
-                    configuredServices.isEmpty
-                        ? 'Nothing is connected yet. Seekarr will stay empty '
-                              'until you add a service — you can do that any '
-                              'time in Settings.'
-                        : 'Your connected services are available and you can '
-                              'start using the app right away.',
-                    style: textTheme.bodyLarge!.copyWith(color: _muted),
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: _radiusPanel,
-                      border: Border.all(color: const Color(0x0FFFFFFF)),
-                      color: const Color(0xD5111521),
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Connected services',
-                          style: textTheme.titleSmall!
-                              .weight(FontWeight.w700)
-                              .copyWith(color: _fg),
-                        ),
-                        const SizedBox(height: 16),
-                        if (configuredServices.isEmpty)
-                          // The panel's whole content in the empty case, so it
-                          // carries the message rather than annotating a field:
-                          // `bodyMedium`, a step above the panel notes.
-                          Text(
-                            'No services configured — you can add them later in Settings.',
-                            style: textTheme.bodyMedium!.copyWith(
-                              color: _muted,
-                            ),
-                          )
-                        else
-                          ...configuredServices.asMap().entries.map((e) {
-                            final idx = e.key;
-                            final k = e.value;
-                            final isChecking = verifying[k] ?? false;
-                            return Column(
-                              children: [
-                                if (idx > 0)
-                                  const Divider(
-                                    height: 24,
-                                    color: Color(0x14FFFFFF),
-                                  ),
-                                Row(
-                                  children: [
-                                    _ServiceDot(color: _serviceColor(k)),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            k.title,
-                                            style: textTheme.titleSmall!
-                                                .weight(FontWeight.w700)
-                                                .copyWith(color: _fg),
-                                          ),
-                                          const SizedBox(height: 3),
-                                          Text(
-                                            _readySubtitle(
-                                              checking: isChecking,
-                                              status: verifyStatus[k],
-                                            ),
-                                            style: textTheme.bodySmall!
-                                                .copyWith(color: _muted2),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    _ReadyStatusChip(
-                                      checking: isChecking,
-                                      status: verifyStatus[k],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            );
-                          }),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _StepFooter(
-            secondary: _AsyncButton(
-              label: 'Review settings',
-              onPressed: onReviewSettings,
-            ),
-            primary: _AsyncButton(
-              label: "Let's go",
-              filled: true,
-              onPressed: onFinish,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The pinned action row at the bottom of a step.
-///
-/// Side by side, the two labels stop fitting as the reading size grows — the row
-/// overflowed by 119px at 2x. Past that point they stack, full width, with the
-/// primary action first.
-class _StepFooter extends StatelessWidget {
-  const _StepFooter({required this.secondary, required this.primary});
-  final Widget secondary;
-  final Widget primary;
-
-  @override
-  Widget build(BuildContext context) {
-    final labelWidth = MediaQuery.textScalerOf(context).scale(14);
-    if (labelWidth > 20) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [primary, const SizedBox(height: 10), secondary],
-      );
-    }
-    return Row(
-      children: [
-        secondary,
-        const SizedBox(width: 10),
-        Expanded(child: primary),
-      ],
-    );
-  }
-}
-
-/// The style every button label on this screen shares.
-///
-/// `labelLarge` is the role the app's own `filledButtonTheme` and
-/// `outlinedButtonTheme` use, at the w700 these buttons were authored with. It is
-/// also the line [_buttonHeight] budgets for.
-TextStyle _buttonLabelStyle(BuildContext context) =>
-    Theme.of(context).textTheme.labelLarge!.weight(FontWeight.w700);
-
-/// Height for a step's buttons, grown by however much their label grew.
-///
-/// `textHeight` is one line of the label role, and it is unchanged at 17 by the
-/// ramp's new leading. A button label is a *single* line, and the app installs
-/// `DefaultTextHeightBehavior(applyHeightToFirstAscent: false,
-/// applyHeightToLastDescent: false)` at its root — so the role's 1.22 governs the
-/// gaps *between* lines while a one-line block keeps Inter's natural metrics.
-/// Measured: `labelLarge` lays out at exactly 17.0pt for one line, before and
-/// after. No box constant in the app needed re-deriving for that reason.
-double _buttonHeight(BuildContext context) =>
-    TextScaleMetrics.boxHeight(context, base: 48, textHeight: 17);
-
-// ─── Button components ───────────────────────────────────────────────────────
-class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({required this.label, required this.onPressed});
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: _buttonHeight(context),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _accent,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusLg),
-        ),
-        child: Text(label, style: _buttonLabelStyle(context)),
-      ),
-    );
-  }
-}
-
-class _SecondaryButton extends StatelessWidget {
-  const _SecondaryButton({required this.label, required this.onPressed});
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: _buttonHeight(context),
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _fg,
-          side: const BorderSide(color: Color(0x14FFFFFF)),
-          backgroundColor: const Color(0x08FFFFFF),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-          ),
-        ),
-        child: Text(label, style: _buttonLabelStyle(context)),
-      ),
-    );
-  }
-}
-
-class _AsyncButton extends StatefulWidget {
-  const _AsyncButton({
-    required this.label,
-    required this.onPressed,
-    this.filled = false,
-  });
-  final String label;
-  final Future<void> Function() onPressed;
-  final bool filled;
-
-  @override
-  State<_AsyncButton> createState() => _AsyncButtonState();
-}
-
-class _AsyncButtonState extends State<_AsyncButton> {
-  bool _loading = false;
-
-  static const _shape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.all(Radius.circular(16)),
+  /// The ring's size for the beat currently on screen.
+  ///
+  /// Two sizes, not four: the door and the close are about the whole stack, so
+  /// the instrument is the subject there; picking and configuring are about one
+  /// service at a time, so it steps down to leave the form room — but it is the
+  /// *same* ring resizing, never a second one.
+  double _ringDiameter(BuildContext context) => serviceRingDiameter(
+    context,
+    preferred: _page == _doorPage || _page >= _closePage ? 300 : 190,
   );
 
   @override
   Widget build(BuildContext context) {
-    final child = _loading
-        ? const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
+    final walk = _walk;
+    final ringStates = _ringStates;
+    final activeWalk = _page >= _firstWalkPage && _page < _closePage
+        ? walk[_page - _firstWalkPage]
+        : null;
+
+    return AmbientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: onboardingMaxWidth),
+              child: Column(
+                children: [
+                  // The instrument, outside the pager on purpose. One ring for
+                  // the whole flow: it holds its place while the forms page
+                  // behind it, rotates the active service to noon, and grows a
+                  // spoke the moment one answers. Hoisting it out is what stops
+                  // the ring and the shell arriving from two different places on
+                  // every step.
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      top: AppSpacing.lg,
+                      bottom: AppSpacing.md,
+                    ),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(end: _ringDiameter(context)),
+                      // The page slide's own timing, so the resize and the
+                      // shell's travel read as one movement.
+                      duration: AppAnimation.durationMd,
+                      curve: AppAnimation.standardCurve,
+                      builder: (context, diameter, _) => AnimatedBuilder(
+                        animation: _entrance,
+                        builder: (context, _) => ServiceRing(
+                          states: ringStates,
+                          diameter: diameter,
+                          entrance: AppAnimation.emphasizedCurve.transform(
+                            _entrance.value,
+                          ),
+                          activeService: activeWalk,
+                          progress: activeWalk == null
+                              ? (_page >= _closePage &&
+                                        _silent.isEmpty &&
+                                        _answering.isNotEmpty
+                                    ? 1
+                                    : 0)
+                              : (_page - _firstWalkPage) / walk.length,
+                          spin: true,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // The step's subject, hoisted for the same reason the ring is:
+                  // a `PageView` builds one element per page, so a headline held
+                  // inside the pager can only ever be replaced, never rolled.
+                  // Held here it is one widget across the whole walk and the
+                  // service name rolls inside a sentence that stays put.
+                  if (activeWalk case final service?)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: OnboardingWalkSubject(
+                        service: service,
+                        position: _page - _firstWalkPage + 1,
+                        total: walk.length,
+                      ),
+                    ),
+                  Expanded(
+                    child: PageView(
+                      controller: _pageController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        OnboardingDoor(
+                          onStart: () => _goTo(_pickPage),
+                          onSkip: _skipEverything,
+                        ),
+                        OnboardingPick(
+                          picked: _picked,
+                          onToggle: (service) => setState(() {
+                            if (_picked.remove(service)) {
+                              _status.remove(service);
+                              _reason.remove(service);
+                              _pendingCert.remove(service);
+                            } else {
+                              _picked.add(service);
+                              _skipped.remove(service);
+                            }
+                          }),
+                          onContinue: _enterWalk,
+                          onBack: () => _goTo(_doorPage),
+                        ),
+                        for (var i = 0; i < walk.length; i++)
+                          OnboardingWalk(
+                            service: walk[i],
+                            urlController: _urlCtrl[walk[i]]!,
+                            apiKeyController: _apiKeyCtrl[walk[i]]!,
+                            usernameController: _usernameCtrl[walk[i]]!,
+                            passwordController: _passwordCtrl[walk[i]]!,
+                            status: _status[walk[i]],
+                            reason: _reason[walk[i]],
+                            failureDetail: _failureDetail[walk[i]],
+                            verifying: _verifying[walk[i]] ?? false,
+                            certificateProbe: _pendingCert[walk[i]],
+                            trustedFingerprint: _pinFor(walk[i]),
+                            affectedServices: _servicesSharingOrigin(walk[i]),
+                            next: i + 1 < walk.length ? walk[i + 1] : null,
+                            onTest: () => _test(walk[i]),
+                            onTrustCertificate: () =>
+                                _trustCertificate(walk[i]),
+                            onSuggestPort: () => _suggestPort(walk[i]),
+                            onSkip: () => _skip(walk[i]),
+                            onAdvance: () => _advanceFrom(walk[i]),
+                            onBack: () => _backFrom(walk[i]),
+                          ),
+                        OnboardingClose(
+                          connected: _answering,
+                          silent: _silent,
+                          onFix: _fix,
+                          onFinish: _finish,
+                          onReview: () => _goTo(_pickPage),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          )
-        : Text(widget.label, style: _buttonLabelStyle(context));
-
-    final onTap = _loading
-        ? null
-        : () async {
-            setState(() => _loading = true);
-            try {
-              await widget.onPressed();
-            } finally {
-              if (mounted) setState(() => _loading = false);
-            }
-          };
-
-    if (widget.filled) {
-      return SizedBox(
-        height: _buttonHeight(context),
-        child: ElevatedButton(
-          onPressed: onTap,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _accent,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: _accent.withValues(alpha: 0.6),
-            elevation: 0,
-            shape: _shape,
           ),
-          child: child,
         ),
-      );
-    }
-
-    return SizedBox(
-      height: _buttonHeight(context),
-      child: OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _fg,
-          side: const BorderSide(color: Color(0x14FFFFFF)),
-          backgroundColor: const Color(0x08FFFFFF),
-          shape: _shape,
-        ),
-        child: child,
       ),
     );
   }

@@ -1,11 +1,60 @@
 import 'package:dio/dio.dart';
 
+import 'package:seekarr/core/network/connection_failure.dart';
+
 /// Status codes that carry a `Location` header we are expected to follow.
 const _redirectStatuses = {301, 302, 303, 307, 308};
 
-/// Accepts 3xx so [SameOriginRedirectInterceptor] can inspect them instead of
-/// Dio rejecting them before the interceptor chain runs.
-bool allowRedirectStatus(int? status) => status != null && status < 400;
+/// Headers that describe a request body. A redirect that downgrades to GET
+/// leaves the body behind, so these stop describing anything.
+const _entityHeaders = {Headers.contentLengthHeader, Headers.contentTypeHeader};
+
+/// Accepts exactly the 3xx codes [SameOriginRedirectInterceptor] knows how to
+/// follow, so Dio hands them to the interceptor instead of rejecting them
+/// before the chain runs.
+///
+/// Deliberately *not* "any status below 400": the other 3xx codes (300 Multiple
+/// Choices, 304 Not Modified, 305, 306) are not followed by anything here, so
+/// accepting them would deliver an empty or HTML body to a caller that goes on
+/// to read `response.data['results']` and either throws a type error or
+/// silently yields nothing. Rejecting them makes them ordinary Dio failures
+/// that [classifyConnectionFailure] can report.
+bool allowRedirectStatus(int? status) =>
+    status != null && (status < 300 || _redirectStatuses.contains(status));
+
+/// A redirect [SameOriginRedirectInterceptor] refused to follow.
+///
+/// Carries both the verdict and the sentence explaining it, because the enum
+/// alone cannot say *which* host a reverse proxy bounced the request to — and
+/// that sentence is the only thing that tells the user their proxy, not their
+/// address, is the problem.
+///
+/// [reason] is [ServiceFailureReason.redirected], which is its own cause rather
+/// than a borrowed one. It was `notFound` for a while — close, since both mean
+/// "the server answered but the API is not here" — but the fixes differ: a
+/// missing base path is corrected in the address field, whereas a refused
+/// redirect is corrected on the proxy sitting in front of the service, and the
+/// address the user typed may be perfectly right. Either way it tells
+/// `certProbeWorthwhile` the handshake already succeeded, so no TLS probe is
+/// worth running.
+///
+/// All three refusals — cross-origin target, missing `Location`, redirect loop
+/// — share the reason and differ only in [failureDetail], which is the sentence
+/// the UI actually shows.
+class RedirectRefused implements Exception, HasFailureReason, HasFailureDetail {
+  const RedirectRefused(this.message);
+
+  final String message;
+
+  @override
+  String get failureDetail => message;
+
+  @override
+  ServiceFailureReason get reason => ServiceFailureReason.redirected;
+
+  @override
+  String toString() => message;
+}
 
 /// Follows redirects by hand so a credential header is never replayed to a host
 /// the user did not configure.
@@ -50,9 +99,10 @@ class SameOriginRedirectInterceptor extends Interceptor {
           requestOptions: request,
           response: response,
           type: DioExceptionType.badResponse,
-          error:
-              'The server answered $status without a Location header. '
-              'Check the service URL.',
+          error: RedirectRefused(
+            'The server answered $status without a Location header. '
+            'Check the service URL.',
+          ),
         ),
       );
       return;
@@ -65,11 +115,12 @@ class SameOriginRedirectInterceptor extends Interceptor {
           requestOptions: request,
           response: response,
           type: DioExceptionType.badResponse,
-          error:
-              'The server redirected to ${target.origin}, a different host '
-              'than the one configured. The request was not resent so the '
-              'API key is not exposed. Point Seekarr directly at the '
-              'service, or fix the redirect on the server.',
+          error: RedirectRefused(
+            'The server redirected to ${target.origin}, a different host '
+            'than the one configured. The request was not resent so the '
+            'API key is not exposed. Point Seekarr directly at the '
+            'service, or fix the redirect on the server.',
+          ),
         ),
       );
       return;
@@ -82,7 +133,9 @@ class SameOriginRedirectInterceptor extends Interceptor {
           requestOptions: request,
           response: response,
           type: DioExceptionType.badResponse,
-          error: 'The server redirected more than $maxRedirects times.',
+          error: RedirectRefused(
+            'The server redirected more than $maxRedirects times.',
+          ),
         ),
       );
       return;
@@ -94,6 +147,21 @@ class SameOriginRedirectInterceptor extends Interceptor {
         ((status == 301 || status == 302) &&
             request.method.toUpperCase() != 'HEAD');
 
+    // Dio stamps `content-length` onto the *original* `RequestOptions` while
+    // encoding the body, so replaying `request.headers` verbatim after dropping
+    // that body sends a GET whose headers still promise N bytes. `dart:io` then
+    // throws `HttpException: Content size below specified contentLength` at
+    // `request.close()` — the legitimate same-origin redirect this interceptor
+    // exists to follow would fail with an opaque transport error (a Radarr
+    // `POST /api/v3/command` behind a proxy that normalises a trailing slash).
+    // 307/308 keep the body, so they keep the headers that describe it.
+    final headers = Map<String, dynamic>.from(request.headers);
+    if (becomesGet) {
+      headers.removeWhere(
+        (key, _) => _entityHeaders.contains(key.toLowerCase()),
+      );
+    }
+
     try {
       final followed = await _dio.request(
         target.toString(),
@@ -104,9 +172,9 @@ class SameOriginRedirectInterceptor extends Interceptor {
         onSendProgress: request.onSendProgress,
         options: Options(
           method: becomesGet ? 'GET' : request.method,
-          headers: request.headers,
+          headers: headers,
           responseType: request.responseType,
-          contentType: request.contentType,
+          contentType: becomesGet ? null : request.contentType,
           sendTimeout: request.sendTimeout,
           receiveTimeout: request.receiveTimeout,
           followRedirects: false,

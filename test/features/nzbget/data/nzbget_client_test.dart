@@ -148,6 +148,28 @@ void main() {
       expect(params.last, [5]);
     });
 
+    test('a refused editqueue reports false rather than throwing', () async {
+      // NZBGet answers HTTP 200 with `{"result": false}` when it declines a
+      // command — pausing a group whose NZBID has already left the queue, for
+      // instance. There is no JSON-RPC `error` object to catch, so the return
+      // value is the only evidence the mutation did not happen.
+      final adapter = CapturingHttpAdapter(
+        response: {'jsonrpc': '2.0', 'result': false, 'id': 1},
+      );
+      final client = _client(adapter);
+
+      expect(await client.pauseGroup(5), isFalse);
+      expect(await client.deleteGroup(5), isFalse);
+    });
+
+    test('a rejected append reports 0 rather than throwing', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {'jsonrpc': '2.0', 'result': 0, 'id': 1},
+      );
+
+      expect(await _client(adapter).append('x.nzb', 'https://bad/x.nzb'), 0);
+    });
+
     test('setRate sends the limit as a positional param', () async {
       final adapter = CapturingHttpAdapter(
         response: {'jsonrpc': '2.0', 'result': true, 'id': 1},

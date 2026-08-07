@@ -2,7 +2,9 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 
+import 'package:seekarr/core/network/cert_trust.dart';
 import 'package:seekarr/core/network/connection_failure.dart';
+import 'package:seekarr/core/network/redirect_guard.dart';
 import 'package:seekarr/core/utils/url_utils.dart';
 
 /// Error thrown by [QbittorrentClient], carrying the [reason] so a caller
@@ -33,12 +35,17 @@ class QbittorrentClient {
   /// `200 Fails.` (qB ≤ 5.0) or `401` (5.1+).
   bool _credentialsRejected = false;
 
+  /// [certFingerprint], when non-empty, is a self-signed certificate the user
+  /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
+  /// when [dio] is injected — a caller supplying its own transport owns its
+  /// TLS behaviour too, the same rule the other per-service clients follow.
   QbittorrentClient({
     required String url,
     this.username,
     this.password,
     Dio? dio,
     CookieJar? cookieJar,
+    String? certFingerprint,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _cookieJar = cookieJar ?? CookieJar() {
     _dio =
@@ -49,8 +56,24 @@ class QbittorrentClient {
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 15),
             sendTimeout: const Duration(seconds: 10),
+            // Follow redirects by hand so the SID cookie — which is full
+            // account access to the torrent client — is never replayed to a
+            // host the user did not configure. `dart:io` exempts a redirect to
+            // a *parent* domain from its own cookie stripping, so
+            // `qbit.homelab.net` → `homelab.net` hands the session over.
+            followRedirects: false,
+            validateStatus: allowRedirectStatus,
           ),
         );
+
+    if (dio == null) {
+      _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
+      final adapter = pinnedHttpClientAdapterFor(
+        baseUrl,
+        pinnedFingerprint: certFingerprint,
+      );
+      if (adapter != null) _dio.httpClientAdapter = adapter;
+    }
 
     _dio.interceptors.add(CookieManager(_cookieJar));
     _dio.interceptors.add(

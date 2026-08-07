@@ -80,6 +80,15 @@ ConnectionPresentation describeConnection(
           label: 'API not at this address',
           needsAttention: true,
         ),
+        // Amber, not red: the server answered and the handshake succeeded.
+        // Kept apart from `notFound` because the thing to go and fix is the
+        // proxy in front of the service, not the address in the form.
+        ServiceFailureReason.redirected => const ConnectionPresentation(
+          tone: StatusTone.warning,
+          icon: Icons.alt_route_rounded,
+          label: 'Redirected elsewhere',
+          needsAttention: true,
+        ),
         ServiceFailureReason.tls => const ConnectionPresentation(
           tone: StatusTone.warning,
           icon: Icons.gpp_bad_rounded,

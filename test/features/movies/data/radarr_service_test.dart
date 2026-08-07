@@ -64,6 +64,40 @@ void main() {
       expect(client.lastGetCancelToken, same(cancelToken));
     });
 
+    test('lookupMovies asks nothing for an empty term', () async {
+      final client = FakeApiClient();
+      final service = RadarrService(client);
+
+      expect(await service.lookupMovies(''), isEmpty);
+      expect(client.getCallCount, 0);
+    });
+
+    test('lookupMovies encodes the term and maps results', () async {
+      final client = FakeApiClient()
+        ..getResponseData = [
+          {'id': 7, 'title': 'Dune', 'year': 2021},
+        ];
+      final service = RadarrService(client);
+
+      final movies = await service.lookupMovies('dune & friends');
+
+      expect(client.lastGetPath, '/api/v3/movie/lookup');
+      expect(client.lastGetQueryParameters, {'term': 'dune%20%26%20friends'});
+      expect(movies.single.title, 'Dune');
+    });
+
+    test('lookupMovies forwards the cancel token to ApiClient', () async {
+      final client = FakeApiClient()..getResponseData = const [];
+      final service = RadarrService(client);
+      final cancelToken = CancelToken();
+
+      await service.lookupMovies('dune', cancelToken: cancelToken);
+
+      // Global search re-runs this leg on every debounced keystroke; without a
+      // token the superseded request runs to completion.
+      expect(client.lastGetCancelToken, same(cancelToken));
+    });
+
     group('getMovieByTmdbId', () {
       test('finds movie when TMDB ID matches', () async {
         final service = _TestRadarrService([

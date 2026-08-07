@@ -253,6 +253,36 @@ void main() {
       expect(mapped.needsAttention, isFalse);
     });
 
+    test('a direct stream still carries its explanation', () {
+      // `StreamSession.transcodeReasons` is documented as populated for a
+      // direct stream as well as a transcode — a remux happens *because of*
+      // something, and Jellyfin reports it in the same array. Gating on
+      // `isTranscode` dropped it, so a Jellyfin remux showed "Direct stream"
+      // with no reason while the byte-identical Plex session explained itself.
+      final mapped = jellyfinStreamSessionFromJson(
+        session(
+          playMethod: 'DirectStream',
+          transcodingInfo: {
+            'Bitrate': 8000000,
+            'TranscodeReasons': ['ContainerNotSupported', 'AudioIsExternal'],
+          },
+        ),
+      )!;
+
+      expect(mapped.playMethod, StreamPlayMethod.directStream);
+      expect(mapped.transcodeReasons, [
+        'Client cannot play this container',
+        'Audio track is a separate file',
+      ]);
+      expect(
+        mapped.transcodeReasonLabel,
+        'Client cannot play this container · Audio track is a separate file',
+      );
+      // Explained, but still not the row that is burning a CPU: `needsAttention`
+      // is the gate for "is this costing me something", not an empty reason list.
+      expect(mapped.needsAttention, isFalse);
+    });
+
     test('a connected client with nothing playing is not a session', () {
       expect(
         jellyfinStreamSessionFromJson({

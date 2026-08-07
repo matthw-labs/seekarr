@@ -43,6 +43,168 @@ void main() {
     });
   });
 
+  // The three-way "is it qBittorrent, Dockge or NZBGet" check used to be spelled
+  // out in five files. Adding a credential-authenticated service therefore meant
+  // finding all five by hand, and missing one left persistence and the settings
+  // form disagreeing about which fields the service even has. These lock the
+  // answer to the registry capability instead.
+  group('the credential model comes from the registry', () {
+    const credentials = SettingsModel(
+      qbittorrentUsername: 'qb-user',
+      qbittorrentPassword: 'qb-pass',
+      dockgeUsername: 'dockge-user',
+      dockgePassword: 'dockge-pass',
+      nzbgetUsername: 'nzbget-user',
+      nzbgetPassword: 'nzbget-pass',
+      radarrApiKey: 'radarr-key',
+    );
+
+    test('usernameFor and passwordFor answer exactly for !usesApiKey', () {
+      for (final service in ServiceKey.values) {
+        if (service.usesApiKey) {
+          expect(
+            credentials.usernameFor(service),
+            isEmpty,
+            reason: '${service.name} authenticates with a key, not a login',
+          );
+          expect(credentials.passwordFor(service), isEmpty);
+        }
+      }
+
+      expect(credentials.usernameFor(ServiceKey.qbittorrent), 'qb-user');
+      expect(credentials.passwordFor(ServiceKey.qbittorrent), 'qb-pass');
+      expect(credentials.usernameFor(ServiceKey.dockge), 'dockge-user');
+      expect(credentials.passwordFor(ServiceKey.dockge), 'dockge-pass');
+      expect(credentials.usernameFor(ServiceKey.nzbget), 'nzbget-user');
+      expect(credentials.passwordFor(ServiceKey.nzbget), 'nzbget-pass');
+    });
+
+    test('a credential service counts as configured on its URL alone', () {
+      // Some can legitimately run with no auth behind a reverse proxy, so a
+      // missing password is not a missing configuration.
+      const urlOnly = SettingsModel(
+        qbittorrentUrl: 'https://qb.lan:8080',
+        radarrUrl: 'https://radarr.lan:7878',
+      );
+
+      expect(urlOnly.isServiceConfigured(ServiceKey.qbittorrent), isTrue);
+      // An API-key service still needs both halves.
+      expect(urlOnly.isServiceConfigured(ServiceKey.radarr), isFalse);
+    });
+  });
+
+  group('SettingsModel.copyWithoutServiceExtras', () {
+    test('removing Jellyfin drops the chosen viewer with it', () {
+      // `jellyfinUserId` sits outside the per-service {url, apiKey} map, so
+      // `copyWithService` cannot reach it. Left behind, re-adding a *different*
+      // Jellyfin binds every per-viewer query to a user id that server has
+      // never heard of, and the picker shows nothing selected.
+      const settings = SettingsModel(
+        jellyfinUrl: 'https://jelly.lan:8096',
+        jellyfinApiKey: 'jf-key',
+        jellyfinUserId: 'a1b2c3',
+      );
+
+      final cleared = settings
+          .copyWithService(ServiceKey.jellyfin, url: '', apiKey: '')
+          .copyWithoutServiceExtras(ServiceKey.jellyfin);
+
+      expect(cleared.jellyfinUserId, isEmpty);
+    });
+
+    test('the Plex client id survives, because it is not per-server', () {
+      // It identifies this install, is minted exactly once, and a new value
+      // registers another device row on the user's server.
+      const settings = SettingsModel(
+        plexUrl: 'https://plex.lan:32400',
+        plexToken: 'token',
+        plexClientId: 'minted-once',
+      );
+
+      final cleared = settings
+          .copyWithService(ServiceKey.plex, url: '', apiKey: '')
+          .copyWithoutServiceExtras(ServiceKey.plex);
+
+      expect(cleared.plexClientId, 'minted-once');
+    });
+
+    test('a service with no extras is returned untouched', () {
+      const settings = SettingsModel(jellyfinUserId: 'a1b2c3');
+
+      expect(
+        settings.copyWithoutServiceExtras(ServiceKey.radarr).jellyfinUserId,
+        'a1b2c3',
+      );
+    });
+  });
+
+  group('SettingsModel.copyWithoutUnusedCertificate', () {
+    const fingerprint = 'aa:bb';
+
+    test('forgets a pin nothing configured reaches any more', () {
+      // Without this the entry outlives the address, and because pins are keyed
+      // purely by origin, any service later pointed back there would silently
+      // reuse the stale trust with no prompt.
+      final settings = const SettingsModel()
+          .copyWithService(
+            ServiceKey.sonarr,
+            url: 'https://nas.lan:8989',
+            apiKey: 'k',
+          )
+          .copyWithTrustedCertificate(
+            url: 'https://nas.lan:8989',
+            fingerprint: fingerprint,
+          );
+
+      final moved = settings
+          .copyWithService(
+            ServiceKey.sonarr,
+            url: 'https://elsewhere.lan:8989',
+            apiKey: 'k',
+          )
+          .copyWithoutUnusedCertificate('https://nas.lan:8989');
+
+      expect(moved.pinForUrl('https://nas.lan:8989'), isNull);
+    });
+
+    test('keeps a pin another configured service still shares', () {
+      // Removing Sonarr must never break Radarr's trust in the same proxy.
+      final settings = const SettingsModel()
+          .copyWithService(
+            ServiceKey.sonarr,
+            url: 'https://nas.lan:443',
+            apiKey: 'k',
+          )
+          .copyWithService(
+            ServiceKey.radarr,
+            url: 'https://nas.lan:443',
+            apiKey: 'k',
+          )
+          .copyWithTrustedCertificate(
+            url: 'https://nas.lan:443',
+            fingerprint: fingerprint,
+          );
+
+      final removed = settings
+          .copyWithService(ServiceKey.sonarr, url: '', apiKey: '')
+          .copyWithoutUnusedCertificate('https://nas.lan:443');
+
+      expect(removed.pinForUrl('https://nas.lan:443'), fingerprint);
+    });
+
+    test('an empty prior URL is a no-op', () {
+      final settings = const SettingsModel().copyWithTrustedCertificate(
+        url: 'https://nas.lan:443',
+        fingerprint: fingerprint,
+      );
+
+      expect(
+        settings.copyWithoutUnusedCertificate('').trustedCertificates,
+        settings.trustedCertificates,
+      );
+    });
+  });
+
   group('SettingsModel.copyWithService', () {
     const base = SettingsModel();
 

@@ -73,6 +73,40 @@ void main() {
       expect(client.lastGetCancelToken, same(cancelToken));
     });
 
+    test('lookupSeries asks nothing for an empty term', () async {
+      final client = FakeApiClient();
+      final service = SonarrService(client);
+
+      expect(await service.lookupSeries(''), isEmpty);
+      expect(client.getCallCount, 0);
+    });
+
+    test('lookupSeries encodes the term and maps results', () async {
+      final client = FakeApiClient()
+        ..getResponseData = [
+          {'id': 9, 'title': 'The Boys', 'year': 2019},
+        ];
+      final service = SonarrService(client);
+
+      final series = await service.lookupSeries('the boys & co');
+
+      expect(client.lastGetPath, '/api/v3/series/lookup');
+      expect(client.lastGetQueryParameters, {'term': 'the%20boys%20%26%20co'});
+      expect(series.single.title, 'The Boys');
+    });
+
+    test('lookupSeries forwards the cancel token to ApiClient', () async {
+      final client = FakeApiClient()..getResponseData = const [];
+      final service = SonarrService(client);
+      final cancelToken = CancelToken();
+
+      await service.lookupSeries('the boys', cancelToken: cancelToken);
+
+      // Global search re-runs this leg on every debounced keystroke; without a
+      // token the superseded request runs to completion.
+      expect(client.lastGetCancelToken, same(cancelToken));
+    });
+
     group('getSeriesByTvdbId', () {
       test('finds series when TVDB ID matches', () async {
         final service = _TestSonarrService([

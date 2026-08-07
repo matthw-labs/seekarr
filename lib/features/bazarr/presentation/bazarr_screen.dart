@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
@@ -28,50 +29,13 @@ class BazarrScreen extends ConsumerWidget {
       accent: AppColors.bazarr,
       appBar: showAppBar ? const GlassAppBar(title: Text('Bazarr')) : null,
       body: SafeArea(
+        // The shared placeholder, not a private copy — Bazarr was the fifth
+        // dashboard to have grown its own "isn't set up" card. `.forService`
+        // keeps the deep link to Bazarr's own settings page that the private
+        // copy had.
         child: isConfigured
             ? _BazarrDashboard(topPadding: topPadding)
-            : _BazarrNotConfigured(
-                onOpenSettings: () => _openSettings(context),
-              ),
-      ),
-    );
-  }
-
-  void _openSettings(BuildContext context) {
-    context.go('/settings/service/${ServiceKey.bazarr.routeParam}');
-  }
-}
-
-class _BazarrNotConfigured extends StatelessWidget {
-  const _BazarrNotConfigured({required this.onOpenSettings});
-
-  final VoidCallback onOpenSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.subtitles_rounded,
-              size: 48,
-              color: AppColors.bazarr,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Bazarr is not configured yet.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onOpenSettings,
-              child: const Text('Open settings'),
-            ),
-          ],
-        ),
+            : NotConfiguredPlaceholder.forService(ServiceKey.bazarr),
       ),
     );
   }
@@ -179,7 +143,10 @@ class _WantedList extends ConsumerWidget {
       data: (items) {
         if (items.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No wanted subtitles. Everything is covered!'),
           );
         }
@@ -409,7 +376,10 @@ class _HistoryList extends ConsumerWidget {
       data: (items) {
         if (items.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No recent activity yet.'),
           );
         }

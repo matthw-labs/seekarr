@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:seekarr/core/utils/url_utils.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
@@ -65,6 +67,17 @@ class SettingsService {
   static const _kThemeMode = 'theme_mode';
   static const _kOnboardingComplete = 'onboarding_complete';
 
+  /// Secure-storage key for the whole origin→fingerprint trust map (ADR-6).
+  /// One entry, JSON-encoded, rather than one key per service — the map is
+  /// keyed by TLS origin, not by `ServiceKey`, so there is no per-service key
+  /// to hang it on.
+  static const _kTrustedCertificates = 'secure_trusted_certificates';
+
+  /// Where TrueNAS's and Dockge's fingerprints lived under ADR-5, kept only
+  /// so [_loadTrustedCertificates] can migrate an existing install once.
+  static const _legacyTrueNasCertFingerprint = 'truenas_cert_fingerprint';
+  static const _legacyDockgeCertFingerprint = 'dockge_cert_fingerprint';
+
   static const Map<ServiceKey, _ServiceStorageKeys> _serviceStorageKeys = {
     ServiceKey.seerr: _ServiceStorageKeys(
       url: 'seerr_url',
@@ -95,6 +108,20 @@ class SettingsService {
       secureApiKey: 'secure_qbittorrent_password',
       username: 'qbittorrent_username',
     ),
+    ServiceKey.transmission: _ServiceStorageKeys(
+      url: 'transmission_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_transmission_password',
+      username: 'transmission_username',
+    ),
+    // Keyed `npm_*` to match `routeParam`, so a storage key, a route segment
+    // and a fixture directory all spell the service the same way.
+    ServiceKey.nginxProxyManager: _ServiceStorageKeys(
+      url: 'npm_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_npm_password',
+      username: 'npm_username',
+    ),
     ServiceKey.bazarr: _ServiceStorageKeys(
       url: 'bazarr_url',
       legacyApiKey: '',
@@ -104,14 +131,12 @@ class SettingsService {
       url: 'truenas_url',
       legacyApiKey: '',
       secureApiKey: 'secure_truenas_api_key',
-      certFingerprint: 'truenas_cert_fingerprint',
     ),
     ServiceKey.dockge: _ServiceStorageKeys(
       url: 'dockge_url',
       legacyApiKey: '',
       secureApiKey: 'secure_dockge_password',
       username: 'dockge_username',
-      certFingerprint: 'dockge_cert_fingerprint',
     ),
     ServiceKey.prowlarr: _ServiceStorageKeys(
       url: 'prowlarr_url',
@@ -232,9 +257,6 @@ class SettingsService {
       if (storageKeys.username != null) {
         await _prefs.remove(storageKeys.username!);
       }
-      if (storageKeys.certFingerprint != null) {
-        await _prefs.remove(storageKeys.certFingerprint!);
-      }
       if (storageKeys.userId != null) {
         await _prefs.remove(storageKeys.userId!);
       }
@@ -246,6 +268,12 @@ class SettingsService {
       }
     }
 
+    // `_secureStore.deleteAll()` above already wipes the secure copy of the
+    // trust map and of both legacy fingerprints; only a plaintext-prefs
+    // fallback left by an older build needs an explicit remove here.
+    await _prefs.remove(_legacyTrueNasCertFingerprint);
+    await _prefs.remove(_legacyDockgeCertFingerprint);
+
     await _prefs.remove(_kRegion);
     await _prefs.remove(_kThemeMode);
     await _prefs.remove(_kOnboardingComplete);
@@ -254,18 +282,14 @@ class SettingsService {
 
   Future<SettingsModel> loadSettings() async {
     final serviceSettings = await _loadServiceSettings();
-    final qbKeys = _serviceStorageKeys[ServiceKey.qbittorrent]!;
-    final qbUsername = _prefs.getString(qbKeys.username!) ?? '';
-    final qbPassword = await _loadApiKey(qbKeys.secureApiKey);
-    final dockgeKeys = _serviceStorageKeys[ServiceKey.dockge]!;
-    final dockgeUsername = _prefs.getString(dockgeKeys.username!) ?? '';
-    final dockgePassword = await _loadApiKey(dockgeKeys.secureApiKey);
-    final nzbgetKeys = _serviceStorageKeys[ServiceKey.nzbget]!;
-    final nzbgetUsername = _prefs.getString(nzbgetKeys.username!) ?? '';
-    final nzbgetPassword = await _loadApiKey(nzbgetKeys.secureApiKey);
-    final truenasKeys = _serviceStorageKeys[ServiceKey.truenas]!;
-    final truenasCertFingerprint = await _loadCertFingerprint(truenasKeys);
-    final dockgeCertFingerprint = await _loadCertFingerprint(dockgeKeys);
+    // The passwords come out of the same generic credential slot every other
+    // service's key does — see [_loadServiceSettings]. The usernames need their
+    // own pass, because they are the half of the pair that has no generic slot;
+    // driving it off the storage table rather than naming each service means a
+    // new credential service is one map entry rather than a line here that is
+    // easy to forget and that nothing would fail without.
+    final usernames = _loadUsernames();
+    final trustedCertificates = await _loadTrustedCertificates(serviceSettings);
     final jellyfinKeys = _serviceStorageKeys[ServiceKey.jellyfin]!;
     final jellyfinUserId = _prefs.getString(jellyfinKeys.userId!) ?? '';
     final plexClientId = await _loadOrCreatePlexClientId();
@@ -280,15 +304,21 @@ class SettingsService {
       lidarrUrl: serviceSettings[ServiceKey.lidarr]!.$1,
       lidarrApiKey: serviceSettings[ServiceKey.lidarr]!.$2,
       qbittorrentUrl: serviceSettings[ServiceKey.qbittorrent]!.$1,
-      qbittorrentUsername: qbUsername,
-      qbittorrentPassword: qbPassword,
+      qbittorrentUsername: usernames[ServiceKey.qbittorrent]!,
+      qbittorrentPassword: serviceSettings[ServiceKey.qbittorrent]!.$2,
+      transmissionUrl: serviceSettings[ServiceKey.transmission]!.$1,
+      transmissionUsername: usernames[ServiceKey.transmission]!,
+      transmissionPassword: serviceSettings[ServiceKey.transmission]!.$2,
+      npmUrl: serviceSettings[ServiceKey.nginxProxyManager]!.$1,
+      npmUsername: usernames[ServiceKey.nginxProxyManager]!,
+      npmPassword: serviceSettings[ServiceKey.nginxProxyManager]!.$2,
       bazarrUrl: serviceSettings[ServiceKey.bazarr]!.$1,
       bazarrApiKey: serviceSettings[ServiceKey.bazarr]!.$2,
       truenasUrl: serviceSettings[ServiceKey.truenas]!.$1,
       truenasApiKey: serviceSettings[ServiceKey.truenas]!.$2,
       dockgeUrl: serviceSettings[ServiceKey.dockge]!.$1,
-      dockgeUsername: dockgeUsername,
-      dockgePassword: dockgePassword,
+      dockgeUsername: usernames[ServiceKey.dockge]!,
+      dockgePassword: serviceSettings[ServiceKey.dockge]!.$2,
       prowlarrUrl: serviceSettings[ServiceKey.prowlarr]!.$1,
       prowlarrApiKey: serviceSettings[ServiceKey.prowlarr]!.$2,
       readarrUrl: serviceSettings[ServiceKey.readarr]!.$1,
@@ -296,8 +326,8 @@ class SettingsService {
       sabnzbdUrl: serviceSettings[ServiceKey.sabnzbd]!.$1,
       sabnzbdApiKey: serviceSettings[ServiceKey.sabnzbd]!.$2,
       nzbgetUrl: serviceSettings[ServiceKey.nzbget]!.$1,
-      nzbgetUsername: nzbgetUsername,
-      nzbgetPassword: nzbgetPassword,
+      nzbgetUsername: usernames[ServiceKey.nzbget]!,
+      nzbgetPassword: serviceSettings[ServiceKey.nzbget]!.$2,
       unraidUrl: serviceSettings[ServiceKey.unraid]!.$1,
       unraidApiKey: serviceSettings[ServiceKey.unraid]!.$2,
       jellyfinUrl: serviceSettings[ServiceKey.jellyfin]!.$1,
@@ -306,8 +336,7 @@ class SettingsService {
       plexUrl: serviceSettings[ServiceKey.plex]!.$1,
       plexToken: serviceSettings[ServiceKey.plex]!.$2,
       plexClientId: plexClientId,
-      truenasCertFingerprint: truenasCertFingerprint,
-      dockgeCertFingerprint: dockgeCertFingerprint,
+      trustedCertificates: trustedCertificates,
       region: _loadRegion(),
       themeMode: AppThemeMode.fromName(_prefs.getString(_kThemeMode)),
     );
@@ -323,35 +352,9 @@ class SettingsService {
 
     await _saveServiceApiKeys(settings);
 
-    final qbKeys = _serviceStorageKeys[ServiceKey.qbittorrent]!;
-    if (settings.qbittorrentUsername.isNotEmpty) {
-      await _prefs.setString(qbKeys.username!, settings.qbittorrentUsername);
-    } else {
-      await _prefs.remove(qbKeys.username!);
-    }
+    await _saveUsernames(settings);
 
-    final dockgeKeys = _serviceStorageKeys[ServiceKey.dockge]!;
-    if (settings.dockgeUsername.isNotEmpty) {
-      await _prefs.setString(dockgeKeys.username!, settings.dockgeUsername);
-    } else {
-      await _prefs.remove(dockgeKeys.username!);
-    }
-
-    final nzbgetKeys = _serviceStorageKeys[ServiceKey.nzbget]!;
-    if (settings.nzbgetUsername.isNotEmpty) {
-      await _prefs.setString(nzbgetKeys.username!, settings.nzbgetUsername);
-    } else {
-      await _prefs.remove(nzbgetKeys.username!);
-    }
-
-    await _saveCertFingerprint(
-      ServiceKey.truenas,
-      settings.truenasCertFingerprint,
-    );
-    await _saveCertFingerprint(
-      ServiceKey.dockge,
-      settings.dockgeCertFingerprint,
-    );
+    await _saveTrustedCertificates(settings.trustedCertificates);
 
     final jellyfinKeys = _serviceStorageKeys[ServiceKey.jellyfin]!;
     if (settings.jellyfinUserId.isNotEmpty) {
@@ -368,6 +371,39 @@ class SettingsService {
     if (settings.plexClientId.isNotEmpty) {
       final plexKeys = _serviceStorageKeys[ServiceKey.plex]!;
       await _prefs.setString(plexKeys.clientId!, settings.plexClientId);
+    }
+  }
+
+  /// Every service's saved username, `''` for those that have none.
+  ///
+  /// Keyed by [ServiceKey] and complete for all of them, so [loadSettings] can
+  /// index it with `!` for the credential services without deciding anywhere
+  /// else which services those are — the presence of a `username` storage key
+  /// is the whole of that decision.
+  Map<ServiceKey, String> _loadUsernames() {
+    return {
+      for (final entry in _serviceStorageKeys.entries)
+        entry.key: entry.value.username == null
+            ? ''
+            : _prefs.getString(entry.value.username!) ?? '',
+    };
+  }
+
+  /// Writes every credential service's username, clearing the key when the
+  /// value is empty so a removed connection leaves nothing behind.
+  ///
+  /// A username is not a secret and stays in [SharedPreferences] beside the
+  /// URL; only the password half goes to the Keychain, via [_saveServiceApiKeys].
+  Future<void> _saveUsernames(SettingsModel settings) async {
+    for (final entry in _serviceStorageKeys.entries) {
+      final key = entry.value.username;
+      if (key == null) continue;
+      final value = settings.usernameFor(entry.key);
+      if (value.isEmpty) {
+        await _prefs.remove(key);
+      } else {
+        await _prefs.setString(key, value);
+      }
     }
   }
 
@@ -405,34 +441,158 @@ class SettingsService {
         '${hex.substring(20)}';
   }
 
-  /// Persists a trust-on-first-use certificate fingerprint.
+  /// Persists the whole trust-on-first-use map (ADR-6).
   ///
-  /// Stored in secure storage rather than SharedPreferences. The fingerprint is
-  /// not a secret, but it *is* integrity-critical: whoever can write it can pin
-  /// their own certificate, after which `buildPinnedHttpClient` accepts it and
-  /// the TrueNAS API key or Dockge password is captured. It therefore lives
-  /// beside the credential it protects. Any value left in prefs by an older
-  /// build is removed on write.
-  Future<void> _saveCertFingerprint(ServiceKey service, String value) async {
-    final key = _serviceStorageKeys[service]!.certFingerprint;
-    if (key == null) return;
-    await _prefs.remove(key);
-    await _saveApiKey(key, value);
+  /// Stored in secure storage rather than SharedPreferences: a fingerprint is
+  /// not a secret, but it *is* integrity-critical — whoever can write one can
+  /// pin their own certificate, after which `buildPinnedHttpClient` accepts
+  /// it and every credential sent to that origin is captured. An empty map
+  /// deletes the key outright rather than writing `'{}'`, so an install that
+  /// never trusts anything never gains a secure-storage entry.
+  Future<void> _saveTrustedCertificates(Map<String, String> value) async {
+    if (value.isEmpty) {
+      await _secureStore.delete(key: _kTrustedCertificates);
+      return;
+    }
+    await _secureStore.write(
+      key: _kTrustedCertificates,
+      value: jsonEncode(value),
+    );
   }
 
-  /// Reads a pinned fingerprint, migrating a value written to prefs by an
-  /// earlier build so an update does not silently drop the user's pin.
-  Future<String> _loadCertFingerprint(_ServiceStorageKeys keys) async {
-    final key = keys.certFingerprint;
-    if (key == null) return '';
+  /// Reads the trust map, migrating ADR-5's two per-service fingerprints
+  /// (TrueNAS, Dockge) into ADR-6's origin-keyed map on an existing install.
+  ///
+  /// [serviceSettings] is the caller's already-loaded URLs — reused rather
+  /// than re-read, since resolving a legacy fingerprint to an origin needs
+  /// that service's saved URL. A legacy fingerprint whose URL is empty or
+  /// unparseable as a TLS origin cannot be placed anywhere and is dropped;
+  /// the user re-trusts on next connect (accepted in ADR-6, not a bug).
+  /// Migration writes the new key and removes both legacy ones so it runs
+  /// exactly once per install.
+  Future<Map<String, String>> _loadTrustedCertificates(
+    Map<ServiceKey, (String, String)> serviceSettings,
+  ) async {
+    final stored = await _loadApiKey(_kTrustedCertificates);
+    if (stored.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(stored) as Map<String, dynamic>;
+        return decoded.map(
+          (origin, fingerprint) => MapEntry(origin, fingerprint as String),
+        );
+      } catch (_) {
+        // A future build's shape, or a hand-edited value — treated as no
+        // trusted certificates rather than crashing startup.
+        return {};
+      }
+    }
+
+    const legacyKeysByService = {
+      ServiceKey.truenas: _legacyTrueNasCertFingerprint,
+      ServiceKey.dockge: _legacyDockgeCertFingerprint,
+    };
+    final migrated = <String, String>{};
+    var foundLegacy = false;
+
+    for (final entry in legacyKeysByService.entries) {
+      final fingerprint = await _loadLegacyCertFingerprint(entry.value);
+      if (fingerprint.isEmpty) continue;
+      foundLegacy = true;
+
+      final url = serviceSettings[entry.key]?.$1 ?? '';
+      final origin = UrlUtils.certOrigin(url);
+      if (origin != null) migrated[origin] = fingerprint;
+    }
+
+    if (foundLegacy) {
+      await _saveTrustedCertificates(migrated);
+      await _secureStore.delete(key: _legacyTrueNasCertFingerprint);
+      await _secureStore.delete(key: _legacyDockgeCertFingerprint);
+      await _prefs.remove(_legacyTrueNasCertFingerprint);
+      await _prefs.remove(_legacyDockgeCertFingerprint);
+    }
+
+    return migrated;
+  }
+
+  /// Mirrors ADR-5's `_loadCertFingerprint` prefs→secure fallback, kept only
+  /// so [_loadTrustedCertificates] can migrate a value an older build may
+  /// have left in either store.
+  Future<String> _loadLegacyCertFingerprint(String key) async {
     final secure = await _loadApiKey(key);
     if (secure.isNotEmpty) return secure;
+    return _prefs.getString(key)?.trim() ?? '';
+  }
 
-    final legacy = _prefs.getString(key)?.trim() ?? '';
-    if (legacy.isEmpty) return '';
-    await _saveApiKey(key, legacy);
-    await _prefs.remove(key);
-    return legacy;
+  /// The only services whose stored scheme-less URL ever meant `http://`.
+  ///
+  /// Both clients prepended `http://` to a scheme-less address until 9128220
+  /// ("default qBittorrent/Dockge to TLS") changed them to `https://`. Every
+  /// other service either always resolved a scheme-less value to `https://`
+  /// (SABnzbd, NZBGet, Unraid, TrueNAS — all shipped with the https default) or
+  /// never worked without a scheme at all: the \*arrs go through `ApiClient`,
+  /// which handed the raw value to `BaseOptions.baseUrl`, and Dio's own setter
+  /// throws `ArgumentError` on `sonarr.lan:8989`.
+  ///
+  /// So this set is the exact blast radius of that one commit, and it is what
+  /// keeps [_schemeQualified] from being a downgrade — see its doc.
+  static const Set<ServiceKey> _cleartextByDefaultBeforeTls = {
+    ServiceKey.qbittorrent,
+    ServiceKey.dockge,
+  };
+
+  /// One-shot migration for a stored service URL saved before addresses were
+  /// normalised on the way in — returns the rewritten value, or null when there
+  /// is nothing to migrate.
+  ///
+  /// Older builds wrote the address field verbatim, and qBittorrent's own field
+  /// had no validator at all, so a perfectly working install can hold
+  /// `192.168.1.5:8080`. Nothing writes such a value any more: both the settings
+  /// form and onboarding run [UrlUtils.normalizeBaseUrl] before saving, so a
+  /// scheme-less value in storage is by definition pre-normalisation data.
+  ///
+  /// It is rewritten to **`http://`**, and only for
+  /// [_cleartextByDefaultBeforeTls]. The direction is the whole point of the
+  /// migration for those two: their clients prepended `http://` themselves, so
+  /// the stored value ran over cleartext, and once the app-wide rule became
+  /// `https://` that same value silently started meaning a different address and
+  /// died in the TLS handshake with no fallback. Writing the scheme the config
+  /// actually ran on preserves what the user set up, and the settings form warns
+  /// about cleartext to a non-local host if they ever open it.
+  ///
+  /// Applying it to every service was the bug this scoping fixes: for everything
+  /// else a scheme-less value has always resolved to `https://`, so rewriting it
+  /// destroyed a working TLS config — sending the TrueNAS API key over `ws://`
+  /// and the Dockge login over cleartext, and orphaning the origin's trusted
+  /// certificate, since [UrlUtils.certOrigin] returns null for an `http://` URL
+  /// and the pin is stored under `https://host:443`.
+  ///
+  /// Returns null — leaving the value untouched — when the service is not one of
+  /// the two, when the URL already carries a scheme, is empty, or does not
+  /// resolve to a host once one is added, since there is then no working
+  /// configuration to preserve.
+  static String? _schemeQualified(ServiceKey service, String url) {
+    if (!_cleartextByDefaultBeforeTls.contains(service)) return null;
+    return _httpQualified(url);
+  }
+
+  static String? _httpQualified(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return null;
+    // The same "has a scheme" test the clients apply, and deliberately not a
+    // general scheme regex: `sonarr.lan:8989` matches one of those, which is the
+    // whole reason a host and a scheme cannot be told apart by the colon alone.
+    if (RegExp(r'^https?://', caseSensitive: false).hasMatch(trimmed)) {
+      return null;
+    }
+    // Some other scheme entirely — never a working Seekarr address, and not
+    // this migration's business to rewrite.
+    if (trimmed.contains('://')) return null;
+
+    final candidate = 'http://$trimmed';
+    final uri = Uri.tryParse(candidate);
+    if (uri == null || uri.host.isEmpty) return null;
+    return candidate;
   }
 
   Future<Map<ServiceKey, (String, String)>> _loadServiceSettings() async {
@@ -447,18 +607,28 @@ class SettingsService {
         url = _loadString(storageKeys.legacyUrl!);
       }
 
-      // Load API key, falling back to legacy secure key.
-      // qBittorrent and Dockge use username/password instead of an API key, so
-      // their secure keys are loaded separately in loadSettings() to avoid a
-      // second secure store read here.
-      var apiKey = '';
-      if (service != ServiceKey.qbittorrent &&
-          service != ServiceKey.dockge &&
-          service != ServiceKey.nzbget) {
-        apiKey = await _loadApiKey(storageKeys.secureApiKey);
-        if (apiKey.isEmpty && storageKeys.legacySecureApiKey != null) {
-          apiKey = await _loadApiKey(storageKeys.legacySecureApiKey!);
-        }
+      final schemed = _schemeQualified(service, url);
+      if (schemed != null) {
+        url = schemed;
+        // Written back so the rewrite happens once rather than on every load,
+        // the same one-shot shape `_loadTrustedCertificates` uses for ADR-5's
+        // fingerprints. `_saveServiceUrls` would eventually persist it too, but
+        // only if the user saves something — and a config that has stopped
+        // connecting is exactly the one nobody opens settings for.
+        await _prefs.setString(storageKeys.url, url);
+      }
+
+      // Load the credential, falling back to the legacy secure key.
+      //
+      // One read per service, whatever the auth model: a credential-
+      // authenticated service keeps its *password* under `secureApiKey`, which
+      // is exactly what `SettingsModel.apiKeyFor` returns for it. Special-casing
+      // those three here was a third copy of a decision the registry already
+      // owns, and it bought nothing — the read it skipped had to happen in
+      // `loadSettings` instead.
+      var apiKey = await _loadApiKey(storageKeys.secureApiKey);
+      if (apiKey.isEmpty && storageKeys.legacySecureApiKey != null) {
+        apiKey = await _loadApiKey(storageKeys.legacySecureApiKey!);
       }
 
       settingsByService[service] = (url, apiKey);
@@ -482,21 +652,9 @@ class SettingsService {
   Future<void> _saveServiceApiKeys(SettingsModel settings) async {
     for (final service in ServiceKey.values) {
       final storageKeys = _serviceStorageKeys[service]!;
-      if (service == ServiceKey.qbittorrent) {
-        await _saveApiKey(
-          storageKeys.secureApiKey,
-          settings.qbittorrentPassword,
-        );
-        continue;
-      }
-      if (service == ServiceKey.dockge) {
-        await _saveApiKey(storageKeys.secureApiKey, settings.dockgePassword);
-        continue;
-      }
-      if (service == ServiceKey.nzbget) {
-        await _saveApiKey(storageKeys.secureApiKey, settings.nzbgetPassword);
-        continue;
-      }
+      // `apiKeyFor` already resolves to the password for a credential-
+      // authenticated service (that is what the generic credential slot is
+      // for), so there is one branch here rather than one per such service.
       await _saveApiKey(storageKeys.secureApiKey, settings.apiKeyFor(service));
 
       // Remove legacy secure API key after writing to the new key.
@@ -550,10 +708,6 @@ class _ServiceStorageKeys {
   /// Prefs key for the username (used by qBittorrent and Dockge).
   final String? username;
 
-  /// Prefs key for a trusted self-signed cert fingerprint (TrueNAS, Dockge).
-  /// Not a secret, so kept in SharedPreferences rather than secure storage.
-  final String? certFingerprint;
-
   /// Prefs key for the chosen viewer's user id (Jellyfin).
   ///
   /// A selection, not a credential: it says whose watch state the library reads
@@ -575,7 +729,6 @@ class _ServiceStorageKeys {
     this.legacyPlaintextApiKey,
     this.legacySecureApiKey,
     this.username,
-    this.certFingerprint,
     this.userId,
     this.clientId,
   });

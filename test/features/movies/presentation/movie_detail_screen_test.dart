@@ -244,12 +244,18 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The manifest region still exists — it now reports the gap instead of
-      // silently disappearing.
-      expect(find.byType(FileInfoSection), findsNothing);
+      // The manifest region still exists, and it now reports the gap on the
+      // *same row shape* a real file gets — so the region does not jump when one
+      // arrives — instead of a centred well with a circled glyph.
+      expect(find.byType(FileInfoSection), findsOneWidget);
       expect(find.text('FILE'), findsOneWidget);
-      expect(find.text('Nothing on disk'), findsOneWidget);
       expect(find.text('No file'), findsOneWidget);
+      // A suggestion, naming the route the promoted "Auto search" does not.
+      expect(find.text('Import a file you already have'), findsOneWidget);
+      expect(
+        find.text('Manual import is in the actions menu.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a movie Radarr does not track gets a sentence, not a CTA', (
@@ -378,14 +384,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Two deliberate steps now: the profile picker lives in the overflow
-      // sheet, so an un-undoable server write cannot fire off one stray tap in
-      // a crowded row of six equal-weight buttons.
-      await tester.tap(
-        find.widgetWithIcon(OutlinedButton, Icons.more_horiz_rounded),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('Quality profile:'));
+      // On an available title the primary is withheld, which frees both visible
+      // slots — so the profile is a labelled button in the band rather than a
+      // sheet row. Still two deliberate steps to a server write, and still not
+      // one stray tap in a crowded row of six equal-weight buttons.
+      await tester.tap(find.text('Quality profile'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Ultra-HD'));
@@ -397,7 +400,16 @@ void main() {
         find.textContaining('moves from HD-1080p to Ultra-HD'),
         findsOneWidget,
       );
-      expect(find.textContaining('searching'), findsOneWidget);
+      // Scoped to the dialog: the available rung's own consequence sentence now
+      // ends "isn't searching", so a bare textContaining('searching') matches
+      // twice and asserts nothing.
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.textContaining('searching'),
+        ),
+        findsOneWidget,
+      );
       expect(radarrService.profileWrites, isEmpty);
 
       await tester.tap(find.text('Cancel'));
@@ -418,14 +430,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Two deliberate steps now: the profile picker lives in the overflow
-      // sheet, so an un-undoable server write cannot fire off one stray tap in
-      // a crowded row of six equal-weight buttons.
-      await tester.tap(
-        find.widgetWithIcon(OutlinedButton, Icons.more_horiz_rounded),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('Quality profile:'));
+      // On an available title the primary is withheld, which frees both visible
+      // slots — so the profile is a labelled button in the band rather than a
+      // sheet row. Still two deliberate steps to a server write, and still not
+      // one stray tap in a crowded row of six equal-weight buttons.
+      await tester.tap(find.text('Quality profile'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Ultra-HD'));
       await tester.pumpAndSettle();
@@ -511,10 +520,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(
-        find.widgetWithIcon(OutlinedButton, Icons.more_horiz_rounded),
-      );
-      await tester.pumpAndSettle();
+      // Interactive search holds the first visible slot on an available title.
       await tester.tap(find.text('Interactive search'));
       await tester.pumpAndSettle();
 

@@ -119,6 +119,26 @@ class StatusBadge extends StatelessWidget {
     final percentText = _percentText;
     final animate = _animated && !MediaQuery.disableAnimationsOf(context);
 
+    // **Nothing in this badge rolls, and that is a decision rather than an
+    // omission** — it is the one surface in the app where a state word genuinely
+    // changes and is deliberately left alone.
+    //
+    // The label was rolled on `.animated` and reverted. This badge is the only
+    // reel candidate whose surface *already* had a considered animation: a tone
+    // cross-tween, a keyed glyph switcher and a swept progress ring, tuned
+    // together for a badge whose changing state is the point of the page. A roll
+    // on top of those is a fourth treatment competing with three that work —
+    // motion added because it was available, not because anything was missing.
+    // It also does not pay for itself: `ReelText` renders one `Text` per
+    // grapheme, so rolling the label scattered single-letter `Text` widgets over
+    // every detail page, enough to make `find.text('R')` match a slot inside a
+    // test asserting a certification is *not* drawn as its own text.
+    //
+    // The percentage is a separate and firmer no. It updates on every poll while
+    // bytes move, so rolling it would leave a queue of eight rows permanently in
+    // motion on a two-second clock. A state word changes when the thing it names
+    // changes; digits change because time passed. `.tabular` is the right fix for
+    // a live number, and it is already applied.
     Widget content = Row(
       mainAxisSize: MainAxisSize.min,
       // Keyed by the resolved state (not the live percentage) so the switcher

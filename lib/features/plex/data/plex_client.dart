@@ -11,6 +11,7 @@ import 'package:seekarr/features/plex/domain/models/plex_models.dart';
 import 'package:seekarr/features/plex/domain/models/plex_transcode_session.dart';
 import 'package:seekarr/features/stream/domain/models/stream_item.dart';
 import 'package:seekarr/features/stream/domain/models/stream_library.dart';
+import 'package:seekarr/features/stream/domain/models/stream_library_page.dart';
 import 'package:seekarr/features/stream/domain/models/stream_session.dart';
 import 'package:seekarr/features/stream/domain/stream_server_client.dart';
 
@@ -120,6 +121,7 @@ class PlexClient implements StreamServerClient {
     String productVersion = kPlexProductVersion,
     String? platform,
     String deviceName = kPlexDeviceName,
+    String? pinnedCertFingerprint,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _token = token.trim(),
        _clientIdentifier = clientIdentifier.trim(),
@@ -127,7 +129,11 @@ class PlexClient implements StreamServerClient {
        _productVersion = productVersion,
        _platform = platform ?? _defaultPlatform(),
        _deviceName = deviceName {
-    _api = ApiClient.authenticatedBy(baseUrl: baseUrl, headers: _headers());
+    _api = ApiClient.authenticatedBy(
+      baseUrl: baseUrl,
+      headers: _headers(),
+      pinnedCertFingerprint: pinnedCertFingerprint,
+    );
   }
 
   final String baseUrl;
@@ -594,10 +600,41 @@ class PlexClient implements StreamServerClient {
       limit: limit,
       cancelToken: cancelToken,
     );
-    return page.items;
+    return page?.items ?? const [];
   }
 
-  /// [getLibraryItems] with the paging envelope kept.
+  @override
+  Future<StreamLibraryPage> getLibraryPage({
+    required String libraryId,
+    required StreamLibraryLens lens,
+    String? viewerId,
+    int startIndex = 0,
+    int limit = kPlexLibraryPageSize,
+    CancelToken? cancelToken,
+  }) async {
+    final page = await getLibraryItemsPage(
+      libraryId: libraryId,
+      lens: lens,
+      startIndex: startIndex,
+      limit: limit,
+      cancelToken: cancelToken,
+    );
+    if (page == null) {
+      return StreamLibraryPage.failed(startIndex: startIndex);
+    }
+    return StreamLibraryPage(
+      items: page.items,
+      // The server's own accounting, which is the whole reason [PlexPage]
+      // exists: the on-deck lenses drop rows *after* the container is counted,
+      // so a page that kept nothing still has to advance the offset instead of
+      // ending the list.
+      nextStartIndex: page.nextOffset,
+      hasMore: page.hasMore,
+    );
+  }
+
+  /// [getLibraryItems] with the paging envelope kept, or **null** when the
+  /// request failed.
   ///
   /// The extra return value is not decoration. Plex's guidance is that a
   /// response "might include a different number of items than requested", so a
@@ -605,7 +642,12 @@ class PlexClient implements StreamServerClient {
   /// `totalSize` rather than by the page size it asked for. Returning only a
   /// `List` — as the shared interface must, since Jellyfin reports its totals
   /// differently — throws exactly the numbers a pager needs away.
-  Future<PlexPage<StreamItem>> getLibraryItemsPage({
+  ///
+  /// Null rather than `PlexPage.empty()` on failure, because an empty page and
+  /// a failed request are the two things a browse must never conflate — see
+  /// [StreamLibraryPage]. [getLibraryItems] still flattens both to `[]`, which
+  /// is the read-path convention for every caller that only wants rows.
+  Future<PlexPage<StreamItem>?> getLibraryItemsPage({
     required String libraryId,
     required StreamLibraryLens lens,
     int startIndex = 0,
@@ -635,7 +677,7 @@ class PlexClient implements StreamServerClient {
       if (keep == null) return page;
       return page.copyWithItems(page.items.where(keep).toList(growable: false));
     } catch (_) {
-      return const PlexPage.empty();
+      return null;
     }
   }
 
@@ -665,6 +707,47 @@ class PlexClient implements StreamServerClient {
     } catch (_) {
       return null;
     }
+  }
+
+  @override
+  Future<StreamItem?> findByExternalId({
+    String? tmdbId,
+    String? tvdbId,
+    String? imdbId,
+    CancelToken? cancelToken,
+  }) async {
+    // Plex indexes external ids as `Guid[]` entries and filters on them through
+    // `?guid=`, one value at a time — unlike Jellyfin's comma-delimited OR. So
+    // this tries each id in turn and stops at the first hit, cheapest identifier
+    // first: TMDB is what Radarr carries and what Plex's Movie agent writes.
+    final guids = <String>[
+      if (tmdbId != null && tmdbId.isNotEmpty) 'tmdb://$tmdbId',
+      if (tvdbId != null && tvdbId.isNotEmpty) 'tvdb://$tvdbId',
+      if (imdbId != null && imdbId.isNotEmpty) 'imdb://$imdbId',
+    ];
+
+    for (final guid in guids) {
+      try {
+        final container = await _container(
+          '/library/all',
+          queryParameters: {
+            'guid': guid,
+            // Without this the response omits Guid entries and a caller cannot
+            // verify the match it just asked for.
+            'includeGuids': 1,
+          },
+          cancelToken: cancelToken,
+        );
+        final items = await _itemsFromAsync(container['Metadata']);
+        if (items.isNotEmpty) return items.first;
+      } catch (_) {
+        // `?guid=` is not honoured by every server version, and an unfiltered
+        // fallback would return the whole library and pick something arbitrary.
+        // Silence is the correct answer: the caller renders nothing.
+        continue;
+      }
+    }
+    return null;
   }
 
   /// `GET /library/metadata/{ratingKey}/children` — show → seasons, season →

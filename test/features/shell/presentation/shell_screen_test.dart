@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:seekarr/features/release_search/presentation/release_search_jobs_provider.dart';
+import 'package:seekarr/features/release_search/presentation/release_search_lifecycle.dart';
 import 'package:seekarr/features/shell/presentation/shell_screen.dart';
 
 import '../../../test_helpers/semantics_announcements.dart';
@@ -212,13 +215,119 @@ void main() {
       );
     });
   });
+
+  group('ShellScreen at rail width', () {
+    testWidgets('still observes the app lifecycle', (tester) async {
+      // The rail branch used to return a bare Scaffold outside
+      // ReleaseSearchLifecycle, so on macOS and tablet nothing observed the
+      // lifecycle at all: appInForegroundProvider stayed permanently true, and a
+      // search the OS killed while the app was away was blamed on the network
+      // instead of on leaving Seekarr.
+      final harness = await _pumpShell(tester, viewport: _railViewport);
+
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(ReleaseSearchLifecycle), findsOneWidget);
+      expect(harness.container.read(appInForegroundProvider), isTrue);
+
+      await _sendLifecycle(tester, AppLifecycleState.paused);
+      expect(harness.container.read(appInForegroundProvider), isFalse);
+
+      await _sendLifecycle(tester, AppLifecycleState.resumed);
+      expect(harness.container.read(appInForegroundProvider), isTrue);
+    });
+
+    testWidgets('crossing the breakpoint keeps one observer, not two', (
+      tester,
+    ) async {
+      // The lifecycle wrapper sits above the layout branch precisely so that
+      // dragging a window past 840pt does not mount or unmount the observer
+      // mid-session.
+      final harness = await _pumpShell(tester, viewport: _railViewport);
+      expect(find.byType(ReleaseSearchLifecycle), findsOneWidget);
+
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FloatingBottomNavBar), findsOneWidget);
+      expect(find.byType(ReleaseSearchLifecycle), findsOneWidget);
+
+      await _sendLifecycle(tester, AppLifecycleState.paused);
+      expect(harness.container.read(appInForegroundProvider), isFalse);
+    });
+
+    testWidgets('shows the finished-search badge the bottom bar shows', (
+      tester,
+    ) async {
+      // The badge is the channel that has to keep working when notifications
+      // are denied, off, or missed — and the rail was the one surface where it
+      // never appeared, because it built its destinations itself.
+      await _pumpShell(
+        tester,
+        viewport: _railViewport,
+        overrides: [unseenReleaseSearchCountProvider.overrideWithValue(3)],
+      );
+
+      expect(
+        find.descendant(
+          of: find.byType(NavigationRail),
+          matching: find.byType(Badge),
+        ),
+        findsOneWidget,
+      );
+      // A number painted on an icon is invisible to a screen reader, so it has
+      // to reach the spoken label too — the same string the bottom bar speaks.
+      final activityLabel = tester.widget<Text>(
+        find.descendant(
+          of: find.byType(NavigationRail),
+          matching: find.text('Activity'),
+        ),
+      );
+      expect(
+        activityLabel.semanticsLabel,
+        'Activity, 3 finished searches to look at',
+      );
+    });
+
+    testWidgets('no waiting searches means no badge', (tester) async {
+      await _pumpShell(tester, viewport: _railViewport);
+
+      expect(
+        find.descendant(
+          of: find.byType(NavigationRail),
+          matching: find.byType(Badge),
+        ),
+        findsNothing,
+      );
+    });
+  });
+}
+
+/// Wide enough for the rail: the breakpoint is Material's 840pt expanded window.
+const Size _railViewport = Size(1200, 900);
+
+/// Drives the real lifecycle channel rather than calling the binding's
+/// protected handler, so the test exercises the same path the platform uses.
+Future<void> _sendLifecycle(
+  WidgetTester tester,
+  AppLifecycleState state,
+) async {
+  await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+    'flutter/lifecycle',
+    const StringCodec().encodeMessage(state.toString()),
+    (_) {},
+  );
+  await tester.pumpAndSettle();
 }
 
 Future<_ShellHarness> _pumpShell(
   WidgetTester tester, {
   String initialLocation = '/services',
+  // Phone width by default, so the shell renders the FloatingBottomNavBar rather
+  // than the wide-window NavigationRail (the rail breakpoint is 840).
+  Size viewport = const Size(400, 900),
+  List<Override> overrides = const [],
 }) async {
-  final container = ProviderContainer();
+  final container = ProviderContainer(overrides: overrides);
   final router = GoRouter(
     initialLocation: initialLocation,
     routes: [
@@ -259,9 +368,7 @@ Future<_ShellHarness> _pumpShell(
     container.dispose();
   });
 
-  // Use a phone-width viewport so the shell renders the FloatingBottomNavBar
-  // rather than the wide-screen NavigationRail (rail breakpoint is 600).
-  tester.view.physicalSize = const Size(400, 900);
+  tester.view.physicalSize = viewport;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/network/pinned_image_cache.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
@@ -151,6 +152,7 @@ class AppIcon extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       child: CachedNetworkImage(
         imageUrl: url,
+        cacheManager: pinnedImageCacheFor(url),
         width: size,
         height: size,
         fit: BoxFit.cover,

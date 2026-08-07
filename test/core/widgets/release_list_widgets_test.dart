@@ -263,11 +263,20 @@ void main() {
       await _pumpReleaseItem(tester, release: buildRelease(size: 500));
       expect(find.text('500 B'), findsOneWidget);
 
+      // Three significant digits on every rung above bytes, from the shared
+      // formatter — the row used to carry its own ladder that printed one
+      // decimal at KB/MB, two at GB, and never reached TB at all.
       await _pumpReleaseItem(tester, release: buildRelease(size: 1536));
-      expect(find.text('1.5 KB'), findsOneWidget);
+      expect(find.text('1.50 KB'), findsOneWidget);
 
       await _pumpReleaseItem(tester, release: buildRelease(size: 5242880));
-      expect(find.text('5.0 MB'), findsOneWidget);
+      expect(find.text('5.00 MB'), findsOneWidget);
+
+      await _pumpReleaseItem(
+        tester,
+        release: buildRelease(size: 2199023255552),
+      );
+      expect(find.text('2.00 TB'), findsOneWidget);
     });
 
     testWidgets('formats ages across minutes, hours, and days', (tester) async {

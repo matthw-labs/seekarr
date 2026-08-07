@@ -118,6 +118,27 @@ class AppColors {
   static const Color unraid = Color(0xFFFF8C2B); // Unraid orange
   static const Color jellyfin = Color(0xFFAA5CC3); // Jellyfin purple
 
+  /// Transmission crimson — the brand's red family, walked off its own hex for
+  /// the same reason [plex] is walked off Plex gold.
+  ///
+  /// Transmission's mark is a plain red that lands ΔE 5.3 from [readarr] and
+  /// 6.1 from [error]: three near-identical reds, one of which is the alarm
+  /// tone. At the 8pt source dot on the merged Recently Added rail, and at the
+  /// 18pt glyph on a folded matrix cell, that is not a distinguishable colour —
+  /// it is a red smear that could be a book, a torrent, or a failure. Rotating
+  /// toward crimson keeps it unmistakably Transmission red while clearing
+  /// ΔE 8.8 from the alarm tone and 10.8 from Readarr. For reference, the
+  /// tightest pair already shipping is [radarr]/[sabnzbd] at ΔE 4.8.
+  static const Color transmission = Color(0xFFE11D48);
+
+  /// Nginx Proxy Manager vermilion — the brand value, used unchanged.
+  ///
+  /// Unlike [transmission] and [plex] this one needed no adjustment: it sits
+  /// ΔE 9.2 from [prowlarr]'s orange and 8.3 from [error], comfortably above
+  /// the palette's existing floor, because it is a *red*-orange and the crowded
+  /// band above it ([unraid], [plex], [radarr], [sabnzbd]) is amber.
+  static const Color nginxProxyManager = Color(0xFFF15833);
+
   /// Plex bronze — deliberately **not** Plex's brand gold `#E5A00D`.
   ///
   /// The brand value is unusable here, and measurably so. In CIE Lab it sits

@@ -895,11 +895,11 @@ void main() {
             'plex/library_movies_page.json',
           ),
         });
-        final page = await _client(first).getLibraryItemsPage(
+        final page = (await _client(first).getLibraryItemsPage(
           libraryId: '1',
           lens: StreamLibraryLens.all,
           limit: 50,
-        );
+        ))!;
 
         expect(first.lastUri!.queryParameters['X-Plex-Container-Size'], '50');
         expect(page.size, 2);
@@ -913,11 +913,11 @@ void main() {
             'plex/library_movies_last_page.json',
           ),
         });
-        final tail = await _client(last).getLibraryItemsPage(
+        final tail = (await _client(last).getLibraryItemsPage(
           libraryId: '1',
           lens: StreamLibraryLens.all,
           startIndex: 136,
-        );
+        ))!;
 
         expect(tail.offset, 136);
         expect(tail.size, 1);
@@ -934,10 +934,10 @@ void main() {
           'plex/library_on_deck.json',
         ),
       });
-      final page = await _client(adapter).getLibraryItemsPage(
+      final page = (await _client(adapter).getLibraryItemsPage(
         libraryId: '2',
         lens: StreamLibraryLens.continueWatching,
-      );
+      ))!;
 
       expect(page.items, hasLength(1));
       expect(page.size, 3);
@@ -1000,11 +1000,11 @@ void main() {
       final adapter = sectionsPlus({
         '/library/sections/1/all': _generatedMoviePage(60, totalSize: 137),
       });
-      final page = await _client(adapter).getLibraryItemsPage(
+      final page = (await _client(adapter).getLibraryItemsPage(
         libraryId: '1',
         lens: StreamLibraryLens.all,
         limit: 60,
-      );
+      ))!;
 
       expect(page.items, hasLength(60));
       expect(page.items.first.title, 'Generated Film 000');
@@ -1050,11 +1050,11 @@ void main() {
           },
         },
       });
-      final page = await _client(adapter).getLibraryItemsPage(
+      final page = (await _client(adapter).getLibraryItemsPage(
         libraryId: '1',
         lens: StreamLibraryLens.all,
         startIndex: 12,
-      );
+      ))!;
 
       // Falls back to what was asked for only because the server said nothing.
       expect(page.offset, 12);
@@ -1448,12 +1448,23 @@ void main() {
       expect(await client.search('inter'), isEmpty);
       expect(await client.getLibraryItemCount('1'), isNull);
 
-      final page = await client.getLibraryItemsPage(
-        libraryId: '1',
-        lens: StreamLibraryLens.all,
+      // Null, not an empty page: an empty page is a claim about the library
+      // and this is a claim about the request. `getLibraryItems` still
+      // flattens both to `[]` for the callers that only want rows.
+      expect(
+        await client.getLibraryItemsPage(
+          libraryId: '1',
+          lens: StreamLibraryLens.all,
+        ),
+        isNull,
       );
-      expect(page.items, isEmpty);
-      expect(page.hasMore, isFalse);
+      expect(
+        await client.getLibraryItems(
+          libraryId: '1',
+          lens: StreamLibraryLens.all,
+        ),
+        isEmpty,
+      );
 
       // Mutating actions report, so the UI can say what happened.
       await expectLater(

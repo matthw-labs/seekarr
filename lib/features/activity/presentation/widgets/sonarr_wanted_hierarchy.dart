@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
@@ -204,7 +205,7 @@ class _SeasonExpansionTile extends StatelessWidget {
   }
 }
 
-class _EpisodeListTile extends StatelessWidget {
+class _EpisodeListTile extends ConsumerWidget {
   final Map<String, dynamic> episode;
   final SonarrService service;
   final bool isCutoff;
@@ -216,7 +217,7 @@ class _EpisodeListTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final colorScheme = theme.colorScheme;
@@ -260,7 +261,7 @@ class _EpisodeListTile extends StatelessWidget {
               onInteractiveSearch: () {
                 showWantedInteractiveSearch(
                   context,
-                  service,
+                  ref,
                   ServiceType.series,
                   episode,
                   title: title,

@@ -497,5 +497,80 @@ void main() {
       expect(find.text('Shogun'), findsOneWidget);
       expect(find.byType(MediaSearchPopupMenu), findsNothing);
     });
+
+    testWidgets('a detail-sheet action actually issues its request', (
+      tester,
+    ) async {
+      // Regression: the sheet's buttons popped the sheet and then ran the
+      // action with the *sheet's own* context. `showAppConfirmDialog` still
+      // opened (its navigator is captured synchronously), but by the time the
+      // user confirmed, the sheet route was disposed — so every
+      // `if (!context.mounted) return;` guard in ActivityActions
+      // short-circuited and the mutation never ran. No request, no snackbar,
+      // no error. The row overflow menu passes the tile's context and worked,
+      // which is exactly what hid this.
+      final radarr = _RecordingRadarrService();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [radarrServiceProvider.overrideWith((ref) => radarr)],
+          child: MaterialApp(
+            home: Scaffold(
+              body: GlobalActivityItemTile(
+                item: GlobalActivityItem(
+                  kind: GlobalActivityKind.queue,
+                  service: ServiceKey.radarr,
+                  serviceType: ServiceType.movies,
+                  title: 'Furiosa',
+                  subtitle: 'Furiosa.2024.2160p.WEB-DL-GROUP',
+                  status: MediaStatusInfo(
+                    availability: MediaAvailability.unknown,
+                    labelOverride: 'Downloading',
+                  ),
+                  raw: const {
+                    'id': 42,
+                    'title': 'Furiosa.2024.2160p.WEB-DL-GROUP',
+                    'movie': {'title': 'Furiosa', 'year': 2024},
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Open the detail sheet, then take the action it offers.
+      await tester.tap(find.text('Furiosa'));
+      await tester.pumpAndSettle();
+      expect(find.text('Remove from queue'), findsOneWidget);
+
+      await tester.tap(find.text('Remove from queue'));
+      await tester.pumpAndSettle();
+
+      // The confirmation still appears — closing the sheet must not take the
+      // dialog with it.
+      expect(find.text('Remove from queue?'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+      await tester.pumpAndSettle();
+
+      expect(radarr.removed, [42]);
+      // And the outcome is reported, rather than the tap vanishing.
+      expect(find.text('Removed from queue'), findsOneWidget);
+    });
   });
+}
+
+/// Records the queue mutations the activity actions issue.
+class _RecordingRadarrService extends FakeRadarrService {
+  final List<int> removed = [];
+
+  @override
+  Future<void> removeFromQueue(
+    int id, {
+    bool removeFromClient = true,
+    bool blocklist = false,
+  }) async {
+    removed.add(id);
+  }
 }

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -400,7 +401,10 @@ class _FakeRadarr extends shared.FakeRadarrService {
   }
 
   @override
-  Future<List<radarr.RadarrMovie>> lookupMovies(String term) async {
+  Future<List<radarr.RadarrMovie>> lookupMovies(
+    String term, {
+    CancelToken? cancelToken,
+  }) async {
     lookupMoviesCallCount += 1;
     if (throwOnLookupMovies) throw Exception('radarr ratings lookup failed');
     return lookupResults;
@@ -431,7 +435,10 @@ class _FakeSonarr extends shared.FakeSonarrService {
   }
 
   @override
-  Future<List<sonarr.SonarrSeries>> lookupSeries(String term) async {
+  Future<List<sonarr.SonarrSeries>> lookupSeries(
+    String term, {
+    CancelToken? cancelToken,
+  }) async {
     lookupSeriesCallCount += 1;
     if (throwOnLookupSeries) throw Exception('sonarr ratings lookup failed');
     return lookupResults;

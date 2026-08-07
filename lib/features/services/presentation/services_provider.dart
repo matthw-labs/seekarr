@@ -16,6 +16,7 @@ import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/movies/presentation/movies_provider.dart';
 import 'package:seekarr/features/music/data/lidarr_service.dart';
 import 'package:seekarr/features/music/domain/lidarr_queue_snapshots.dart';
+import 'package:seekarr/features/music/domain/models/lidarr_album.dart';
 import 'package:seekarr/features/music/presentation/music_provider.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/series/presentation/series_provider.dart';
@@ -28,22 +29,79 @@ import 'package:seekarr/features/services/domain/service_summary.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
+import 'package:seekarr/features/npm/data/npm_client.dart';
+import 'package:seekarr/features/transmission/data/transmission_client.dart';
 import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
 import 'package:seekarr/features/unraid/data/unraid_client.dart';
 
+/// A live reachability probe for one service.
+///
+/// The `select` is load-bearing rather than a micro-optimisation, because of
+/// what this provider *is*: one family entry per service, each of which opens a
+/// connection and waits out a 5–8 second timeout ([_loadVersion] builds a fresh
+/// qBittorrent/SABnzbd/NZBGet/Unraid client per call). Watching the whole
+/// `SettingsModel` meant that every settings write — a theme-mode toggle
+/// included — re-probed all fifteen services, and a single Save can write twice
+/// because answering the cert-trust prompt writes again. Keyed on the service's
+/// own connection details, only the service that actually changed re-probes.
 final serviceSummaryProvider =
     FutureProvider.family<ServiceSummary, ServiceKey>((ref, service) async {
-      final settings = ref.watch(currentSettingsProvider);
-      return _loadServiceSummary(ref, service, settings);
+      // Watch the narrow key; read the whole model for the work. The
+      // per-client branches in [_loadVersion] each reach for their own fields,
+      // and none of them is anything but a projection of the key below.
+      ref.watch(
+        currentSettingsProvider.select((s) => _connectionOf(s, service)),
+      );
+      return _loadServiceSummary(
+        ref,
+        service,
+        ref.read(currentSettingsProvider),
+      );
     });
 
+/// Everything a status probe reads about one service, as a single comparable
+/// value.
+///
+/// A record, so `select` gets structural equality for free. The password is not
+/// a separate field on purpose: `SettingsModel.passwordFor` *is* `apiKeyFor` for
+/// the credential-authenticated services, so [apiKey] already covers it.
+typedef _ServiceConnection = ({
+  bool configured,
+  String url,
+  String apiKey,
+  String username,
+  String? certFingerprint,
+});
+
+_ServiceConnection _connectionOf(SettingsModel settings, ServiceKey service) {
+  final url = settings.urlFor(service);
+  return (
+    configured: settings.isServiceConfigured(service),
+    url: url,
+    apiKey: settings.apiKeyFor(service),
+    username: settings.usernameFor(service),
+    certFingerprint: settings.pinForUrl(url),
+  );
+}
+
 typedef ServiceStatusClientFactory =
-    ApiClient Function({required String baseUrl, required String apiKey});
+    ApiClient Function({
+      required String baseUrl,
+      required String apiKey,
+      String? pinnedCertFingerprint,
+    });
 
 final serviceStatusClientFactoryProvider = Provider<ServiceStatusClientFactory>(
   (ref) =>
-      ({required String baseUrl, required String apiKey}) =>
-          ApiClient(baseUrl: baseUrl, apiKey: apiKey),
+      ({
+        required String baseUrl,
+        required String apiKey,
+        String? pinnedCertFingerprint,
+      }) => ApiClient(
+        baseUrl: baseUrl,
+        apiKey: apiKey,
+        pinnedCertFingerprint: pinnedCertFingerprint,
+      ),
 );
 
 Future<ServiceSummary> _loadServiceSummary(
@@ -94,6 +152,7 @@ Future<String?> _loadVersion(
       password: settings.qbittorrentPassword.isNotEmpty
           ? settings.qbittorrentPassword
           : null,
+      certFingerprint: settings.pinForUrl(settings.qbittorrentUrl),
     );
     try {
       final version = await client.getVersion().timeout(
@@ -126,6 +185,7 @@ Future<String?> _loadVersion(
     final client = SabnzbdClient(
       url: settings.sabnzbdUrl,
       apiKey: settings.sabnzbdApiKey,
+      certFingerprint: settings.pinForUrl(settings.sabnzbdUrl),
     );
     try {
       final version = await client.getVersion().timeout(
@@ -146,6 +206,7 @@ Future<String?> _loadVersion(
       password: settings.nzbgetPassword.isEmpty
           ? null
           : settings.nzbgetPassword,
+      certFingerprint: settings.pinForUrl(settings.nzbgetUrl),
     );
     try {
       final version = await client.version().timeout(
@@ -157,10 +218,54 @@ Future<String?> _loadVersion(
     }
   }
 
+  if (service == ServiceKey.transmission) {
+    final client = TransmissionClient(
+      url: settings.transmissionUrl,
+      username: settings.transmissionUsername.isEmpty
+          ? null
+          : settings.transmissionUsername,
+      password: settings.transmissionPassword.isEmpty
+          ? null
+          : settings.transmissionPassword,
+      certFingerprint: settings.pinForUrl(settings.transmissionUrl),
+    );
+    try {
+      // Two hops on a cold client — the 409 handshake, then the real call — so
+      // this gets the same headroom as qBittorrent's login-then-version pair.
+      final version = await client.version().timeout(
+        const Duration(seconds: 8),
+      );
+      return version.isNotEmpty ? version : null;
+    } finally {
+      client.close();
+    }
+  }
+
+  if (service == ServiceKey.nginxProxyManager) {
+    final client = NpmClient(
+      url: settings.npmUrl,
+      identity: settings.npmUsername.isEmpty ? null : settings.npmUsername,
+      secret: settings.npmPassword.isEmpty ? null : settings.npmPassword,
+      certFingerprint: settings.pinForUrl(settings.npmUrl),
+    );
+    try {
+      // `GET /api/` is unauthenticated, so the reachability probe costs no
+      // token exchange — which matters because this provider re-runs on every
+      // settings change and NPM has no rate limiting to absorb a login storm.
+      final version = await client.version().timeout(
+        const Duration(seconds: 6),
+      );
+      return version.isNotEmpty ? version : null;
+    } finally {
+      client.close();
+    }
+  }
+
   if (service == ServiceKey.unraid) {
     final client = UnraidClient(
       url: settings.unraidUrl,
       apiKey: settings.unraidApiKey,
+      certFingerprint: settings.pinForUrl(settings.unraidUrl),
     );
     try {
       final version = await client.version().timeout(
@@ -173,9 +278,11 @@ Future<String?> _loadVersion(
   }
 
   final createClient = ref.watch(serviceStatusClientFactoryProvider);
+  final url = settings.urlFor(service);
   final client = createClient(
-    baseUrl: settings.urlFor(service),
+    baseUrl: url,
     apiKey: settings.apiKeyFor(service),
+    pinnedCertFingerprint: settings.pinForUrl(url),
   );
 
   try {
@@ -228,6 +335,15 @@ String _statusEndpointFor(ServiceKey service) {
     case ServiceKey.unraid:
       // Handled over GraphQL in _loadVersion; no REST endpoint.
       return '';
+    case ServiceKey.transmission:
+      // Handled over the RPC envelope in _loadVersion; the endpoint is a POST
+      // with a session-id handshake, not a GET.
+      return '';
+    case ServiceKey.nginxProxyManager:
+      // Handled in _loadVersion, which reads the unauthenticated `GET /api/`
+      // through the client so the token exchange is not paid for a version
+      // string.
+      return '';
     // Both media-server probes are deliberately the *unauthenticated* ones, so
     // reachability separates cleanly from credentials: a 200 here with a 401
     // elsewhere means "the box is up, the token is wrong", which is the single
@@ -268,6 +384,20 @@ final sonarrQueueSnapshotProvider = FutureProvider<ArrQueueSnapshot>((
   );
 });
 
+/// How many artists the album → artist fallback may probe, and how many of
+/// those requests may be in flight at once.
+///
+/// The fallback exists for Lidarr queue records that name an album but not its
+/// artist, and there is no endpoint that maps one to the other — the only route
+/// is `/album?artistId=` per artist. Unbounded, that walks the entire artist
+/// library one request at a time, so a four-thousand-artist library could fire
+/// four thousand sequential requests to badge one queue row. The guard above
+/// makes it rare; this makes it bounded when it does happen. An unresolved
+/// album simply badges nothing, which is the same outcome as the request
+/// failing.
+const int _lidarrAlbumLookupCap = 40;
+const int _lidarrAlbumLookupConcurrency = 4;
+
 /// The Lidarr queue indexed by artist *and* album id.
 final lidarrQueueSnapshotsProvider = FutureProvider<LidarrQueueSnapshots>((
   ref,
@@ -307,18 +437,40 @@ final lidarrQueueSnapshotsProvider = FutureProvider<LidarrQueueSnapshots>((
     final albumToArtist = <int, int>{};
     if (unresolvedAlbumIds.isNotEmpty) {
       final pending = {...unresolvedAlbumIds};
-      for (final artist in await service.getArtists()) {
-        if (pending.isEmpty) break;
-        if (artist.albumCount <= 0) continue;
+      final candidates = (await service.getArtists())
+          .where((artist) => artist.albumCount > 0)
+          .take(_lidarrAlbumLookupCap)
+          .toList(growable: false);
 
-        try {
-          for (final album in await service.getAlbums(artist.id)) {
+      for (
+        var start = 0;
+        start < candidates.length && pending.isNotEmpty;
+        start += _lidarrAlbumLookupConcurrency
+      ) {
+        final batch = candidates
+            .skip(start)
+            .take(_lidarrAlbumLookupConcurrency);
+        final fetched = await Future.wait(
+          batch.map((artist) async {
+            try {
+              return (
+                artist: artist.id,
+                albums: await service.getAlbums(artist.id),
+              );
+            } catch (_) {
+              // One artist that will not answer must not abandon the rest of
+              // the batch.
+              return (artist: artist.id, albums: const <LidarrAlbum>[]);
+            }
+          }),
+        );
+
+        for (final result in fetched) {
+          for (final album in result.albums) {
             if (pending.remove(album.id)) {
-              albumToArtist[album.id] = artist.id;
+              albumToArtist[album.id] = result.artist;
             }
           }
-        } catch (_) {
-          continue;
         }
       }
     }
@@ -382,13 +534,24 @@ const int servicesRecentlyAddedLimit = 12;
 final servicesRecentlyAddedProvider = FutureProvider<List<RecentlyAddedItem>>((
   ref,
 ) async {
-  final settings = ref.watch(currentSettingsProvider);
+  // One narrow watch per source rather than the whole `SettingsModel`: the rail
+  // depends on three URL/key pairs, and watching the object rebuilt — and
+  // refetched — the entire rail on any settings write, a theme toggle included.
+  final radarr = ref.watch(
+    currentSettingsProvider.select((s) => _connectionOf(s, ServiceKey.radarr)),
+  );
+  final sonarr = ref.watch(
+    currentSettingsProvider.select((s) => _connectionOf(s, ServiceKey.sonarr)),
+  );
+  final lidarr = ref.watch(
+    currentSettingsProvider.select((s) => _connectionOf(s, ServiceKey.lidarr)),
+  );
 
   Future<List<RecentlyAddedItem>> from(
-    ServiceKey service,
+    _ServiceConnection connection,
     Future<List<RecentlyAddedItem>> Function() load,
   ) async {
-    if (!settings.isServiceConfigured(service)) return const [];
+    if (!connection.configured) return const [];
     try {
       return await load();
     } catch (_) {
@@ -397,67 +560,67 @@ final servicesRecentlyAddedProvider = FutureProvider<List<RecentlyAddedItem>>((
   }
 
   final results = await Future.wait([
-    from(ServiceKey.radarr, () async {
+    from(radarr, () async {
       final movies = await ref.watch(moviesProvider.future);
-      return movies
-          .map(
-            (movie) => RecentlyAddedItem(
-              service: ServiceKey.radarr,
-              id: movie.id,
-              title: movie.title,
-              // `year` is an int defaulting to 0, so an item with no year
-              // printed "0" and announced "Zero".
-              subtitle: movie.year == 0 ? '' : movie.year.toString(),
-              posterUrl: ImageUtils.extractPosterUrl(
-                movie.images,
-                baseUrl: settings.radarrUrl,
-                apiKey: settings.radarrApiKey,
-              ).url,
-              addedAt: parseAddedTimestamp(movie.added),
-            ),
-          )
-          .toList(growable: false);
+      return _newestFrom(
+        movies,
+        addedOf: (movie) => movie.added,
+        project: (movie, addedAt) => RecentlyAddedItem(
+          service: ServiceKey.radarr,
+          id: movie.id,
+          title: movie.title,
+          // `year` is an int defaulting to 0, so an item with no year
+          // printed "0" and announced "Zero".
+          subtitle: movie.year == 0 ? '' : movie.year.toString(),
+          posterUrl: ImageUtils.extractPosterUrl(
+            movie.images,
+            baseUrl: radarr.url,
+            apiKey: radarr.apiKey,
+          ).url,
+          addedAt: addedAt,
+        ),
+      );
     }),
-    from(ServiceKey.sonarr, () async {
+    from(sonarr, () async {
       final series = await ref.watch(seriesProvider.future);
-      return series
-          .map(
-            (show) => RecentlyAddedItem(
-              service: ServiceKey.sonarr,
-              id: show.id,
-              title: show.title,
-              subtitle: show.year == 0 ? '' : show.year.toString(),
-              posterUrl: ImageUtils.extractPosterUrl(
-                show.images,
-                baseUrl: settings.sonarrUrl,
-                apiKey: settings.sonarrApiKey,
-              ).url,
-              addedAt: parseAddedTimestamp(show.added),
-            ),
-          )
-          .toList(growable: false);
+      return _newestFrom(
+        series,
+        addedOf: (show) => show.added,
+        project: (show, addedAt) => RecentlyAddedItem(
+          service: ServiceKey.sonarr,
+          id: show.id,
+          title: show.title,
+          subtitle: show.year == 0 ? '' : show.year.toString(),
+          posterUrl: ImageUtils.extractPosterUrl(
+            show.images,
+            baseUrl: sonarr.url,
+            apiKey: sonarr.apiKey,
+          ).url,
+          addedAt: addedAt,
+        ),
+      );
     }),
-    from(ServiceKey.lidarr, () async {
+    from(lidarr, () async {
       final artists = await ref.watch(musicProvider.future);
-      return artists
-          .map(
-            (artist) => RecentlyAddedItem(
-              service: ServiceKey.lidarr,
-              id: artist.id,
-              title: artist.artistName,
-              // An artist has no year, so the qualifier is its scale.
-              subtitle: artist.albumCount == 1
-                  ? '1 album'
-                  : '${artist.albumCount} albums',
-              posterUrl: ImageUtils.extractPosterUrl(
-                artist.images,
-                baseUrl: settings.lidarrUrl,
-                apiKey: settings.lidarrApiKey,
-              ).url,
-              addedAt: parseAddedTimestamp(artist.added),
-            ),
-          )
-          .toList(growable: false);
+      return _newestFrom(
+        artists,
+        addedOf: (artist) => artist.added,
+        project: (artist, addedAt) => RecentlyAddedItem(
+          service: ServiceKey.lidarr,
+          id: artist.id,
+          title: artist.artistName,
+          // An artist has no year, so the qualifier is its scale.
+          subtitle: artist.albumCount == 1
+              ? '1 album'
+              : '${artist.albumCount} albums',
+          posterUrl: ImageUtils.extractPosterUrl(
+            artist.images,
+            baseUrl: lidarr.url,
+            apiKey: lidarr.apiKey,
+          ).url,
+          addedAt: addedAt,
+        ),
+      );
     }),
   ]);
 
@@ -466,6 +629,55 @@ final servicesRecentlyAddedProvider = FutureProvider<List<RecentlyAddedItem>>((
     limit: servicesRecentlyAddedLimit,
   );
 });
+
+/// The newest [servicesRecentlyAddedLimit] rows of one library, projected into
+/// [RecentlyAddedItem] **after** the trim rather than before it.
+///
+/// The rail shows twelve tiles. This provider used to build a projection for
+/// every film, series and artist the user owns — an `ImageUtils.extractPosterUrl`
+/// walk over each item's image list, plus the title/subtitle strings — and then
+/// discard all but twelve, on the UI isolate. A three-thousand-film Radarr paid
+/// three thousand poster lookups for twelve tiles.
+///
+/// The timestamp still has to be read for every row: that is what "newest"
+/// means, and it is one `DateTime.tryParse`. Everything else now happens
+/// [servicesRecentlyAddedLimit] times.
+///
+/// The comparator is [sortRecentlyAdded]'s — newest first, undated last — plus a
+/// source-order tiebreak, so trimming per source cannot change what the merged
+/// rail shows: the merged result takes at most twelve from any one source
+/// anyway, and the tiebreak makes which twelve deterministic rather than
+/// whatever an unstable `List.sort` happened to leave.
+List<RecentlyAddedItem> _newestFrom<T>(
+  List<T> rows, {
+  required String? Function(T row) addedOf,
+  required RecentlyAddedItem Function(T row, DateTime? addedAt) project,
+}) {
+  final dated =
+      List.generate(
+        rows.length,
+        (index) =>
+            (index: index, addedAt: parseAddedTimestamp(addedOf(rows[index]))),
+        growable: false,
+      )..sort((a, b) {
+        final addedA = a.addedAt;
+        final addedB = b.addedAt;
+        if (addedA != null && addedB != null) {
+          final byDate = addedB.compareTo(addedA);
+          if (byDate != 0) return byDate;
+        } else if (addedA == null && addedB != null) {
+          return 1;
+        } else if (addedA != null && addedB == null) {
+          return -1;
+        }
+        return a.index.compareTo(b.index);
+      });
+
+  return dated
+      .take(servicesRecentlyAddedLimit)
+      .map((entry) => project(rows[entry.index], entry.addedAt))
+      .toList(growable: false);
+}
 
 /// How many in-flight items the hub shows before deferring to `/activity`.
 ///
@@ -487,7 +699,30 @@ const int servicesQueuePreviewLimit = 5;
 final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
   ref,
 ) async {
-  final settings = ref.watch(currentSettingsProvider);
+  // Watch the seven connections this actually depends on, not the whole model.
+  // A bare `ref.watch(currentSettingsProvider)` re-ran seven concurrent queue
+  // fetches on every settings write — including a theme-mode toggle, which
+  // cannot change a queue. Same shape as `serviceSummaryProvider`: watch the
+  // narrow keys, read the model for the work.
+  //
+  // A record rather than a list, and that is the load-bearing part: `select`
+  // compares with `==`, and a `List` has identity equality, so a list would
+  // report a change on every rebuild and quietly preserve the bug it was meant
+  // to fix. Records compare structurally, nested records included.
+  ref.watch(
+    currentSettingsProvider.select(
+      (s) => (
+        _connectionOf(s, ServiceKey.radarr),
+        _connectionOf(s, ServiceKey.sonarr),
+        _connectionOf(s, ServiceKey.lidarr),
+        _connectionOf(s, ServiceKey.readarr),
+        _connectionOf(s, ServiceKey.qbittorrent),
+        _connectionOf(s, ServiceKey.sabnzbd),
+        _connectionOf(s, ServiceKey.nzbget),
+      ),
+    ),
+  );
+  final settings = ref.read(currentSettingsProvider);
 
   Future<List<ServiceQueueItem>> from(
     ServiceKey service,
@@ -686,6 +921,7 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
       // the rest have no queue at all.
       ServiceKey.seerr ||
       ServiceKey.qbittorrent ||
+      ServiceKey.transmission ||
       ServiceKey.bazarr ||
       ServiceKey.truenas ||
       ServiceKey.dockge ||
@@ -693,6 +929,9 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
       ServiceKey.sabnzbd ||
       ServiceKey.nzbget ||
       ServiceKey.unraid ||
+      // A reverse proxy moves no bytes on anyone's behalf; it has nothing to
+      // contribute to an in-flight queue.
+      ServiceKey.nginxProxyManager ||
       // A media server has no acquisition queue at all. Its live work is
       // outbound playback, which is a different record with different actions
       // and does not belong in a queue row.
@@ -742,6 +981,7 @@ String _queueTypeLabel(ServiceKey service) {
     // media type is already in the release name.
     ServiceKey.seerr ||
     ServiceKey.qbittorrent ||
+    ServiceKey.transmission ||
     ServiceKey.bazarr ||
     ServiceKey.truenas ||
     ServiceKey.dockge ||
@@ -749,6 +989,7 @@ String _queueTypeLabel(ServiceKey service) {
     ServiceKey.sabnzbd ||
     ServiceKey.nzbget ||
     ServiceKey.unraid ||
+    ServiceKey.nginxProxyManager ||
     ServiceKey.jellyfin ||
     ServiceKey.plex => service.title,
   };

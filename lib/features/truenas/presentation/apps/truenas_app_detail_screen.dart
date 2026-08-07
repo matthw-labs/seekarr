@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/utils/snack_bar_helper.dart';
+import 'package:seekarr/core/utils/url_utils.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/app_error_state.dart';
 import 'package:seekarr/core/widgets/app_skeleton.dart';
@@ -53,6 +55,45 @@ class TrueNasAppDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Opens an app portal, refusing anything that is not a web address.
+///
+/// App portals are strings the *server* chose — a compromised TrueNAS, or just
+/// a hostile chart in a third-party catalog, controls both the label and the
+/// target. Handing them straight to `launchUrl` let a tile reading "Web UI"
+/// fire `intent://`, `file://` or `tel:` from Seekarr's context. A portal is a
+/// web address; anything that isn't http/https is refused.
+///
+/// The allowlist itself is [UrlUtils.isLaunchableWebUri], shared with the
+/// Seerr-supplied trailer URLs that need the identical guard for the identical
+/// reason.
+Future<void> _openPortal(BuildContext context, String rawUrl) async {
+  // `Uri.tryParse` rather than `Uri.parse`: a portal string that isn't a URI at
+  // all threw FormatException straight out of the tap handler.
+  final uri = Uri.tryParse(rawUrl.trim());
+  if (!UrlUtils.isLaunchableWebUri(uri)) {
+    SnackBarHelper.error(context, 'Portal link is not a web address');
+    return;
+  }
+  try {
+    final launched = await launchUrl(
+      uri!,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched && context.mounted) {
+      SnackBarHelper.error(context, 'Nothing on this device can open $rawUrl');
+    }
+  } catch (e) {
+    // launchUrl throws PlatformException when no handler is installed.
+    if (context.mounted) {
+      SnackBarHelper.error(
+        context,
+        'Could not open the portal link.',
+        detail: e,
+      );
+    }
   }
 }
 
@@ -120,10 +161,7 @@ class _AppDetailBody extends ConsumerWidget {
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.xs,
               ),
-              onTap: () => launchUrl(
-                Uri.parse(entry.value),
-                mode: LaunchMode.externalApplication,
-              ),
+              onTap: () => _openPortal(context, entry.value),
               child: Row(
                 children: [
                   const Icon(Icons.open_in_new_rounded, size: 16),

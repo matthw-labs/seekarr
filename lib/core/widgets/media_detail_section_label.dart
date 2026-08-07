@@ -91,6 +91,21 @@ class MediaDetailSectionLabel extends StatelessWidget {
           if (count != null && count!.trim().isNotEmpty) ...[
             const SizedBox(width: AppSpacing.sm),
             Flexible(
+              // **This count does not roll, and the reason is the note further
+              // down this very file.** It moves when the library does — an
+              // episode is grabbed and "41 of 48" becomes "42 of 48" — so it
+              // looks like an obvious candidate, and it was tried.
+              //
+              // `ReelLine` gates itself with a `LayoutBuilder`, because deciding
+              // whether a line can roll means knowing the width it has. But a
+              // `LayoutBuilder` cannot report intrinsic dimensions, and the
+              // stacking note below records that this widget "sits inside callers
+              // that ask for them" — which is why the stack threshold here is
+              // keyed off the text scaler instead of measuring. Putting a
+              // measuring widget inside the one component that documents it must
+              // not measure would fail on whichever caller asks first, and the
+              // existing `Flexible` + ellipsis is already the correct answer for
+              // a count this long.
               child: Text(
                 count!,
                 maxLines: 1,

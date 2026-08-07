@@ -17,7 +17,11 @@ final prowlarrServiceProvider = Provider<ProwlarrService>((ref) {
     throw Exception('Prowlarr not configured');
   }
   final service = ProwlarrService(
-    ApiClient(baseUrl: settings.prowlarrUrl, apiKey: settings.prowlarrApiKey),
+    ApiClient(
+      baseUrl: settings.prowlarrUrl,
+      apiKey: settings.prowlarrApiKey,
+      pinnedCertFingerprint: settings.pinForUrl(settings.prowlarrUrl),
+    ),
   );
   // The provider is rebuilt whenever the config changes; close the previous
   // Dio instance so its connections are not leaked.
@@ -92,16 +96,88 @@ final prowlarrIndexerStatusByIdProvider =
       return null;
     });
 
-/// Recent history for a single indexer.
-///
-/// Prowlarr's history endpoint has no reliable per-indexer filter, so a larger
-/// page is fetched and filtered client-side by `indexerId`.
+/// Recent history for a single indexer, filtered server-side.
 final prowlarrIndexerHistoryProvider =
     FutureProvider.family<List<ProwlarrHistoryItem>, int>((ref, id) async {
-      final page = await ref
-          .watch(prowlarrServiceProvider)
-          .getHistory(page: 1, pageSize: 100);
-      return page.records
-          .where((item) => item.indexerId == id)
-          .toList(growable: false);
+      return ref.watch(prowlarrServiceProvider).getIndexerHistory(id);
+    });
+
+/// Configured providers of one kind (apps, download clients, notifications,
+/// indexer proxies).
+final prowlarrProvidersProvider =
+    FutureProvider.family<List<ProwlarrProviderResource>, ProwlarrProviderKind>(
+      (ref, kind) async {
+        return ref.watch(prowlarrServiceProvider).getProviders(kind);
+      },
+    );
+
+/// Implementations that can be added for one kind.
+///
+/// `autoDispose` because it is only read while a picker is open.
+final prowlarrProviderSchemaProvider = FutureProvider.autoDispose
+    .family<List<ProwlarrProviderResource>, ProwlarrProviderKind>((
+      ref,
+      kind,
+    ) async {
+      return ref.watch(prowlarrServiceProvider).getProviderSchema(kind);
+    });
+
+/// Applications Prowlarr syncs its indexers to.
+final prowlarrApplicationsProvider =
+    FutureProvider<List<ProwlarrProviderResource>>((ref) async {
+      return ref.watch(
+        prowlarrProvidersProvider(ProwlarrProviderKind.application).future,
+      );
+    });
+
+/// Download clients, offered per indexer in the edit form.
+final prowlarrDownloadClientsProvider =
+    FutureProvider<List<ProwlarrProviderResource>>((ref) async {
+      return ref.watch(
+        prowlarrProvidersProvider(ProwlarrProviderKind.downloadClient).future,
+      );
+    });
+
+/// Newznab categories, for the indexer category filter.
+final prowlarrCategoriesProvider = FutureProvider<List<ProwlarrCategory>>((
+  ref,
+) async {
+  return ref.watch(prowlarrServiceProvider).getIndexerCategories();
+});
+
+/// Tags with their usage, for the tag manager.
+final prowlarrTagDetailsProvider = FutureProvider<List<ProwlarrTagDetail>>((
+  ref,
+) async {
+  return ref.watch(prowlarrServiceProvider).getTagDetails();
+});
+
+/// Tags, used by the indexer filters and the edit form.
+final prowlarrTagsProvider = FutureProvider<List<ProwlarrTag>>((ref) async {
+  return ref.watch(prowlarrServiceProvider).getTags();
+});
+
+/// Tag labels by id, so a tile can render names instead of numbers.
+final prowlarrTagLabelsProvider = Provider<Map<int, String>>((ref) {
+  final tags = ref.watch(prowlarrTagsProvider);
+  return tags.maybeWhen(
+    data: (tags) => {for (final tag in tags) tag.id: tag.label},
+    orElse: () => const <int, String>{},
+  );
+});
+
+/// Sync profiles offered by the indexer edit form.
+final prowlarrAppProfilesProvider = FutureProvider<List<ProwlarrAppProfile>>((
+  ref,
+) async {
+  return ref.watch(prowlarrServiceProvider).getAppProfiles();
+});
+
+/// Every definition Prowlarr can add.
+///
+/// `autoDispose` on purpose: the payload is thousands of definitions and it is
+/// only needed while the add-indexer picker is open.
+final prowlarrIndexerSchemaProvider =
+    FutureProvider.autoDispose<List<ProwlarrIndexer>>((ref) async {
+      return ref.watch(prowlarrServiceProvider).getIndexerSchema();
     });

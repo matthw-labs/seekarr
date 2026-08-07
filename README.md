@@ -94,6 +94,7 @@ One client for **Seerr**, **Radarr**, **Sonarr**, **Lidarr**, and **qBittorrent*
   - Queue status normalization based on structured fields
   - Sonarr wanted items organized by Series → Season → Episode with per-episode search
 - **Customization** — Light, Dark, or System theme; configurable navigation bar services
+- **Self-signed certificates** — trust-on-first-use for any service behind a home-made reverse proxy, scoped to the address rather than the service, so two services behind the same proxy share one decision
 - **Multiplatform** — Tested on Android, iOS, and macOS
 
 ---
@@ -132,6 +133,8 @@ Seekarr ships with no default credentials. After launching the app, open **Setti
 - Region preferences (where applicable)
 
 API keys are stored securely on the device using `flutter_secure_storage` and are never transmitted outside your local network.
+
+If a service sits behind a self-signed HTTPS certificate — common for a home-lab reverse proxy — Seekarr offers to trust it the first time it's seen. Trust is scoped to the address, not the service, so two services behind the same proxy are trusted (and revoked) together. Trusted certificates can be reviewed or forgotten at any time from **Settings → Connections → Trusted certificates**.
 
 ---
 

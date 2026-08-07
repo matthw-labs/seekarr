@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/media_poster_card.dart';
@@ -137,10 +138,9 @@ class _UnplayedBadge extends StatelessWidget {
       ),
       child: Text(
         '$count',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: colorScheme.onPrimary,
-          fontWeight: FontWeight.w700,
-        ),
+        style: Theme.of(context).textTheme.labelSmall!
+            .weight(FontWeight.w700)
+            .copyWith(color: colorScheme.onPrimary),
       ),
     );
   }

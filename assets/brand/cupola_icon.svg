@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><defs>
+<radialGradient id="ground" cx="50%" cy="45%" r="76%">
+  <stop offset="0%" stop-color="#151A2A"/><stop offset="56%" stop-color="#0C0E17"/><stop offset="100%" stop-color="#08090F"/>
+</radialGradient>
+<radialGradient id="body" cx="50%" cy="42%" r="70%">
+  <stop offset="0%" stop-color="#333D57"/><stop offset="100%" stop-color="#1B2233"/>
+</radialGradient>
+<radialGradient id="pane" cx="512" cy="512" r="404.02" gradientUnits="userSpaceOnUse">
+  <stop offset="0.6" stop-color="#C6CBFF"/>
+  <stop offset="0.75" stop-color="#949CFB"/>
+  <stop offset="0.85" stop-color="#6A6AEE"/>
+  <stop offset="0.94" stop-color="#4A3FC8"/>
+</radialGradient>
+<radialGradient id="core" cx="50%" cy="50%" r="52%">
+  <stop offset="0%" stop-color="#8E96F7"/><stop offset="70%" stop-color="#6E70EE"/><stop offset="100%" stop-color="#5451DA"/>
+</radialGradient>
+<radialGradient id="halo" cx="50%" cy="50%" r="50%">
+  <stop offset="0%" stop-color="#6366F1" stop-opacity="0.34"/><stop offset="100%" stop-color="#6366F1" stop-opacity="0"/>
+</radialGradient></defs><rect width="1024" height="1024" fill="url(#ground)"/>
+  <circle cx="512" cy="512" r="490" fill="url(#halo)"/>
+  <path d="M458.31 76.48Q512 45.48 565.69 76.48L862.32 247.74Q916.02 278.74 916.02 340.74L916.02 683.26Q916.02 745.26 862.32 776.26L565.69 947.52Q512 978.52 458.31 947.52L161.68 776.26Q107.98 745.26 107.98 683.26L107.98 340.74Q107.98 278.74 161.68 247.74Z" fill="url(#body)"/>
+  <path d="M458.31 76.48Q512 45.48 565.69 76.48L862.32 247.74Q916.02 278.74 916.02 340.74L916.02 683.26Q916.02 745.26 862.32 776.26L565.69 947.52Q512 978.52 458.31 947.52L161.68 776.26Q107.98 745.26 107.98 683.26L107.98 340.74Q107.98 278.74 161.68 247.74Z" fill="none" stroke="#4B566F" stroke-width="5" stroke-opacity="0.75"/>
+  <path d="M542.51 125.04Q540.15 90.88 569.81 108L832.97 259.94Q862.63 277.06 831.87 292.1L772.88 320.94Q742.12 335.98 712.47 318.86L579.03 241.82Q549.38 224.7 547.02 190.54Z" fill="url(#pane)"/>
+  <path d="M862.37 344.94Q890.78 325.82 890.78 360.06L890.78 663.94Q890.78 698.18 862.37 679.06L807.91 642.4Q779.5 623.28 779.5 589.04L779.5 434.96Q779.5 400.72 807.91 381.6Z" fill="url(#pane)"/>
+  <path d="M831.87 731.9Q862.63 746.94 832.97 764.06L569.81 916Q540.15 933.12 542.51 898.96L547.02 833.46Q549.38 799.3 579.03 782.18L712.47 705.14Q742.12 688.02 772.88 703.06Z" fill="url(#pane)"/>
+  <path d="M481.49 898.96Q483.85 933.12 454.19 916L191.03 764.06Q161.37 746.94 192.13 731.9L251.12 703.06Q281.88 688.02 311.53 705.14L444.97 782.18Q474.62 799.3 476.98 833.46Z" fill="url(#pane)"/>
+  <path d="M161.63 679.06Q133.22 698.18 133.22 663.94L133.22 360.06Q133.22 325.82 161.63 344.94L216.09 381.6Q244.5 400.72 244.5 434.96L244.5 589.04Q244.5 623.28 216.09 642.4Z" fill="url(#pane)"/>
+  <path d="M192.13 292.1Q161.37 277.06 191.03 259.94L454.19 108Q483.85 90.88 481.49 125.04L476.98 190.54Q474.62 224.7 444.97 241.82L311.53 318.86Q281.88 335.98 251.12 320.94Z" fill="url(#pane)"/>
+  <circle cx="512" cy="512" r="199.02" fill="url(#core)"/>
+  <circle cx="512" cy="512" r="214.02" fill="none" stroke="#4B566F" stroke-width="7" stroke-opacity="0.9"/></svg>

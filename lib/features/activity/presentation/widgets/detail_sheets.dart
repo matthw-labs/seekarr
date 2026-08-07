@@ -192,7 +192,9 @@ List<_DetailSection> _buildHistorySections(Map<String, dynamic> item) {
         ),
         _detailField(
           'Size',
-          formatSizeInGb(asActivityMap(item['data'])?['size'] ?? item['size']),
+          formatActivitySize(
+            asActivityMap(item['data'])?['size'] ?? item['size'],
+          ),
         ),
         _detailField('Quality', extractQualityName(item)),
       ]),

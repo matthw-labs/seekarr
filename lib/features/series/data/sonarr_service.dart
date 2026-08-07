@@ -13,7 +13,11 @@ final sonarrServiceProvider = Provider<SonarrService>((ref) {
     throw Exception('Sonarr not configured');
   }
   return SonarrService(
-    ApiClient(baseUrl: settings.sonarrUrl, apiKey: settings.sonarrApiKey),
+    ApiClient(
+      baseUrl: settings.sonarrUrl,
+      apiKey: settings.sonarrApiKey,
+      pinnedCertFingerprint: settings.pinForUrl(settings.sonarrUrl),
+    ),
   );
 });
 
@@ -147,8 +151,21 @@ class SonarrService with ArrActivityMixin {
   }
 
   /// Searches for series by term using the lookup API.
-  Future<List<SonarrSeries>> lookupSeries(String term) async {
-    return lookupItems('series/lookup', term, SonarrSeries.fromJson);
+  ///
+  /// [cancelToken] aborts the request once the search that asked for it has
+  /// been superseded — see [ArrActivityMixin.lookupItems], which owns the
+  /// empty-term guard, the isolate mapping and the degrade-to-`[]` rule the
+  /// three arr lookups share.
+  Future<List<SonarrSeries>> lookupSeries(
+    String term, {
+    CancelToken? cancelToken,
+  }) {
+    return lookupItems(
+      'series/lookup',
+      term,
+      SonarrSeries.fromJson,
+      cancelToken: cancelToken,
+    );
   }
 
   /// Finds a series in the library by its TVDB ID.

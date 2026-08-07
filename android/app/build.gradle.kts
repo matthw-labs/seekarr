@@ -61,6 +61,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // flutter_local_notifications requires this even when scheduled
+        // notifications are never used: the plugin itself compiles against
+        // java.time, which is API 26, so below that it needs the desugared
+        // backport or the build fails at D8 with missing classes.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -72,8 +77,11 @@ android {
         applicationId = "labs.matthw.seekarr"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        // flutter_secure_storage 10.x requires Android 23+.
-        minSdk = maxOf(flutter.minSdkVersion, 23)
+        // flutter_secure_storage 10.x requires Android 23+;
+        // flutter_local_notifications 22.x requires 24+. Costs nothing worth
+        // keeping: 24 is Android 7.0, and everything below it is a rounding
+        // error on any current distribution.
+        minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -101,6 +109,12 @@ android {
             )
         }
     }
+}
+
+dependencies {
+    // Version matched to the one flutter_local_notifications 22.x declares, so
+    // the app and the plugin never disagree on which backport is on the path.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {

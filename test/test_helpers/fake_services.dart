@@ -7,6 +7,8 @@
 /// handful of methods they need, keeping per-test boilerplate to a minimum.
 library;
 
+import 'package:dio/dio.dart';
+
 import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/core/models/media_preview.dart';
 import 'package:seekarr/features/discover/data/seerr_service.dart';
@@ -39,7 +41,10 @@ class FakeRadarrService extends RadarrService {
   Future<List<Map<String, dynamic>>> getQualityProfiles() async => const [];
 
   @override
-  Future<List<RadarrMovie>> lookupMovies(String term) async => const [];
+  Future<List<RadarrMovie>> lookupMovies(
+    String term, {
+    CancelToken? cancelToken,
+  }) async => const [];
 
   @override
   Future<List<dynamic>> getQueue({
@@ -92,7 +97,10 @@ class FakeSonarrService extends SonarrService {
   Future<List<Map<String, dynamic>>> getQualityProfiles() async => const [];
 
   @override
-  Future<List<SonarrSeries>> lookupSeries(String term) async => const [];
+  Future<List<SonarrSeries>> lookupSeries(
+    String term, {
+    CancelToken? cancelToken,
+  }) async => const [];
 
   @override
   Future<List<dynamic>> getQueue({
@@ -148,7 +156,10 @@ class FakeLidarrService extends LidarrService {
   Future<List<Map<String, dynamic>>> getQualityProfiles() async => const [];
 
   @override
-  Future<List<LidarrArtist>> lookupArtists(String term) async => const [];
+  Future<List<LidarrArtist>> lookupArtists(
+    String term, {
+    CancelToken? cancelToken,
+  }) async => const [];
 
   @override
   Future<List<dynamic>> getQueue({
@@ -229,8 +240,11 @@ class FakeSeerrService extends SeerrService {
   Future<List<SeerrGenre>> getTvGenres() async => const [];
 
   @override
-  Future<List<MediaPreview>> search(String query, {int page = 1}) async =>
-      const [];
+  Future<List<MediaPreview>> search(
+    String query, {
+    int page = 1,
+    CancelToken? cancelToken,
+  }) async => const [];
 
   @override
   Future<List<SeerrRequest>> getRequests() async => const [];

@@ -19,7 +19,7 @@ final dockgeClientProvider = Provider<DockgeClient>((ref) {
     currentSettingsProvider.select((s) => s.dockgePassword),
   );
   final certFingerprint = ref.watch(
-    currentSettingsProvider.select((s) => s.dockgeCertFingerprint),
+    currentSettingsProvider.select((s) => s.pinForUrl(s.dockgeUrl)),
   );
   if (url.isEmpty) {
     throw const DockgeException('Dockge not configured');
@@ -28,7 +28,7 @@ final dockgeClientProvider = Provider<DockgeClient>((ref) {
     baseUrl: url,
     username: username.isEmpty ? null : username,
     password: password.isEmpty ? null : password,
-    certFingerprint: certFingerprint.isEmpty ? null : certFingerprint,
+    certFingerprint: certFingerprint,
   );
   ref.onDispose(client.close);
   return client;

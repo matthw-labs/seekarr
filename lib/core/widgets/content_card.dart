@@ -4,6 +4,7 @@ import 'package:seekarr/core/app_elevation.dart';
 import 'package:seekarr/core/app_gradients.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/network/pinned_image_cache.dart';
 import 'package:seekarr/core/widgets/pressable_scale.dart';
 
 /// A card widget for displaying media content with cached images.
@@ -88,6 +89,7 @@ class ContentCard extends StatelessWidget {
     return CachedNetworkImage(
       imageUrl: imageUrl!,
       httpHeaders: httpHeaders,
+      cacheManager: pinnedImageCacheFor(imageUrl),
       fit: BoxFit.cover,
       placeholder: (context, url) => useShimmer
           ? _ShimmerPlaceholder(color: colorScheme.surfaceContainerHigh)

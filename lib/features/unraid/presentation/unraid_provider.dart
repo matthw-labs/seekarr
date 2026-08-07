@@ -16,6 +16,7 @@ final unraidClientProvider = Provider<UnraidClient>((ref) {
   final client = UnraidClient(
     url: settings.unraidUrl,
     apiKey: settings.unraidApiKey,
+    certFingerprint: settings.pinForUrl(settings.unraidUrl),
   );
   ref.onDispose(() => client.close());
   return client;

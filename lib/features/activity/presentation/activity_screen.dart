@@ -26,6 +26,8 @@ import 'package:seekarr/features/activity/presentation/widgets/requests_list.dar
 import 'package:seekarr/features/activity/presentation/widgets/wanted_tab.dart';
 import 'package:seekarr/features/discover/presentation/discover_provider.dart';
 import 'package:seekarr/features/import/presentation/import_service_picker_sheet.dart';
+import 'package:seekarr/features/stream/presentation/widgets/stream_activity_section.dart';
+import 'package:seekarr/features/release_search/presentation/release_searches_body.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
 enum ServiceType { movies, series, music, discover }
@@ -99,7 +101,9 @@ class ActivityScreen extends ConsumerWidget {
 /// sub-segment bar so service-specific subsections (Queue/Requests,
 /// History/Blocklist, Missing/Cutoff) remain reachable from the global view.
 enum _ActivitySection {
-  now('Now', Icons.downloading_rounded),
+  // Not a download arrow any more: the bucket carries both directions of the
+  // box's traffic, bytes in and bytes out.
+  now('Now', Icons.swap_vert_rounded),
   history('History', Icons.history_rounded),
   wanted('Wanted', Icons.manage_search_rounded);
 
@@ -113,10 +117,31 @@ enum _ActivitySection {
 /// granular providers in `activity_provider.dart`.
 class _ActivitySub {
   final String label;
-  final FutureProvider<ActivityFeed> provider;
+
+  /// Null on a [_ActivitySub.custom] sub, whose records are not
+  /// [GlobalActivityItem]s at all.
+  final FutureProvider<ActivityFeed>? provider;
   final String emptyMessage;
 
-  const _ActivitySub(this.label, this.provider, this.emptyMessage);
+  /// A body that replaces the whole feed path, filter strip included.
+  ///
+  /// Live playback is the case this exists for. A session is not a queue record:
+  /// it has a person, a device and a delivery method, and none of the queue
+  /// affordances mean anything for it. Forcing it into [GlobalActivityItem] would
+  /// need a new `ServiceType` member, which breaks 21 exhaustive switches here
+  /// plus 6 on [GlobalActivityKind] — two of those with `_ =>` fallbacks that
+  /// would mis-route the row silently rather than failing to compile.
+  ///
+  /// The service strip is skipped for these on purpose: it filters the four arr
+  /// services, which is an axis a media-server session does not sit on.
+  final Widget Function(double bottomPadding)? body;
+
+  const _ActivitySub(this.label, this.provider, this.emptyMessage)
+    : body = null;
+
+  const _ActivitySub.custom({required this.label, required this.body})
+    : provider = null,
+      emptyMessage = '';
 }
 
 /// Sub-segments per bucket. The first entry is the default selection.
@@ -134,10 +159,18 @@ class _ActivitySub {
 final Map<_ActivitySection, List<_ActivitySub>> _activitySubs = {
   _ActivitySection.now: [
     _ActivitySub(
-      'All',
+      'Downloading',
       globalNowItemsProvider,
       'Nothing downloading right now',
     ),
+    // The second record type this bucket was always waiting for. Its label was
+    // 'All' only because a one-entry bucket renders no pill row — and "All" was
+    // never true, since the bucket only ever held the ingress half.
+    _ActivitySub.custom(label: 'Streaming', body: _streamActivityBody),
+    // A background release search is live, and an expiring result is live too —
+    // the gerund is what makes it a sibling of the two above rather than a
+    // different kind of thing filed next to them.
+    _ActivitySub.custom(label: 'Searching', body: _releaseSearchesBody),
   ],
   _ActivitySection.history: [
     _ActivitySub('History', globalHistoryItemsProvider, 'No recent history'),
@@ -304,7 +337,18 @@ class _BucketBody extends ConsumerWidget {
         .watch(_activitySubIndexProvider(section))
         .clamp(0, subs.length - 1);
     final sub = subs[subIndex];
-    final feedAsync = ref.watch(sub.provider);
+
+    final customBody = sub.body;
+    if (customBody != null) {
+      return Column(
+        children: [
+          _SubPills(section: section, subs: subs, subIndex: subIndex),
+          Expanded(child: customBody(bottomPadding)),
+        ],
+      );
+    }
+
+    final feedAsync = ref.watch(sub.provider!);
     final filter = ref.watch(_activityServiceFilterProvider);
     final configuredServices = ref.watch(configuredActivityServicesProvider);
 
@@ -317,25 +361,22 @@ class _BucketBody extends ConsumerWidget {
     // discarded it, so every pull-to-refresh and every poll tick blanked the
     // whole list to shimmer and then redrew it — turning a background update
     // into a full visual reset.
-    final feed = feedAsync.asData?.value;
+    //
+    // `AsyncValue.value`, emphatically not `asData?.value`. In Riverpod 3 a
+    // provider that re-runs because a watched dependency changed enters
+    // `AsyncLoading` with `isReloading` set — and `asData` returns null in that
+    // state. The 15s "Now" poll bumps `activityRefreshVersionProvider`, which
+    // every feed provider watches, so `asData` was null on *every tick*: the
+    // list was replaced by shimmer, the service strip's counts fell back to a
+    // dash, and `isRefreshing` could never be true, which left `_RefreshingBar`
+    // dead code. `.value` carries the previous data through a reload, which is
+    // what the paragraph above always claimed to do.
+    final feed = feedAsync.value;
     final isRefreshing = feedAsync.isLoading && feed != null;
 
     return Column(
       children: [
-        // Only where a bucket genuinely has more than one record type. "Now" has
-        // one, so it shows no pill row at all — see [_activitySubs].
-        if (subs.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: SelectionPills<int>(
-              values: [for (var index = 0; index < subs.length; index++) index],
-              selected: subIndex,
-              labelBuilder: (index) => subs[index].label,
-              onSelected: (index) =>
-                  ref.read(_activitySubIndexProvider(section).notifier).state =
-                      index,
-            ),
-          ),
+        _SubPills(section: section, subs: subs, subIndex: subIndex),
         // Service selection, one tap, with the counts on it.
         //
         // This replaced an app-bar popup menu, which in turn replaced a row of
@@ -379,6 +420,47 @@ class _BucketBody extends ConsumerWidget {
     );
   }
 }
+
+/// The record-type pill row for a bucket.
+///
+/// Extracted because the Streaming sub renders a body of its own and still needs
+/// this row above it — inline, the two paths would each carry a copy and could
+/// drift. Renders nothing for a bucket with a single record type: a pill row with
+/// one pill is a label pretending to be a control.
+class _SubPills extends ConsumerWidget {
+  const _SubPills({
+    required this.section,
+    required this.subs,
+    required this.subIndex,
+  });
+
+  final _ActivitySection section;
+  final List<_ActivitySub> subs;
+  final int subIndex;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (subs.length <= 1) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: SelectionPills<int>(
+        values: [for (var index = 0; index < subs.length; index++) index],
+        selected: subIndex,
+        labelBuilder: (index) => subs[index].label,
+        onSelected: (index) =>
+            ref.read(_activitySubIndexProvider(section).notifier).state = index,
+      ),
+    );
+  }
+}
+
+/// Top-level so `_activitySubs` can stay `const`.
+Widget _streamActivityBody(double bottomPadding) =>
+    StreamActivitySection(bottomPadding: bottomPadding);
+
+Widget _releaseSearchesBody(double bottomPadding) =>
+    ReleaseSearchesBody(bottomPadding: bottomPadding);
 
 /// A hairline progress line while a refresh runs behind visible content.
 ///

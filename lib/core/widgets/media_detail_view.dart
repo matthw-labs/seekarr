@@ -9,6 +9,7 @@ import 'package:seekarr/core/app_animation.dart';
 import 'package:seekarr/core/app_gradients.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/network/pinned_image_cache.dart';
 import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/ambient_background.dart';
@@ -548,14 +549,23 @@ class _MediaDetailHeader extends StatelessWidget {
     // completes, and reverses under an interactive pop. Identity once the
     // route is settled (value 1), so resting frames are unaffected.
     if (routeAnimation != null && !phase.reduceMotion) {
-      final settle = CurvedAnimation(
-        parent: routeAnimation!,
-        curve: AppAnimation.emphasizedCurve,
+      // `drive(CurveTween(...))` and never a `CurvedAnimation`, which is not a
+      // style choice: this build runs from a `SliverPersistentHeaderDelegate`
+      // whose `shouldRebuild` is deliberately always true, inside a
+      // `LayoutBuilder` — so it runs once per frame for the whole collapse
+      // range. `CurvedAnimation`'s constructor registers a status listener on
+      // its parent that only `dispose()` removes, and the parent here is the
+      // *route's* animation, which outlives every one of those frames; each
+      // scroll frame therefore left another listener on it, for the life of the
+      // page. A `CurveTween` allocates none, and with no `reverseCurve` a
+      // `CurvedAnimation` evaluates to exactly this.
+      final settle = routeAnimation!.drive(
+        CurveTween(curve: AppAnimation.emphasizedCurve),
       );
       backdropGroup = FadeTransition(
         opacity: settle,
         child: ScaleTransition(
-          scale: Tween<double>(begin: 1.06, end: 1.0).animate(settle),
+          scale: settle.drive(Tween<double>(begin: 1.06, end: 1.0)),
           child: backdropGroup,
         ),
       );
@@ -834,6 +844,7 @@ class _FallbackHeroBackdrop extends StatelessWidget {
                 ? CachedNetworkImage(
                     imageUrl: posterUrl!,
                     httpHeaders: posterHeaders,
+                    cacheManager: pinnedImageCacheFor(posterUrl),
                     width: 120,
                     fit: BoxFit.cover,
                     errorWidget: (context, url, error) => Icon(
@@ -1004,6 +1015,7 @@ class _BackdropHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return CachedNetworkImage(
       imageUrl: backdropUrl,
+      cacheManager: pinnedImageCacheFor(backdropUrl),
       fit: BoxFit.cover,
       errorWidget: (context, url, error) =>
           Container(color: Theme.of(context).colorScheme.surfaceContainer),

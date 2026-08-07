@@ -115,7 +115,16 @@ String formatDateOnly(String? isoDate) {
   return formatIsoDate(isoDate);
 }
 
-String formatSizeInGb(dynamic bytes) {
+/// Renders a byte count for the Activity surfaces that get one from loosely
+/// typed JSON — history `data.size`, `sizeOnDisk`, an episode file's `size`.
+///
+/// Was a private GB-only ladder (`'${bytes / 1024^3} GB'`, two decimals, no
+/// rung either side), which put two different ladders on the *same* detail
+/// sheet: the queue sheet's Size field renders through [formatActivityBytes]
+/// and the history sheet's through this, so 297 MB read as `0.29 GB` one tap
+/// away from `297 MB`, and a 2 TiB item as `2048.00 GB`. Only the parsing is
+/// local now; the ladder is the shared one.
+String formatActivitySize(dynamic bytes) {
   if (bytes == null) return '—';
 
   final value = switch (bytes) {
@@ -124,10 +133,9 @@ String formatSizeInGb(dynamic bytes) {
     _ => null,
   };
 
-  if (value == null) return '—';
+  if (value == null || !value.isFinite) return '—';
 
-  const bytesPerGb = 1024 * 1024 * 1024;
-  return '${(value / bytesPerGb).toStringAsFixed(2)} GB';
+  return formatReleaseSize(value.round());
 }
 
 String? formatCutoffSize(Map<String, dynamic> item, ServiceType serviceType) {
@@ -151,7 +159,7 @@ String? formatCutoffSize(Map<String, dynamic> item, ServiceType serviceType) {
     ServiceType.discover => null,
   };
 
-  final formattedSize = formatSizeInGb(size);
+  final formattedSize = formatActivitySize(size);
   return formattedSize == '—' ? null : formattedSize;
 }
 

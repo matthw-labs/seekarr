@@ -120,11 +120,13 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_animation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/reel_motion.dart';
 import 'package:seekarr/core/service_theme.dart';
 import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/pressable_scale.dart';
+import 'package:seekarr/core/widgets/reel_line.dart';
 import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
 import 'package:seekarr/core/widgets/status_badge.dart';
 import 'package:seekarr/features/services/domain/service_signal.dart';
@@ -600,6 +602,15 @@ class _DomainBandState extends ConsumerState<_DomainBand>
 
   @override
   Widget build(BuildContext context) {
+    // Resolved here, once per build — **not** inside the `AnimatedBuilder`.
+    //
+    // Nothing about "what is down and what wants attention" changes because the
+    // band happens to be 40% open, yet the rollup loop ran once per fold frame:
+    // a pass over every service in the domain, two provider reads each, plus the
+    // list and the joined string. At 120Hz that is the same answer recomputed
+    // 120 times a second for the duration of every open and close.
+    final rollup = _rollup();
+
     return Listener(
       // Not a `GestureDetector`: this must observe the touch without competing
       // for it, so the header's own tap and the cells' taps still win.
@@ -607,29 +618,36 @@ class _DomainBandState extends ConsumerState<_DomainBand>
       onPointerDown: _cancelDemo,
       child: AnimatedBuilder(
         animation: _controller,
-        builder: (context, _) => _build(context, _FoldPhase(_controller.value)),
+        // `child` is what an `AnimatedBuilder` is *for*, and this band was
+        // passing none. The rollup line is the costly part of the header —
+        // `ReelLine` shapes its text with a `TextPainter` inside a
+        // `LayoutBuilder`, memoised per span but still a subtree rebuilt on
+        // every frame — and none of it depends on the phase; only the `Opacity`
+        // wrapped around it does. Handed through as the identical widget
+        // instance, `Element.updateChild` short-circuits and the subtree is not
+        // rebuilt between frames at all.
+        child: _RollupLine(rollup: rollup),
+        builder: (context, child) => _build(
+          context,
+          _FoldPhase(_controller.value),
+          rollup: rollup,
+          rollupLine: child!,
+        ),
       ),
     );
   }
 
-  Widget _build(BuildContext context, _FoldPhase phase) {
-    final domain = widget.domain;
-    final services = widget.services;
-    final expanded = widget.expanded;
-
-    void toggle() {
-      HapticFeedback.selectionClick();
-      ref.read(expandedServiceDomainsProvider.notifier).toggle(domain);
-    }
-
-    // The folded band hides every card's figure, so the header carries the
-    // band's single most useful fact while it is shut: the count of services
-    // not answering, or failing that, the first live signal that wants
-    // attention. Watching these providers here costs no extra fetch — every
-    // cell in the band (compact ones included) already watches the same ones.
+  /// The folded band's single most useful fact.
+  ///
+  /// The band hides every card's figure while it is shut, so the header carries
+  /// the count of services not answering, or failing that the first live signal
+  /// that wants attention. Watching these providers here costs no extra fetch —
+  /// every cell in the band (compact ones included) already watches the same
+  /// ones.
+  String? _rollup() {
     var down = 0;
     String? attention;
-    for (final service in services) {
+    for (final service in widget.services) {
       final summary = ref.watch(serviceSummaryProvider(service));
       final reachability = switch (summary) {
         AsyncData(:final value) =>
@@ -653,7 +671,23 @@ class _DomainBandState extends ConsumerState<_DomainBand>
       if (attention != null) attention,
       if (down > 0) '$down down',
     ];
-    final rollup = rollupParts.isEmpty ? null : rollupParts.join(' · ');
+    return rollupParts.isEmpty ? null : rollupParts.join(' · ');
+  }
+
+  Widget _build(
+    BuildContext context,
+    _FoldPhase phase, {
+    required String? rollup,
+    required Widget rollupLine,
+  }) {
+    final domain = widget.domain;
+    final services = widget.services;
+    final expanded = widget.expanded;
+
+    void toggle() {
+      HapticFeedback.selectionClick();
+      ref.read(expandedServiceDomainsProvider.notifier).toggle(domain);
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -689,7 +723,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
             context,
             phase: phase,
             onToggle: toggle,
-            rollup: rollup,
+            rollupLine: rollupLine,
           ),
         ),
         // No `AnimatedSize`. The band's height is now an explicit lerp between
@@ -710,7 +744,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
     BuildContext context, {
     required _FoldPhase phase,
     required VoidCallback onToggle,
-    String? rollup,
+    required Widget rollupLine,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -755,17 +789,12 @@ class _DomainBandState extends ConsumerState<_DomainBand>
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
+                    // Only the opacity is on the fold's clock; the line inside
+                    // it arrives prebuilt from the `AnimatedBuilder`'s `child`
+                    // and is the same instance every frame.
                     child: Opacity(
                       opacity: (1 - phase.geometry).clamp(0, 1),
-                      child: Text(
-                        rollup ?? '',
-                        textAlign: TextAlign.end,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                      child: rollupLine,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -778,6 +807,41 @@ class _DomainBandState extends ConsumerState<_DomainBand>
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The one live figure on this screen that rolls.
+///
+/// It is the closed band's whole reason for having a header line — "3 pending ·
+/// 1 down" is the fact folding would otherwise swallow — so it is also the line
+/// worth animating when a service answers and the count drops.
+///
+/// The ellipsis is not decoration here and `ReelText` cannot produce one, which
+/// is exactly why this goes through [ReelLine]: it rolls while the rollup fits
+/// the trailing slot and hands back to a plain elliding `Text` when it does not.
+///
+/// Its own widget so the band can hoist it out of the fold's per-frame builder:
+/// [ReelLine] measures with a `TextPainter` inside a `LayoutBuilder` — memoised
+/// per span, so the shaping is paid once, but the rebuild around it is not free
+/// either — and none of that depends on how open the band is.
+class _RollupLine extends StatelessWidget {
+  const _RollupLine({required this.rollup});
+
+  final String? rollup;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ReelLine(
+      rollup ?? '',
+      options: ReelMotion.figure,
+      textAlign: TextAlign.end,
+      fallbackMaxLines: 1,
+      fallbackOverflow: TextOverflow.ellipsis,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
       ),
     );
   }

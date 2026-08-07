@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/widgets/selection_pills.dart';
+import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
 import 'package:seekarr/features/activity/presentation/activity_screen.dart';
 import 'package:seekarr/features/activity/presentation/widgets/activity_tab.dart';
 import 'package:seekarr/features/activity/presentation/widgets/requests_list.dart';
@@ -149,8 +152,8 @@ void main() {
     expect(find.text('Furiosa'), findsNothing);
   });
 
-  testWidgets('record-type pills appear only where a bucket has more than one '
-      'record type', (tester) async {
+  testWidgets('the Now bucket pills the two directions of traffic, not the '
+      'service axis', (tester) async {
     final scope = await settingsScope(configured: activityServiceKeys);
 
     await tester.pumpWidget(
@@ -176,10 +179,21 @@ void main() {
     // service strip, and those two controls filtered the same axis: "Requests"
     // selects Seerr's rows and "Queue" selects the three \*arrs', which is exactly
     // what picking a service in the strip does. Two stacked rows filtering one
-    // axis is what made the header read as a single confusing bank.
-    expect(find.byType(SelectionPills<int>), findsNothing);
+    // axis is what made the header read as a single confusing bank. Those pills
+    // are still gone, and must stay gone.
     expect(find.text('Queue'), findsNothing);
     expect(find.text('Requests'), findsNothing);
+
+    // The row is back, but on a genuinely different axis: ingress against egress.
+    // A download and a playback are two record types no service filter reaches
+    // one from the other, which is exactly the bar the surviving pills elsewhere
+    // had to clear. The bucket previously showed no row at all only because it
+    // held one type — and its label was "All", which was never true of a bucket
+    // that carried only the incoming half.
+    expect(find.byType(SelectionPills<int>), findsOneWidget);
+    expect(find.text('Downloading'), findsOneWidget);
+    expect(find.text('Streaming'), findsOneWidget);
+    expect(find.text('All'), findsNothing);
 
     await tester.tap(find.text('History'));
     await tester.pumpAndSettle();
@@ -220,6 +234,87 @@ void main() {
 
     expect(find.byType(SelectionPills<int>), findsOneWidget);
     expect(find.text('Blocklist'), findsOneWidget);
+  });
+
+  testWidgets('a poll tick refreshes in place instead of blanking the list', (
+    tester,
+  ) async {
+    // Regression: the bucket read `feedAsync.asData?.value`, which is null
+    // while a provider is *reloading* — and the "Now" bucket bumps
+    // `activityRefreshVersionProvider` every 15 seconds, which every feed
+    // provider watches. So on every tick the whole list was replaced by
+    // shimmer, the service strip's counts fell back to a dash, and the
+    // hairline "refreshing" bar the screen carries could never appear.
+    final scope = await settingsScope(configured: activityServiceKeys);
+    // The second fetch is held open on purpose: an in-flight reload is the
+    // whole state under test, and a fake that answers instantly never renders
+    // one.
+    final radarr = _GatedRadarrService(
+      queue: const [
+        {
+          'title': 'Furiosa.2024.2160p.WEB-DL-GROUP',
+          'status': 'downloading',
+          'size': 100,
+          'sizeleft': 25,
+          'movie': {'title': 'Furiosa', 'year': 2024},
+        },
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
+          secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
+          initialSettingsProvider.overrideWith((ref) => scope.settings),
+          initialOnboardingCompletedProvider.overrideWith((ref) => true),
+          requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
+          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+          radarrServiceProvider.overrideWith((ref) => radarr),
+          sonarrServiceProvider.overrideWith((ref) => FakeSonarrService()),
+          lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+        ],
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.text('Furiosa'), findsOneWidget);
+
+    // Drive the real mechanism: the 15s poll timer, not a hand-rolled bump.
+    await tester.pump(const Duration(seconds: 16));
+    expect(radarr.queueCalls, greaterThan(1));
+
+    // Mid-reload the previous feed is still on screen …
+    expect(find.text('Furiosa'), findsOneWidget);
+    // … and it is *not* the skeleton, which is what the user used to get.
+    expect(find.byType(ShimmerList), findsNothing);
+    // The strip still knows how many rows there are, rather than shrugging.
+    expect(find.text('–'), findsNothing);
+    // And the hairline refresh bar — dead code until now, because the flag that
+    // gates it could never be true — is the thing that says "updating".
+    expect(
+      tester
+          .widgetList<LinearProgressIndicator>(
+            find.byType(LinearProgressIndicator),
+          )
+          .any((bar) => bar.value == null),
+      isTrue,
+    );
+
+    // Let the refetch land; the row survives that too, and the bar goes away.
+    radarr.release();
+    await tester.pumpAndSettle();
+    expect(find.text('Furiosa'), findsOneWidget);
+    expect(find.byType(ShimmerList), findsNothing);
+    expect(
+      tester
+          .widgetList<LinearProgressIndicator>(
+            find.byType(LinearProgressIndicator),
+          )
+          .any((bar) => bar.value == null),
+      isFalse,
+    );
   });
 
   testWidgets('tapping a request pushes the requests screen with a way back', (
@@ -299,6 +394,26 @@ void main() {
 
     expect(find.byType(GlobalActivityScreen), findsOneWidget);
   });
+}
+
+/// Answers the first queue fetch immediately and holds every later one open
+/// until [release], so a test can inspect the screen mid-reload.
+class _GatedRadarrService extends FakeRadarrService {
+  _GatedRadarrService({required this.queue});
+
+  final List<dynamic> queue;
+  final Completer<List<dynamic>> _gate = Completer<List<dynamic>>();
+  int queueCalls = 0;
+
+  void release() {
+    if (!_gate.isCompleted) _gate.complete(queue);
+  }
+
+  @override
+  Future<List<dynamic>> getQueue({Map<String, dynamic>? queryParameters}) {
+    queueCalls++;
+    return queueCalls == 1 ? Future.value(queue) : _gate.future;
+  }
 }
 
 class _ActivityRadarrService extends FakeRadarrService {

@@ -14,7 +14,11 @@ final lidarrServiceProvider = Provider<LidarrService>((ref) {
     throw Exception('Lidarr not configured');
   }
   return LidarrService(
-    ApiClient(baseUrl: settings.lidarrUrl, apiKey: settings.lidarrApiKey),
+    ApiClient(
+      baseUrl: settings.lidarrUrl,
+      apiKey: settings.lidarrApiKey,
+      pinnedCertFingerprint: settings.pinForUrl(settings.lidarrUrl),
+    ),
   );
 });
 
@@ -108,8 +112,21 @@ class LidarrService with ArrActivityMixin {
   }
 
   /// Searches for artists by term using the lookup API.
-  Future<List<LidarrArtist>> lookupArtists(String term) async {
-    return lookupItems('artist/lookup', term, LidarrArtist.fromJson);
+  ///
+  /// [cancelToken] aborts the request once the search that asked for it has
+  /// been superseded — see [ArrActivityMixin.lookupItems], which owns the
+  /// empty-term guard, the isolate mapping and the degrade-to-`[]` rule the
+  /// three arr lookups share.
+  Future<List<LidarrArtist>> lookupArtists(
+    String term, {
+    CancelToken? cancelToken,
+  }) {
+    return lookupItems(
+      'artist/lookup',
+      term,
+      LidarrArtist.fromJson,
+      cancelToken: cancelToken,
+    );
   }
 
   /// Fetches all quality profiles.

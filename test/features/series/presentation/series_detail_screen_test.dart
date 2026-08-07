@@ -385,10 +385,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(
-        find.widgetWithIcon(OutlinedButton, Icons.more_horiz_rounded),
-      );
-      await tester.pumpAndSettle();
+      // Auto search is one of the two visible secondaries on an available
+      // series, so it is reached directly rather than through the sheet.
       await tester.tap(find.text('Auto search'));
       await tester.pumpAndSettle();
 

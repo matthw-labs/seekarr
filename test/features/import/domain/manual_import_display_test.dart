@@ -32,6 +32,69 @@ void main() {
     });
   });
 
+  group('manualImportFileNamesTitle', () {
+    test('a release-named file names its title', () {
+      for (final path in const [
+        '/downloads/Target Movie.mkv',
+        '/downloads/Target.Movie.2024.1080p.BluRay.x264-GRP.mkv',
+        '/downloads/target_movie_2024.mkv',
+      ]) {
+        expect(
+          manualImportFileNamesTitle('Target Movie', _item({'path': path})),
+          isTrue,
+          reason: path,
+        );
+      }
+    });
+
+    test('the release folder counts as the name too', () {
+      // The case the whole feature exists for: the service could not parse the
+      // file, but the folder it arrived in says plainly what it is.
+      final item = _item({
+        'path': '/downloads/Target Movie (2024)/a1b2c3.mkv',
+        'folderName': 'Target Movie (2024)',
+        'relativePath': 'a1b2c3.mkv',
+      });
+      expect(manualImportFileNamesTitle('Target Movie', item), isTrue);
+    });
+
+    test('a leading article on either side is not a difference', () {
+      final item = _item({'path': '/downloads/Batman.2022.1080p.mkv'});
+      expect(manualImportFileNamesTitle('The Batman', item), isTrue);
+    });
+
+    test('a different film does not name the target', () {
+      for (final path in const [
+        '/downloads/Some Other Movie.mkv',
+        '/downloads/Target.mkv',
+        '/downloads/Movie Target.mkv',
+        '/downloads/a1b2c3.mkv',
+      ]) {
+        expect(
+          manualImportFileNamesTitle('Target Movie', _item({'path': path})),
+          isFalse,
+          reason: path,
+        );
+      }
+    });
+
+    test('the scan root never vouches for what is under it', () {
+      // Checking the absolute path would make every file in `/media/The Matrix`
+      // a Matrix file, which is precisely the over-reach being guarded against.
+      final item = _item({
+        'path': '/media/The Matrix/unrelated.mkv',
+        'folderName': 'unrelated-release',
+        'relativePath': 'unrelated.mkv',
+      });
+      expect(manualImportFileNamesTitle('The Matrix', item), isFalse);
+    });
+
+    test('an empty title matches nothing', () {
+      final item = _item({'path': '/downloads/Target Movie.mkv'});
+      expect(manualImportFileNamesTitle('   ', item), isFalse);
+    });
+  });
+
   group('manualImportGroupTitle', () {
     test('groups by the matched media title per service', () {
       expect(

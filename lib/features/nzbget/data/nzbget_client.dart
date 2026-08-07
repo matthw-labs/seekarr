@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import 'package:seekarr/core/network/cert_trust.dart';
 import 'package:seekarr/core/network/connection_failure.dart';
+import 'package:seekarr/core/network/redirect_guard.dart';
 import 'package:seekarr/core/utils/url_utils.dart';
 import 'package:seekarr/features/nzbget/domain/models/nzbget_models.dart';
 
@@ -28,8 +30,17 @@ class NzbgetException implements Exception, HasFailureReason {
 /// standard §10.2 #9); the credentials only ever travel in the `Authorization`
 /// header, never in the URL.
 class NzbgetClient {
-  NzbgetClient({required String url, this.username, this.password, Dio? dio})
-    : baseUrl = UrlUtils.normalizeBaseUrl(url) {
+  /// [certFingerprint], when non-empty, is a self-signed certificate the user
+  /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
+  /// when [dio] is injected — a caller supplying its own transport owns its
+  /// TLS behaviour too.
+  NzbgetClient({
+    required String url,
+    this.username,
+    this.password,
+    Dio? dio,
+    String? certFingerprint,
+  }) : baseUrl = UrlUtils.normalizeBaseUrl(url) {
     _dio =
         dio ??
         Dio(
@@ -37,8 +48,25 @@ class NzbgetClient {
             baseUrl: baseUrl,
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 15),
+            // Follow redirects by hand so the Basic credential is never
+            // replayed to a host the user did not configure. `dart:io` is not
+            // enough on its own: it copies `Authorization` when the redirect
+            // target is a *parent* of the original host, so
+            // `nzbget.homelab.net` → `homelab.net` hands the password over —
+            // and on a home network that apex is usually a shared reverse proxy
+            // or a wildcard catch-all.
+            followRedirects: false,
+            validateStatus: allowRedirectStatus,
           ),
         );
+    if (dio == null) {
+      _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
+      final adapter = pinnedHttpClientAdapterFor(
+        baseUrl,
+        pinnedFingerprint: certFingerprint,
+      );
+      if (adapter != null) _dio.httpClientAdapter = adapter;
+    }
   }
 
   final String baseUrl;

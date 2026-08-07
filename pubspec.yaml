@@ -46,6 +46,17 @@ dependencies:
   shared_preferences: ^2.5.3
   flutter_secure_storage: ^10.2.0
   cached_network_image: ^3.4.1
+  # Promoted from a transitive dependency of `cached_network_image` so
+  # `lib/core/network/pinned_image_cache.dart` can build a per-origin
+  # `CacheManager`/`HttpFileService` pinned to a trusted self-signed
+  # certificate (ADR-6) — posters from an arr instance behind one would
+  # otherwise stay broken even after the API transport is pinned, since
+  # `cached_network_image` fetches over its own HTTP stack.
+  flutter_cache_manager: ^3.4.1
+  # Promoted for the same reason: `HttpFileService` takes a `package:http`
+  # `Client`, and `IOClient` is what lets it wrap our pinned `dart:io`
+  # `HttpClient`.
+  http: ^1.6.0
   flutter_svg: ^2.2.3
   infinite_scroll_pagination: ^5.1.1
   url_launcher: ^6.3.2
@@ -55,8 +66,31 @@ dependencies:
   # Referenced directly for the custom WebSocket connector that pins a trusted
   # self-signed certificate on the Dockge Socket.IO connection.
   web_socket: ^1.0.1
+  # Carries one long-running release search across app suspension on iOS and
+  # Android. Its `DataTask` is routed onto a real background `URLSession`, which
+  # is what lets a multi-minute request survive being backgrounded — and needs no
+  # `UIBackgroundModes`, so there is nothing to justify at App Store review. Two
+  # of its defaults are actively wrong for this use and are overridden at startup
+  # in `main.dart`: `requestTimeout` (60s "waiting for more data", and our server
+  # sends nothing for minutes) and `doRescheduleKilledTasks` (would silently
+  # re-run a killed search against the user's indexers).
+  background_downloader: ^9.5.7
+  # Tells the user a background search finished. Only `POST_NOTIFICATIONS` is
+  # required, because `zonedSchedule` is never called — which is what keeps this
+  # clear of the Play-restricted exact-alarm permissions.
+  flutter_local_notifications: ^22.2.0
   # SHA-256 fingerprints for trust-on-first-use TLS certificate pinning.
   crypto: ^3.0.0
+  # Grapheme-slot text rolling, used only where a *changing* value is the
+  # information: live figures, state words, command labels. Pure Dart, no
+  # platform channels, no transitive dependencies — see `lib/core/reel_motion.dart`
+  # for the one place its timing is chosen.
+  #
+  # Pinned to an exact version on purpose. It is pre-1.0 with a single
+  # maintainer, and it reaches into `TextPainter`, dry layout and baseline
+  # metrics — the part of Flutter most likely to move under it. A caret here
+  # would let a patch release change text layout across the app unreviewed.
+  reel_text: 0.4.3
 
 dependency_overrides:
   # path_provider_foundation 2.6.0 pulls in objective_c native assets,
@@ -89,6 +123,12 @@ flutter:
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter.ttf
+
+  assets:
+    # The product mark — the Cupola seen from above: six lit window panes on the
+    # hexagon's edge midpoints, around the central circular window. Rendered from
+    # `assets/brand/cupola_mark.svg`, which is the vector source of record.
+    - assets/brand/seekarr_mark.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

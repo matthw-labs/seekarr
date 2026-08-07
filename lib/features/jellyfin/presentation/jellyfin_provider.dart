@@ -20,15 +20,31 @@ import 'package:seekarr/features/stream/domain/stream_server_client.dart';
 /// every dependent lens. That is why the browse family below is keyed by
 /// (library, lens, page) and not by viewer: the viewer is part of *which client
 /// you are talking to*, not part of a page's identity.
+/// Field-by-field `select`, not a bare `watch` of the whole `SettingsModel`, and
+/// that is a correctness point rather than a micro-optimisation: this provider
+/// closes a live `Dio` in `onDispose`, so rebuilding it cancels every in-flight
+/// Stream request and invalidates every surface downstream. Watching the whole
+/// object made a theme-mode toggle do exactly that. Same shape as
+/// `truenasClientProvider`.
 final jellyfinClientProvider = Provider<JellyfinClient>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (settings.jellyfinUrl.isEmpty || settings.jellyfinApiKey.isEmpty) {
+  final url = ref.watch(currentSettingsProvider.select((s) => s.jellyfinUrl));
+  final apiKey = ref.watch(
+    currentSettingsProvider.select((s) => s.jellyfinApiKey),
+  );
+  final userId = ref.watch(
+    currentSettingsProvider.select((s) => s.jellyfinUserId),
+  );
+  final certFingerprint = ref.watch(
+    currentSettingsProvider.select((s) => s.pinForUrl(s.jellyfinUrl)),
+  );
+  if (url.isEmpty || apiKey.isEmpty) {
     throw Exception('Jellyfin not configured');
   }
   final client = JellyfinClient(
-    baseUrl: settings.jellyfinUrl,
-    apiKey: settings.jellyfinApiKey,
-    userId: settings.jellyfinUserId,
+    baseUrl: url,
+    apiKey: apiKey,
+    userId: userId,
+    pinnedCertFingerprint: certFingerprint,
   );
   ref.onDispose(client.close);
   return client;
@@ -116,11 +132,13 @@ typedef JellyfinLibraryPageKey = ({
 ///
 /// The request is cancelled if the page is disposed before it lands, which for a
 /// list the user is scrolling quickly is most of them.
-final jellyfinLibraryItemsProvider =
-    FutureProvider.family<List<StreamItem>, JellyfinLibraryPageKey>((
-      ref,
-      key,
-    ) async {
+///
+/// `autoDispose` is what makes that sentence true. Without it a family entry is
+/// never disposed, so the `onDispose` cancellation below was dead wiring *and*
+/// every page of every library the user ever scrolled — fifty `StreamItem`s
+/// each — stayed resident for the life of the app.
+final jellyfinLibraryItemsProvider = FutureProvider.autoDispose
+    .family<List<StreamItem>, JellyfinLibraryPageKey>((ref, key) async {
       final client = ref.watch(jellyfinServerProvider);
       final cancelToken = CancelToken();
       ref.onDispose(cancelToken.cancel);
@@ -137,21 +155,23 @@ final jellyfinLibraryItemsProvider =
 ///
 /// Resolves from the id alone so `ServiceRoutes.jellyfinItem` works as a deep
 /// link; `state.extra` stays preload/Hero data only.
-final jellyfinItemProvider = FutureProvider.family<StreamItem?, String>((
-  ref,
-  itemId,
-) async {
-  final client = ref.watch(jellyfinServerProvider);
-  final cancelToken = CancelToken();
-  ref.onDispose(cancelToken.cancel);
-  return client.getItem(itemId, cancelToken: cancelToken);
-});
+///
+/// `autoDispose` for the same two reasons as the browse family above: every item
+/// ever opened would otherwise be retained forever, and the cancellation below
+/// would never fire.
+final jellyfinItemProvider = FutureProvider.autoDispose
+    .family<StreamItem?, String>((ref, itemId) async {
+      final client = ref.watch(jellyfinServerProvider);
+      final cancelToken = CancelToken();
+      ref.onDispose(cancelToken.cancel);
+      return client.getItem(itemId, cancelToken: cancelToken);
+    });
 
 /// The children of a series, season or album — seasons, episodes or tracks.
 ///
 /// Empty for a leaf item, which the client answers without a request.
-final jellyfinItemChildrenProvider =
-    FutureProvider.family<List<StreamItem>, String>((ref, itemId) async {
+final jellyfinItemChildrenProvider = FutureProvider.autoDispose
+    .family<List<StreamItem>, String>((ref, itemId) async {
       final client = ref.watch(jellyfinServerProvider);
       final cancelToken = CancelToken();
       ref.onDispose(cancelToken.cancel);

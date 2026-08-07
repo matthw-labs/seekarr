@@ -18,15 +18,29 @@ import 'package:seekarr/features/stream/domain/stream_server_client.dart';
 /// `plexClientId` is read but never generated here: `SettingsService` mints it
 /// once and persists it, because Plex registers a new device row against the
 /// user's server for every distinct `X-Plex-Client-Identifier` it sees.
+///
+/// Field-by-field `select` rather than a bare watch of the whole
+/// `SettingsModel`, for the same reason `jellyfinClientProvider` does it: this
+/// provider closes a live `Dio` in `onDispose`, so any rebuild kills in-flight
+/// requests and cascades an invalidation through every Stream surface. Watching
+/// the whole settings object meant a theme-mode toggle did that.
 final plexClientProvider = Provider<PlexClient>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (settings.plexUrl.isEmpty || settings.plexToken.isEmpty) {
+  final url = ref.watch(currentSettingsProvider.select((s) => s.plexUrl));
+  final token = ref.watch(currentSettingsProvider.select((s) => s.plexToken));
+  final clientId = ref.watch(
+    currentSettingsProvider.select((s) => s.plexClientId),
+  );
+  final certFingerprint = ref.watch(
+    currentSettingsProvider.select((s) => s.pinForUrl(s.plexUrl)),
+  );
+  if (url.isEmpty || token.isEmpty) {
     throw Exception('Plex not configured');
   }
   final client = PlexClient(
-    url: settings.plexUrl,
-    token: settings.plexToken,
-    clientIdentifier: settings.plexClientId,
+    url: url,
+    token: token,
+    clientIdentifier: clientId,
+    pinnedCertFingerprint: certFingerprint,
   );
   ref.onDispose(client.close);
   return client;
@@ -87,11 +101,16 @@ typedef PlexLibraryPageKey = ({
 /// No viewer is passed. On Plex the token *is* the user: `/library/*` takes no
 /// impersonation parameter, so every lens answers for the token's owner and a
 /// viewer key would be a parameter with no effect. See `PlexClient.getViewers`.
-final plexLibraryItemsProvider =
-    FutureProvider.family<PlexPage<StreamItem>, PlexLibraryPageKey>((
-      ref,
-      key,
-    ) async {
+///
+/// Null when the request failed, which an empty page is not: see
+/// `StreamLibraryPage`. A caller that only wants rows should say
+/// `?.items ?? const []` and be explicit about flattening the two.
+///
+/// `autoDispose`, like every per-page and per-item family here: a browse the
+/// user has left holds fifty `StreamItem`s per page, and a family entry that is
+/// never disposed keeps every one of them for the life of the app.
+final plexLibraryItemsProvider = FutureProvider.autoDispose
+    .family<PlexPage<StreamItem>?, PlexLibraryPageKey>((ref, key) async {
       return ref
           .watch(plexClientProvider)
           .getLibraryItemsPage(
@@ -107,28 +126,23 @@ final plexLibraryItemsProvider =
 /// Separate from [plexLibrariesProvider] because Plex puts no count on a
 /// section: the number costs one extra request per library, so it is fetched
 /// where it is shown rather than N times on every dashboard load.
-final plexLibraryItemCountProvider = FutureProvider.family<int?, String>((
-  ref,
-  libraryId,
-) async {
-  return ref.watch(plexClientProvider).getLibraryItemCount(libraryId);
-});
+final plexLibraryItemCountProvider = FutureProvider.autoDispose
+    .family<int?, String>((ref, libraryId) async {
+      return ref.watch(plexClientProvider).getLibraryItemCount(libraryId);
+    });
 
 /// One item at any depth — film, show, season, episode, album or track.
-final plexItemProvider = FutureProvider.family<StreamItem?, String>((
-  ref,
-  ratingKey,
-) async {
-  return ref.watch(plexClientProvider).getItem(ratingKey);
-});
+final plexItemProvider = FutureProvider.autoDispose.family<StreamItem?, String>(
+  (ref, ratingKey) async {
+    return ref.watch(plexClientProvider).getItem(ratingKey);
+  },
+);
 
 /// The children of a show, season or album.
-final plexChildrenProvider = FutureProvider.family<List<StreamItem>, String>((
-  ref,
-  ratingKey,
-) async {
-  return ref.watch(plexClientProvider).getChildren(ratingKey);
-});
+final plexChildrenProvider = FutureProvider.autoDispose
+    .family<List<StreamItem>, String>((ref, ratingKey) async {
+      return ref.watch(plexClientProvider).getChildren(ratingKey);
+    });
 
 /// In-progress playback across every library.
 final plexContinueWatchingProvider = FutureProvider<List<StreamItem>>((

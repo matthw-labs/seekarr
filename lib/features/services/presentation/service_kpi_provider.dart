@@ -27,6 +27,10 @@ import 'package:seekarr/features/series/presentation/series_provider.dart';
 import 'package:seekarr/features/services/domain/service_signal.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
+import 'package:seekarr/features/npm/domain/models/npm_models.dart';
+import 'package:seekarr/features/npm/presentation/npm_provider.dart';
+import 'package:seekarr/features/transmission/domain/models/transmission_models.dart';
+import 'package:seekarr/features/transmission/presentation/transmission_provider.dart';
 import 'package:seekarr/features/truenas/presentation/truenas_provider.dart';
 import 'package:seekarr/features/unraid/domain/models/unraid_models.dart';
 import 'package:seekarr/features/unraid/presentation/unraid_provider.dart';
@@ -64,6 +68,10 @@ final serviceKpiProvider = FutureProvider.autoDispose
           return _nzbgetKpis(ref);
         case ServiceKey.unraid:
           return _unraidKpis(ref);
+        case ServiceKey.transmission:
+          return _transmissionKpis(ref);
+        case ServiceKey.nginxProxyManager:
+          return _npmKpis(ref);
         case ServiceKey.jellyfin:
           return _streamKpis(
             ref.watch(jellyfinSessionsProvider.future),
@@ -299,9 +307,19 @@ Future<List<ServiceKpi>> _seerrKpis(Ref ref) async {
   var processing = 0;
   var available = 0;
   for (final r in requests) {
+    // Pending counts the requests that still need a decision, so it reads the
+    // request's OWN status — the same source `request_ordering.dart`,
+    // `seerr_request_filter.dart` and the /activity tiles read, and for the same
+    // documented reason. `displayStatus` answers a different question: it lets
+    // the media's availability override the request, so a request still in
+    // pendingApproval whose media Radarr already holds reports "Available" —
+    // which is how this KPI came to show "Pending 0" while /activity was
+    // offering an Approve button for that very record.
+    if (r.status == RequestStatus.pendingApproval) pending++;
+
+    // The other two stay on displayStatus, which is the right source for them:
+    // they describe where the media is, not what the request needs.
     switch (r.displayStatus.kind) {
-      case SeerrRequestDisplayKind.pending:
-        pending++;
       case SeerrRequestDisplayKind.approved:
       case SeerrRequestDisplayKind.processing:
         processing++;
@@ -309,6 +327,7 @@ Future<List<ServiceKpi>> _seerrKpis(Ref ref) async {
       case SeerrRequestDisplayKind.partiallyAvailable:
       case SeerrRequestDisplayKind.completed:
         available++;
+      case SeerrRequestDisplayKind.pending:
       case SeerrRequestDisplayKind.declined:
       case SeerrRequestDisplayKind.failed:
       case SeerrRequestDisplayKind.deleted:
@@ -573,6 +592,101 @@ Future<List<ServiceKpi>> _nzbgetKpis(Ref ref) async {
           ? Icons.pause_circle_rounded
           : Icons.play_circle_rounded,
       accent: _warnIf(status.paused),
+    ),
+  ];
+}
+
+/// Transmission's rail, shaped like qBittorrent's so the two torrent clients
+/// read the same way in the matrix — `Down` first, flagged while bytes are
+/// actually moving, so the resting cell says "0 B/s" rather than a library
+/// total.
+Future<List<ServiceKpi>> _transmissionKpis(Ref ref) async {
+  final results = await Future.wait([
+    ref.watch(transmissionStatsProvider.future),
+    ref.watch(transmissionTorrentsProvider.future),
+  ]);
+  final stats = results[0] as TransmissionStats;
+  final torrents = results[1] as List<TransmissionTorrent>;
+  final downloading = torrents.where((t) => t.status.isIncoming).length;
+  final stalled = torrents.where((t) => t.warning != null).length;
+
+  return [
+    ServiceKpi(
+      label: 'Down',
+      value: stats.downloadSpeedLabel,
+      icon: Icons.south_rounded,
+      accent: _warnIf(stats.downloadSpeed > 0),
+    ),
+    ServiceKpi(
+      label: 'Up',
+      value: stats.uploadSpeedLabel,
+      icon: Icons.north_rounded,
+    ),
+    ServiceKpi(
+      label: 'Active',
+      value: '${stats.activeTorrentCount}',
+      icon: Icons.bolt_rounded,
+    ),
+    ServiceKpi(
+      label: 'Downloading',
+      value: '$downloading',
+      icon: Icons.download_rounded,
+    ),
+    ServiceKpi(
+      label: 'Stalled',
+      value: '$stalled',
+      icon: Icons.report_gmailerrorred_rounded,
+      accent: _warnIf(stalled > 0),
+    ),
+  ];
+}
+
+/// Nginx Proxy Manager's rail.
+///
+/// `Offline` is the metric that earns its place: a reverse proxy is either
+/// serving every hostname it claims or it is not, and a host that is switched on
+/// while nginx has refused its configuration is invisible from every other
+/// screen in the app — the site simply stops answering. Expiring certificates
+/// are the second, for the same reason a day later.
+Future<List<ServiceKpi>> _npmKpis(Ref ref) async {
+  final results = await Future.wait([
+    ref.watch(npmProxyHostsProvider.future),
+    ref.watch(npmCertificatesProvider.future),
+  ]);
+  final hosts = results[0] as List<NpmProxyHost>;
+  final certificates = results[1] as List<NpmCertificate>;
+  final now = DateTime.now();
+  final broken = hosts.where((h) => h.hasConfigError).length;
+  final disabled = hosts.where((h) => !h.enabled).length;
+  final expiring = certificates.where((c) => c.isExpiringSoon(now)).length;
+
+  return [
+    ServiceKpi(
+      label: 'Offline',
+      value: '$broken',
+      icon: Icons.error_outline_rounded,
+      accent: _warnIf(broken > 0),
+    ),
+    ServiceKpi(
+      label: 'Hosts',
+      value: '${hosts.length}',
+      icon: Icons.alt_route_rounded,
+    ),
+    ServiceKpi(
+      label: 'Expiring',
+      value: '$expiring',
+      icon: Icons.lock_clock_rounded,
+      accent: _warnIf(expiring > 0),
+    ),
+    ServiceKpi(
+      label: 'Certificates',
+      value: '${certificates.length}',
+      icon: Icons.lock_outline_rounded,
+    ),
+    ServiceKpi(
+      label: 'Disabled',
+      value: '$disabled',
+      icon: Icons.pause_circle_rounded,
     ),
   ];
 }

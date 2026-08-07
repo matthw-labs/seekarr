@@ -25,10 +25,24 @@ class SeriesSeasonsList extends StatelessWidget {
   final List<SonarrSeason> seasons;
 
   final AsyncValue<List<SonarrEpisode>> episodesAsync;
+
+  /// Optional background-search indicators, injected rather than resolved here.
+  ///
+  /// This widget is deliberately provider-free — it takes callbacks and sets, not
+  /// providers — so the caller supplies these and a test needs no `ProviderScope`.
+  /// Both default to nothing, which is also the correct state when the feature
+  /// has no job for that row.
+  final Widget Function(int seasonNumber)? seasonIndicator;
+  final Widget Function(SonarrEpisode episode)? episodeIndicator;
   final void Function(int seasonNumber) onSearchSeason;
   final void Function(int seasonNumber) onInteractiveSearchSeason;
   final void Function(int episodeId) onSearchEpisode;
-  final void Function(int episodeId) onInteractiveSearchEpisode;
+
+  /// Carries the season alongside the episode: without it the release-search
+  /// entry point cannot tell that this episode is covered by a season search
+  /// that may already be running, and would start a second overlapping pass.
+  final void Function(int episodeId, int seasonNumber)
+  onInteractiveSearchEpisode;
   final Set<int> searchingSeasons;
   final Set<int> searchingEpisodes;
 
@@ -40,6 +54,8 @@ class SeriesSeasonsList extends StatelessWidget {
     super.key,
     required this.seasons,
     required this.episodesAsync,
+    this.seasonIndicator,
+    this.episodeIndicator,
     required this.onSearchSeason,
     required this.onInteractiveSearchSeason,
     required this.onSearchEpisode,
@@ -58,6 +74,7 @@ class SeriesSeasonsList extends StatelessWidget {
     return MediaChildGroupSliver(
       accent: accent,
       pickerTitle: 'Seasons',
+      childNoun: 'episodes',
       pickerLabel: 'All ${ordered.length} seasons',
       groups: ordered
           .map(
@@ -79,12 +96,19 @@ class SeriesSeasonsList extends StatelessWidget {
             'up on its next refresh.',
         accentColor: accent,
       ),
-      groupAction: (context, group) => MediaSearchPopupMenu(
-        onAutoSearch: () => onSearchSeason(group.id),
-        onInteractiveSearch: () => onInteractiveSearchSeason(group.id),
-        isLoading: searchingSeasons.contains(group.id),
-        iconSize: 18,
-        tooltip: 'Search ${group.label}',
+      groupAction: (context, group) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (seasonIndicator != null)
+            Flexible(child: seasonIndicator!(group.id)),
+          MediaSearchPopupMenu(
+            onAutoSearch: () => onSearchSeason(group.id),
+            onInteractiveSearch: () => onInteractiveSearchSeason(group.id),
+            isLoading: searchingSeasons.contains(group.id),
+            iconSize: 18,
+            tooltip: 'Search ${group.label}',
+          ),
+        ],
       ),
       childOverride: (context, group) =>
           _childOverride(context, group, episodesBySeason),
@@ -150,12 +174,21 @@ class SeriesSeasonsList extends StatelessWidget {
       // the rows a search would actually change: nothing on disk, aired, and not
       // already in the pipeline. The season menu above still covers the rest.
       trailing: _isSearchable(status)
-          ? MediaSearchPopupMenu(
-              onAutoSearch: () => onSearchEpisode(episode.id),
-              onInteractiveSearch: () => onInteractiveSearchEpisode(episode.id),
-              isLoading: searchingEpisodes.contains(episode.id),
-              iconSize: 18,
-              tooltip: 'Search episode ${episode.episodeNumber}',
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (episodeIndicator != null) episodeIndicator!(episode),
+                MediaSearchPopupMenu(
+                  onAutoSearch: () => onSearchEpisode(episode.id),
+                  onInteractiveSearch: () => onInteractiveSearchEpisode(
+                    episode.id,
+                    episode.seasonNumber,
+                  ),
+                  isLoading: searchingEpisodes.contains(episode.id),
+                  iconSize: 18,
+                  tooltip: 'Search episode ${episode.episodeNumber}',
+                ),
+              ],
             )
           : null,
     );

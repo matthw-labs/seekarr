@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:seekarr/features/bazarr/data/bazarr_service.dart';
@@ -359,6 +360,119 @@ void main() {
 
       expect(client.lastDeletePath, '/api/system/jobs');
       expect(client.lastDeleteQueryParameters, {'id': 'j1'});
+    });
+  });
+
+  group('BazarrService.searchLibrary', () {
+    /// The two GETs a library snapshot makes: `/api/series` then `/api/movies`.
+    void seedLibrary(FakeApiClient client) {
+      client.getResponseQueue.addAll([
+        {
+          'data': [
+            {'sonarrSeriesId': 5, 'title': 'Foundation'},
+            {'sonarrSeriesId': 6, 'title': 'The Boys'},
+            {'sonarrSeriesId': 7},
+          ],
+          'total': 3,
+        },
+        {
+          'data': [
+            {'radarrId': 11, 'title': 'Dune'},
+            {'radarrId': 12, 'title': 'Foundation: The Movie'},
+          ],
+          'total': 2,
+        },
+      ]);
+    }
+
+    test('matches series and movies by title, case-insensitively', () async {
+      final client = FakeApiClient();
+      seedLibrary(client);
+      final service = BazarrService(client);
+
+      final hits = await service.searchLibrary('FOUND');
+
+      expect(hits.map((hit) => hit.id), [5, 12]);
+      expect(hits.map((hit) => hit.isMovie), [false, true]);
+      expect(hits.map((hit) => hit.title), [
+        'Foundation',
+        'Foundation: The Movie',
+      ]);
+    });
+
+    test('returns nothing, and asks nothing, for a blank query', () async {
+      final client = FakeApiClient();
+      final service = BazarrService(client);
+
+      expect(await service.searchLibrary('   '), isEmpty);
+      expect(client.getCallCount, 0);
+    });
+
+    test('reuses the snapshot instead of re-downloading the library', () async {
+      final client = FakeApiClient();
+      seedLibrary(client);
+      final service = BazarrService(client);
+
+      await service.searchLibrary('dune');
+      await service.searchLibrary('dun');
+      await service.searchLibrary('du');
+
+      // Bazarr has no search endpoint, so each query used to pull both lists in
+      // full — up to 1000 records per debounced keystroke pause.
+      expect(client.getCallCount, 2);
+    });
+
+    test('shares a fetch already in flight', () async {
+      final client = FakeApiClient();
+      seedLibrary(client);
+      final service = BazarrService(client);
+
+      final results = await Future.wait([
+        service.searchLibrary('dune'),
+        service.searchLibrary('boys'),
+      ]);
+
+      expect(client.getCallCount, 2);
+      expect(results.first.single.title, 'Dune');
+      expect(results[1].single.title, 'The Boys');
+    });
+
+    test('a superseded query skips the match but keeps the snapshot', () async {
+      final client = FakeApiClient();
+      seedLibrary(client);
+      final service = BazarrService(client);
+      final cancelToken = CancelToken()..cancel();
+
+      final hits = await service.searchLibrary(
+        'found',
+        cancelToken: cancelToken,
+      );
+
+      // Cancelling cannot abort the download — it is shared with whatever query
+      // comes next (see `_libraryIndex`) — so the snapshot still lands and the
+      // successor reads it without a second round trip.
+      expect(hits, isEmpty);
+      expect(client.getCallCount, 2);
+      expect((await service.searchLibrary('found')).map((hit) => hit.id), [
+        5,
+        12,
+      ]);
+      expect(client.getCallCount, 2);
+    });
+
+    test('a failed round does not poison the next query', () async {
+      final client = FakeApiClient()..getException = Exception('bazarr down');
+      final service = BazarrService(client);
+
+      await expectLater(service.searchLibrary('dune'), throwsA(isA<Object>()));
+
+      // The in-flight future is released on failure too, or every later query
+      // would await a future that already lost.
+      client.getException = null;
+      seedLibrary(client);
+      final hits = await service.searchLibrary('dune');
+
+      expect(hits.single.title, 'Dune');
     });
   });
 }

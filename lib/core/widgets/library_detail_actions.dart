@@ -103,17 +103,46 @@ class MediaPrimaryAction {
 ///   monitored series used to read "Unmonitor", which is not what anyone opened
 ///   the page for. It is replaced with *nothing* rather than with another search
 ///   that can churn a library; "find a better release" stays reachable as
-///   Interactive search in the overflow.
+///   Interactive search beside it.
 /// * **An action is withheld, never disabled.** [MediaActionKind.none] renders
 ///   no button, and the consequence carries the page instead.
 /// * **Monitoring is not an action.** It is a persistent binary of the user's
 ///   copy, so it lives in the overflow — except at the one rung where *not*
 ///   monitoring is the reason nothing is happening.
+///
+/// **A button names its MECHANISM; the consequence sentence names the SITUATION.**
+/// There are exactly two search mechanisms and therefore exactly two labels:
+/// `Auto search` for [MediaActionKind.search], which hands the decision to the
+/// service, and `Interactive search` for [MediaActionKind.interactiveSearch],
+/// which hands it to the user. Nothing else may name a search.
+///
+/// This replaced four names for the automatic search (`Find releases`,
+/// `Find missing`, `Auto search`) and three for the interactive one
+/// (`Find an upgrade`, `Find another release`, `Interactive search`) — seven
+/// labels for two behaviours. Worse, the state-shaped names pointed the wrong
+/// way: `Find releases` reads as *show me the releases*, which is the
+/// interactive behaviour, while the button it sat on performed the automatic
+/// grab. On a rung where both mechanisms are on screen at once — a missing title
+/// promotes the automatic one and shows the interactive one beside it — the user
+/// could not tell which was which, and the label was the reason.
+///
+/// The per-state nuance those names carried is not lost, it moved to where state
+/// belongs: `partial` says "Part of this is on disk; Radarr is hunting the rest.",
+/// `upgradable` says "The file is below your quality cutoff, so Radarr keeps
+/// looking." The button says how, the sentence says why.
 MediaPrimaryAction resolveMediaAction(
   MediaStatusInfo status,
   MediaActionCapabilities caps, {
   required String serviceName,
+
+  /// A whole clause for the `partial` rung, count first: `41 of 48 episodes are
+  /// on disk.` A host supplies it because only the host knows the child noun.
   String? partialSummary,
+
+  /// A **tail** for the `unavailable` rung, not a whole sentence: it completes
+  /// `There's nothing to search for until …`, so pass `Jul 17, 2026` and never
+  /// `Out on Jul 17, 2026.`. A tail keeps the stem inside the ladder's voice and
+  /// puts the date last, where changing it cannot reflow the prose before it.
   String? consequenceOverride,
 }) {
   final pipeline = status.pipeline;
@@ -121,15 +150,29 @@ MediaPrimaryAction resolveMediaAction(
   if (pipeline != null) {
     switch (pipeline) {
       case MediaPipeline.clientUnavailable:
-        return _queueOrNothing(caps, 'The download client is not answering.');
+        // Names the component that is down and the consequence the badge
+        // withholds: the whole queue is frozen, not just this title. "The
+        // download client" and never a brand name — the app does not know which
+        // client is configured.
+        return _queueOrNothing(
+          caps,
+          'Nothing moves until the download client answers.',
+        );
       case MediaPipeline.failed:
+        // The attributed frame REPLACES the fallback clause; it is never
+        // appended after it, or the sentence claims two different things.
+        final reported = _reports(serviceName, status.detail);
         return _findAnotherRelease(
           caps,
-          status.detail ?? 'The transfer failed.',
+          "This release won't finish. ${reported ?? 'Another one might.'}",
         );
       case MediaPipeline.importBlocked:
+        // The fact the badge withholds leads: the bytes arrived safely and the
+        // blockage is at the import step. Deliberately no detail frame here —
+        // on this rung the service's message is usually a path-length wall of
+        // text, and the promoted verb has already done the sentence's job.
         final consequence =
-            'The download finished but $serviceName could not import it.';
+            'The download is done; $serviceName needs a hand importing it.';
         if (caps.canImport) {
           return MediaPrimaryAction(
             kind: MediaActionKind.manualImport,
@@ -143,26 +186,76 @@ MediaPrimaryAction resolveMediaAction(
         final percent = status.progressPercent;
         return _findAnotherRelease(
           caps,
-          percent == null ? 'Stalled.' : 'Stalled at $percent%.',
+          percent == null
+              ? 'No bytes are moving on this transfer right now.'
+              // The figure is the last thing in the sentence, so 5% -> 43% ->
+              // 100% never reflows a word beside it.
+              : 'No bytes are moving right now; it sits at $percent%.',
         );
+      // These five shared one branch that printed `detail ?? pipeline.label`
+      // plus an appended percentage — the badge's own word with a diagnostic
+      // stapled to it, which is the worst restatement on the ladder. Each rung
+      // now says what follows from itself instead.
       case MediaPipeline.queued:
-      case MediaPipeline.downloading:
-      case MediaPipeline.importPending:
-      case MediaPipeline.importing:
-      case MediaPipeline.paused:
-        final base = status.detail ?? pipeline.label;
-        final percent = status.progressPercent;
         return _queueOrNothing(
           caps,
-          percent == null ? base : '$base · $percent%',
+          _withWarning(
+            status,
+            serviceName,
+            // Deliberately silent about *whose* turn: true of both a client
+            // queue and a service-side release delay.
+            "This title is waiting its turn; no bytes have moved yet.",
+          ),
+        );
+      case MediaPipeline.downloading:
+        final downloadedPercent = status.progressPercent;
+        return _queueOrNothing(
+          caps,
+          _withWarning(
+            status,
+            serviceName,
+            downloadedPercent == null
+                ? 'The download client has it.'
+                : 'The download client has it, $downloadedPercent% through.',
+          ),
+        );
+      case MediaPipeline.importPending:
+        return _queueOrNothing(
+          caps,
+          _withWarning(
+            status,
+            serviceName,
+            'The download is done; $serviceName imports it on its next pass.',
+          ),
+        );
+      case MediaPipeline.importing:
+        return _queueOrNothing(
+          caps,
+          _withWarning(
+            status,
+            serviceName,
+            '$serviceName is moving the files into your library.',
+          ),
+        );
+      case MediaPipeline.paused:
+        return _queueOrNothing(
+          caps,
+          _withWarning(
+            status,
+            serviceName,
+            'Nothing moves until the download client resumes it.',
+          ),
         );
     }
   }
 
   if (status.unmonitored && !status.isAvailable) {
-    const consequence = 'Not monitored, so nothing is being hunted.';
+    // The badge already says Unmonitored, so it carries the reason and the
+    // sentence carries the consequence. The promoted Monitor verb carries the
+    // fix; the sentence must not restate it.
+    final consequence = "$serviceName isn't searching for this title.";
     if (caps.canMonitor) {
-      return const MediaPrimaryAction(
+      return MediaPrimaryAction(
         kind: MediaActionKind.monitor,
         label: 'Monitor',
         icon: Icons.bookmark_add_outlined,
@@ -174,7 +267,10 @@ MediaPrimaryAction resolveMediaAction(
 
   switch (status.availability) {
     case MediaAvailability.notTracked:
-      final consequence = 'Not in $serviceName yet.';
+      // True of both the Seerr Request path and the *arr Add path, because
+      // "tracking" is what both of them start.
+      final consequence =
+          'Nothing happens until $serviceName is tracking this title.';
       if (caps.canRequest) {
         return MediaPrimaryAction(
           kind: MediaActionKind.request,
@@ -194,11 +290,16 @@ MediaPrimaryAction resolveMediaAction(
       return _nothing(consequence);
 
     case MediaAvailability.missing:
-      const consequence = 'Expected on disk, nothing there.';
+      // Provable rather than hopeful: the unmonitored rung above is checked
+      // first, so anything reaching here IS monitored, and therefore genuinely
+      // in Wanted and in RSS. Naming the ongoing process instead of the absence
+      // is the whole mechanism — it is what replaced "Expected on disk, nothing
+      // there.", which had no actor and so read as a monitoring alert.
+      final consequence = '$serviceName is hunting a release for this title.';
       if (caps.canSearch) {
-        return const MediaPrimaryAction(
+        return MediaPrimaryAction(
           kind: MediaActionKind.search,
-          label: 'Find releases',
+          label: 'Auto search',
           icon: Icons.saved_search_rounded,
           consequence: consequence,
         );
@@ -206,11 +307,13 @@ MediaPrimaryAction resolveMediaAction(
       return _nothing(consequence);
 
     case MediaAvailability.partial:
-      final consequence = partialSummary ?? 'Some of it is on disk.';
+      final consequence =
+          partialSummary ??
+          'Part of this is on disk; $serviceName is hunting the rest.';
       if (caps.canSearch) {
         return MediaPrimaryAction(
           kind: MediaActionKind.search,
-          label: 'Find missing',
+          label: 'Auto search',
           icon: Icons.saved_search_rounded,
           consequence: consequence,
         );
@@ -218,11 +321,15 @@ MediaPrimaryAction resolveMediaAction(
       return _nothing(consequence);
 
     case MediaAvailability.upgradable:
-      const consequence = 'On disk, below the quality cutoff.';
+      // Names the reason the badge omits — the cutoff, which is the real
+      // Radarr/Sonarr noun — and the consequence: the search is still live.
+      final consequence =
+          'The file is below your quality cutoff, so $serviceName keeps '
+          'looking.';
       if (caps.canInteractiveSearch) {
-        return const MediaPrimaryAction(
+        return MediaPrimaryAction(
           kind: MediaActionKind.interactiveSearch,
-          label: 'Find an upgrade',
+          label: 'Interactive search',
           icon: Icons.search_rounded,
           consequence: consequence,
         );
@@ -230,17 +337,74 @@ MediaPrimaryAction resolveMediaAction(
       return _nothing(consequence);
 
     case MediaAvailability.available:
-      return _nothing('Everything expected is on disk.');
+      // This sentence pays for the withheld primary: it tells the operator the
+      // absence of a button is a *result*, not a gap. It is half the answer to
+      // "the action row feels too empty" — the visible secondaries beside the
+      // overflow are the other half.
+      //
+      // "everything it expects" and not "nothing is outstanding": the first
+      // draft used the latter, which is bookish and ambiguous enough to be read
+      // as "nothing is excellent". What this rung is actually about is the count
+      // the page already shows — 89 of 89, 1 file — which is what the service
+      // expected and got.
+      return _nothing(
+        "$serviceName has everything it expects, so it isn't searching.",
+      );
 
     case MediaAvailability.unavailable:
-      return _nothing(consequenceOverride ?? 'Not released yet.');
+      // The override is a tail substitution, so the stem stays inside the
+      // ladder's voice and a date change never reflows the prose before it.
+      return _nothing(
+        "There's nothing to search for until ${consequenceOverride ?? "it's released"}.",
+      );
 
     case MediaAvailability.deleted:
-      return _nothing('Removed from $serviceName.');
+      return _nothing(
+        'Nothing changes here until this title is back in $serviceName.',
+      );
 
     case MediaAvailability.unknown:
-      return _nothing(status.detail ?? status.label);
+      // On this rung the service's words ARE the only fact available, so the
+      // frame stands alone. The bare label "Unknown" is never a sentence again.
+      return _nothing(
+        _reports(serviceName, status.detail) ??
+            "$serviceName didn't report a state for this title.",
+      );
   }
+}
+
+/// Normalises a service-supplied `detail` into an attributed sentence.
+///
+/// The service's words arrive after a colon, never inside our own grammar, so a
+/// screen reader is handed a whole clause instead of the bare fragment the old
+/// ladder passed through — `status.detail` *was* the entire sentence on two
+/// rungs. Returns null when nothing legible survives, which is what lets a
+/// caller fall back to its own clause instead of rendering a colon and nothing.
+String? _reports(String serviceName, String? detail) {
+  var text = detail?.trim() ?? '';
+  const exceptionPrefix = 'Exception: ';
+  if (text.startsWith(exceptionPrefix)) {
+    text = text.substring(exceptionPrefix.length).trim();
+  }
+  if (text.isEmpty) return null;
+  if (!text.endsWith('.') && !text.endsWith('!') && !text.endsWith('?')) {
+    text = '$text.';
+  }
+
+  return '$serviceName reports: $text';
+}
+
+/// Appends the attributed detail as a second sentence on a warning-toned queue
+/// rung.
+///
+/// Without it the badge turns warning-toned with nothing on the page saying why:
+/// that reason rode in `detail`, which the five-way split of the queue branch
+/// would otherwise drop on the floor.
+String _withWarning(MediaStatusInfo status, String serviceName, String base) {
+  if (!status.hasWarning) return base;
+  final reported = _reports(serviceName, status.detail);
+
+  return reported == null ? base : '$base $reported';
 }
 
 /// Every queue state routes to the queue — or, where the host gave no route
@@ -269,7 +433,7 @@ MediaPrimaryAction _findAnotherRelease(
   if (!caps.canInteractiveSearch) return _nothing(consequence);
   return MediaPrimaryAction(
     kind: MediaActionKind.interactiveSearch,
-    label: 'Find another release',
+    label: 'Interactive search',
     icon: Icons.search_rounded,
     consequence: consequence,
   );
@@ -313,6 +477,55 @@ class MediaOverflowAction {
   }) : isDestructive = true;
 }
 
+/// A non-promoted action plus the rank at which it may claim a visible slot.
+///
+/// Two orders, one list. The sheet renders in list order; the row fills its
+/// slots by [visibleRank]. Keeping both on one object is what makes it
+/// impossible for an action to be shown twice or to disappear from both places.
+@immutable
+class _SecondaryCandidate {
+  final MediaOverflowAction action;
+
+  /// Lower wins a slot first. Null can never be visible.
+  final int? visibleRank;
+
+  /// Shorter label for the visible button, where a sheet row's width is not
+  /// available. Falls back to the sheet's own label.
+  final String? visibleLabel;
+
+  const _SecondaryCandidate({
+    required this.action,
+    required this.visibleRank,
+    this.visibleLabel,
+  });
+
+  String get visibleName => visibleLabel ?? action.label;
+}
+
+/// The candidates that earn the row's visible slots, in rank order.
+///
+/// Anything without a rank, or without an invoker, is filtered out first: a
+/// visible control that does nothing is worse than one that was never offered,
+/// and this band's whole rule is that an action is withheld rather than
+/// disabled.
+List<_SecondaryCandidate> _visibleSecondaries(
+  List<_SecondaryCandidate> candidates, {
+  required int slots,
+}) {
+  if (slots <= 0) return const [];
+  final ranked =
+      candidates
+          .where(
+            (candidate) =>
+                candidate.visibleRank != null &&
+                candidate.action.onInvoke != null,
+          )
+          .toList()
+        ..sort((a, b) => a.visibleRank!.compareTo(b.visibleRank!));
+
+  return ranked.take(slots).toList(growable: false);
+}
+
 /// Shows the non-promoted actions for a media detail page.
 ///
 /// [title] is the media title, shown as the sheet's subtitle. [actions] are
@@ -323,8 +536,8 @@ class MediaOverflowAction {
 /// **Haptics live here, once.** Each service screen used to fire its own, and
 /// they had drifted: Radarr fired `selectionClick` on both searches and
 /// `mediumImpact` before Delete while Sonarr and Lidarr fired nothing at all.
-/// The row is the tap target now, so the row owns the feedback — a destructive
-/// row gets `mediumImpact`, everything else `selectionClick`, and
+/// The sheet is the tap target now, so the sheet owns the feedback — a
+/// destructive row gets `mediumImpact`, everything else `selectionClick`, and
 /// [PressableScale]'s own light impact is suppressed so exactly one fires.
 Future<void> showMediaDetailActions(
   BuildContext context, {
@@ -333,8 +546,6 @@ Future<void> showMediaDetailActions(
   required List<MediaOverflowAction> actions,
 }) {
   final safe = actions.where((action) => action.label.isNotEmpty).toList();
-  final ordinary = safe.where((action) => !action.isDestructive);
-  final destructive = safe.where((action) => action.isDestructive);
 
   return AppBottomSheet.show<void>(
     context: context,
@@ -342,33 +553,87 @@ Future<void> showMediaDetailActions(
     subtitle: title,
     icon: Icons.more_horiz_rounded,
     accent: accent,
-    builder: (sheetContext) => Column(
+    builder: (sheetContext) => _MediaOverflowRows(actions: safe),
+  );
+}
+
+/// The sheet's rows, and the one thing they share: a sheet spends itself on a
+/// single action.
+///
+/// The rows sit on a route that pops *before* the action runs, and a
+/// [MediaOverflowAction] is a bare [VoidCallback] — so the host learns about a
+/// tap only once it has already started the work, and cannot refuse a second
+/// one. Two fingers landing on Manual import and Delete in the same frame is
+/// enough: both rows fire, both pop, and the second pop takes the detail page
+/// with it while a delete is already in flight. The guard belongs here, where
+/// the sheet knows it has been used.
+class _MediaOverflowRows extends StatefulWidget {
+  final List<MediaOverflowAction> actions;
+
+  const _MediaOverflowRows({required this.actions});
+
+  @override
+  State<_MediaOverflowRows> createState() => _MediaOverflowRowsState();
+}
+
+class _MediaOverflowRowsState extends State<_MediaOverflowRows> {
+  bool _spent = false;
+
+  void _invoke(MediaOverflowAction action) {
+    if (_spent) return;
+    setState(() => _spent = true);
+    if (action.isDestructive) {
+      HapticFeedback.mediumImpact();
+    } else {
+      HapticFeedback.selectionClick();
+    }
+    Navigator.of(context).pop();
+    action.onInvoke!();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ordinary = widget.actions.where((action) => !action.isDestructive);
+    final destructive = widget.actions.where((action) => action.isDestructive);
+
+    Widget row(MediaOverflowAction action) => _MediaOverflowRow(
+      action: action,
+      onInvoke: action.onInvoke == null || _spent
+          ? null
+          : () => _invoke(action),
+    );
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final action in ordinary) _MediaOverflowRow(action: action),
+        for (final action in ordinary) row(action),
         if (destructive.isNotEmpty && ordinary.isNotEmpty)
           Divider(
             height: AppSpacing.xl,
             thickness: 1,
-            color: Theme.of(sheetContext).colorScheme.outlineVariant,
+            color: Theme.of(context).colorScheme.outlineVariant,
           ),
-        for (final action in destructive) _MediaOverflowRow(action: action),
+        for (final action in destructive) row(action),
       ],
-    ),
-  );
+    );
+  }
 }
 
 class _MediaOverflowRow extends StatelessWidget {
   final MediaOverflowAction action;
 
-  const _MediaOverflowRow({required this.action});
+  /// Null disables the row — either the action carries no invoker, or the sheet
+  /// has already been spent on another one.
+  final VoidCallback? onInvoke;
+
+  const _MediaOverflowRow({required this.action, required this.onInvoke});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final enabled = action.onInvoke != null;
+    final enabled = onInvoke != null;
     final glyphColor = enabled
         ? (action.isDestructive
               ? colorScheme.error
@@ -383,7 +648,7 @@ class _MediaOverflowRow extends StatelessWidget {
       haptic: false,
       semanticLabel: action.label,
       excludeChildSemantics: true,
-      onTap: enabled ? () => _invoke(context) : null,
+      onTap: onInvoke,
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           minHeight: HeaderActionRow.buttonHeight,
@@ -410,16 +675,6 @@ class _MediaOverflowRow extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  void _invoke(BuildContext context) {
-    if (action.isDestructive) {
-      HapticFeedback.mediumImpact();
-    } else {
-      HapticFeedback.selectionClick();
-    }
-    Navigator.of(context).pop();
-    action.onInvoke!();
   }
 }
 
@@ -464,12 +719,20 @@ class LibraryDetailActions extends StatelessWidget {
   /// a release date on a title that has not come out yet.
   final String? consequenceOverride;
 
-  /// True while the promoted action is in flight: its glyph spins and the
-  /// button stops accepting taps.
+  /// True while a write started from this band is in flight: the promoted
+  /// action's glyph spins and **nothing in the band accepts a tap** — not the
+  /// promoted button, not the visible secondaries, not the overflow trigger.
   ///
-  /// One flag rather than one per action, because only one action is promoted.
-  /// Map the host's own per-action flag onto it — `_isAutoSearching` on a search
-  /// rung, `_isUpdatingMonitoredState` on the monitor rung.
+  /// One flag rather than one per action, because the band is one console for
+  /// one item: whatever is in flight, a second command against the same title is
+  /// never what the user meant. Map the host's own in-flight flags onto it —
+  /// `_isAutoSearching || _isUpdatingMonitoredState || _isDeleting`.
+  ///
+  /// It is the *only* re-entrancy guard on this path. Hosts hand over bare
+  /// [VoidCallback]s that fire a service command directly, so before this reached
+  /// past the promoted button, triple-tapping the auto-search secondary sent
+  /// three searches and the overflow could start a second Delete on top of a
+  /// running one.
   final bool isBusy;
 
   /// Momentarily true after the promoted action lands; holds a success check in
@@ -547,6 +810,10 @@ class LibraryDetailActions extends StatelessWidget {
     consequenceOverride: consequenceOverride,
   );
 
+  /// Every tap target in the band goes through here, so [isBusy] can never be
+  /// honoured by one rung and forgotten by the next.
+  VoidCallback? _whenIdle(VoidCallback? invoke) => isBusy ? null : invoke;
+
   VoidCallback? _invokerFor(MediaActionKind kind) {
     switch (kind) {
       case MediaActionKind.openQueue:
@@ -572,7 +839,17 @@ class LibraryDetailActions extends StatelessWidget {
   ///
   /// The promoted kind is skipped, so the sheet holds exactly the non-promoted
   /// actions and the same verb never appears twice.
-  List<MediaOverflowAction> _overflowActions(
+  /// Every non-promoted action, in *sheet* order, each carrying the rank at
+  /// which it may claim one of the row's visible slots.
+  ///
+  /// The two orders are deliberately different. The sheet reads best grouped by
+  /// kind — both searches together, then state, then the destructive one last.
+  /// The row must never spend both of its slots on two searches, so
+  /// `visibleRank` promotes Interactive search and then the quality profile,
+  /// which are the two an operator actually reaches for on a title that is
+  /// already complete. A null rank can only ever appear in the sheet, which is
+  /// how Delete is kept from becoming a visible peer of Import on any rung.
+  List<_SecondaryCandidate> _candidates(
     BuildContext context,
     MediaActionKind promoted,
   ) {
@@ -580,52 +857,76 @@ class LibraryDetailActions extends StatelessWidget {
     final profileName = currentProfileName;
     final profileSetter = onProfileSelected;
 
-    return <MediaOverflowAction>[
+    return <_SecondaryCandidate>[
       if (onInteractiveSearch != null &&
           promoted != MediaActionKind.interactiveSearch)
-        MediaOverflowAction(
-          label: 'Interactive search',
-          icon: Icons.search_rounded,
-          onInvoke: onInteractiveSearch,
+        _SecondaryCandidate(
+          visibleRank: 0,
+          action: MediaOverflowAction(
+            label: 'Interactive search',
+            icon: Icons.search_rounded,
+            onInvoke: onInteractiveSearch,
+          ),
         ),
       if (onSearch != null && promoted != MediaActionKind.search)
-        MediaOverflowAction(
-          label: 'Auto search',
-          icon: Icons.saved_search_rounded,
-          onInvoke: onSearch,
+        _SecondaryCandidate(
+          visibleRank: 2,
+          action: MediaOverflowAction(
+            label: 'Auto search',
+            icon: Icons.saved_search_rounded,
+            onInvoke: onSearch,
+          ),
         ),
       if (onMonitoredChanged != null && promoted != MediaActionKind.monitor)
-        MediaOverflowAction(
-          label: isMonitored ? 'Stop monitoring' : 'Monitor',
-          icon: isMonitored
-              ? Icons.bookmark_remove_outlined
-              : Icons.bookmark_add_outlined,
-          onInvoke: () => onMonitoredChanged!(!isMonitored),
+        _SecondaryCandidate(
+          visibleRank: 4,
+          action: MediaOverflowAction(
+            label: isMonitored ? 'Stop monitoring' : 'Monitor',
+            icon: isMonitored
+                ? Icons.bookmark_remove_outlined
+                : Icons.bookmark_add_outlined,
+            onInvoke: () => onMonitoredChanged!(!isMonitored),
+          ),
         ),
       if (profileName != null && profileSetter != null && profiles.isNotEmpty)
-        MediaOverflowAction(
-          label: 'Quality profile: $profileName',
-          icon: Icons.high_quality_rounded,
-          onInvoke: () => showMediaProfileSelector(
-            context,
-            currentProfileName: profileName,
-            currentProfileId: currentProfileId,
-            qualityProfiles: profiles,
-            onProfileSelected: profileSetter,
-            accent: service.accent,
+        _SecondaryCandidate(
+          visibleRank: 1,
+          // The sheet names the current profile because it has the width for it;
+          // the visible button cannot, so it carries the bare noun and the
+          // current value stays one tap away. Same action, two densities.
+          visibleLabel: 'Quality profile',
+          action: MediaOverflowAction(
+            label: 'Quality profile: $profileName',
+            icon: Icons.high_quality_rounded,
+            onInvoke: () => showMediaProfileSelector(
+              context,
+              currentProfileName: profileName,
+              currentProfileId: currentProfileId,
+              qualityProfiles: profiles,
+              onProfileSelected: profileSetter,
+              accent: service.accent,
+            ),
           ),
         ),
       if (onImport != null && promoted != MediaActionKind.manualImport)
-        MediaOverflowAction(
-          label: 'Manual import',
-          icon: Icons.download_for_offline_outlined,
-          onInvoke: onImport,
+        _SecondaryCandidate(
+          visibleRank: 3,
+          action: MediaOverflowAction(
+            label: 'Manual import',
+            icon: Icons.download_for_offline_outlined,
+            onInvoke: onImport,
+          ),
         ),
       if (onDelete != null)
-        MediaOverflowAction.destructive(
-          label: 'Delete',
-          icon: Icons.delete_outline_rounded,
-          onInvoke: onDelete,
+        _SecondaryCandidate(
+          // Never visible. A destructive action is not a peer of Import in a
+          // row of identical discs, which is what the previous band shipped.
+          visibleRank: null,
+          action: MediaOverflowAction.destructive(
+            label: 'Delete',
+            icon: Icons.delete_outline_rounded,
+            onInvoke: onDelete,
+          ),
         ),
     ];
   }
@@ -641,9 +942,20 @@ class LibraryDetailActions extends StatelessWidget {
     final onAccent = ServiceTheme.foregroundOn(accent);
 
     final action = promotedAction;
-    final overflow = _overflowActions(context, action.kind);
     final invoker = _invokerFor(action.kind);
     final hasPrimary = action.kind != MediaActionKind.none && invoker != null;
+
+    // A withheld primary frees both slots. That is the whole answer to a row
+    // that read as an empty shelf on an available title: the promotion rule is
+    // unchanged — promoting a search on a complete title is what the previous
+    // pass deliberately killed — but the space it leaves is now spent on the two
+    // actions an operator does reach for, instead of on nothing.
+    final candidates = _candidates(context, action.kind);
+    final visible = _visibleSecondaries(candidates, slots: hasPrimary ? 1 : 2);
+    final overflow = candidates
+        .where((candidate) => !visible.contains(candidate))
+        .map((candidate) => candidate.action)
+        .toList(growable: false);
 
     final consequence = Text(
       action.consequence,
@@ -654,22 +966,26 @@ class LibraryDetailActions extends StatelessWidget {
       ),
     );
 
-    Widget? trailing;
+    final tonalStyle = HeaderActionRow.tonalIconButtonStyle(
+      foregroundColor: colorScheme.onSurfaceVariant,
+      backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
+      borderColor: colorScheme.outlineVariant,
+    );
+
+    Widget? overflowDisc;
     if (overflow.isNotEmpty) {
-      trailing = SizedBox.square(
+      overflowDisc = SizedBox.square(
         dimension: HeaderActionRow.buttonHeight,
         child: OutlinedButton(
-          onPressed: () => showMediaDetailActions(
-            context,
-            accent: accent,
-            title: mediaTitle,
-            actions: overflow,
+          onPressed: _whenIdle(
+            () => showMediaDetailActions(
+              context,
+              accent: accent,
+              title: mediaTitle,
+              actions: overflow,
+            ),
           ),
-          style: HeaderActionRow.tonalIconButtonStyle(
-            foregroundColor: colorScheme.onSurfaceVariant,
-            backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
-            borderColor: colorScheme.outlineVariant,
-          ),
+          style: tonalStyle,
           child: const Icon(
             Icons.more_horiz_rounded,
             size: ActionStateGlyph.glyphSize,
@@ -679,10 +995,110 @@ class LibraryDetailActions extends StatelessWidget {
       );
     }
 
+    // Icon-only, for the rungs where a primary already holds the wide slot.
+    // The glyph carries the accessible name because there is no visible caption
+    // to read: a 9pt caption in a fixed box is exactly what ellipsised to
+    // "Inter…" and "Auto…" in the band this replaced.
+    Widget secondaryDisc(_SecondaryCandidate candidate) => SizedBox.square(
+      dimension: HeaderActionRow.buttonHeight,
+      child: OutlinedButton(
+        // Disabled rather than withheld while the band is busy: a control that
+        // vanishes mid-write reflows the row under the thumb, which is how the
+        // next tap lands on whatever slid into its place.
+        onPressed: _whenIdle(candidate.action.onInvoke),
+        style: tonalStyle,
+        child: Icon(
+          candidate.action.icon,
+          size: ActionStateGlyph.glyphSize,
+          semanticLabel: candidate.visibleName,
+        ),
+      ),
+    );
+
+    // Labelled, for the rungs with no primary. Two bare discs beside a wide
+    // empty gap read as leftovers; a labelled pair reads as a console. The label
+    // is clamped and wraps to two lines rather than eliding, for the same reason
+    // the primary's is.
+    // **No glyph on this variant, and that is arithmetic rather than taste.**
+    // Two buttons plus the overflow disc leave roughly 150pt each on a 402pt
+    // phone, and an 18pt glyph, its 8pt gap and 12pt of padding either side eat
+    // about 50 of that — leaving ~100pt for a label that wants 118. So
+    // "Interactive search" wrapped to two centred lines beside a left-hanging
+    // icon, which is exactly what it looked like: an accident. With only two
+    // controls on a wide row the words *are* the affordance, so the glyph gives
+    // its width back to them and stays on the icon-only variant, where it is the
+    // whole control. The label still wraps rather than elides once a reading
+    // size genuinely needs a second line.
+    Widget secondaryButton(_SecondaryCandidate candidate) => OutlinedButton(
+      onPressed: _whenIdle(candidate.action.onInvoke),
+      style:
+          HeaderActionRow.tonalExpandedButtonStyle(
+            foregroundColor: colorScheme.onSurfaceVariant,
+            backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
+            borderColor: colorScheme.outlineVariant,
+          ).copyWith(
+            padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
+              EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            ),
+          ),
+      child: MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
+        child: Text(
+          candidate.visibleName,
+          maxLines: 2,
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+
+    final trailingChildren = <Widget>[
+      if (hasPrimary) ...visible.map(secondaryDisc),
+      if (overflowDisc != null) overflowDisc,
+    ];
+    final trailing = trailingChildren.isEmpty
+        ? null
+        : trailingChildren.length == 1
+        ? trailingChildren.single
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              for (var i = 0; i < trailingChildren.length; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpacing.sm),
+                trailingChildren[i],
+              ],
+            ],
+          );
+
     if (!hasPrimary) {
-      // Withheld, not disabled — and the sentence takes the wide slot so the
-      // band is never a lone overflow button with nothing to explain it.
-      return HeaderActionRow(expanded: consequence, trailing: trailing);
+      if (visible.isEmpty) {
+        // Nothing promoted and no capability to surface: the sentence takes the
+        // wide slot so the band is never a lone overflow button with nothing to
+        // explain it.
+        return HeaderActionRow(expanded: consequence, trailing: trailing);
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          HeaderActionRow(
+            expanded: Row(
+              children: <Widget>[
+                for (var i = 0; i < visible.length; i++) ...[
+                  if (i > 0) const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: secondaryButton(visible[i])),
+                ],
+              ],
+            ),
+            trailing: trailing,
+          ),
+          if (action.consequence.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            consequence,
+          ],
+        ],
+      );
     }
 
     // The label is clamped at 1.6x for the reason the stacking section header
@@ -712,7 +1128,7 @@ class LibraryDetailActions extends StatelessWidget {
       children: [
         HeaderActionRow(
           expanded: FilledButton.icon(
-            onPressed: isBusy ? null : invoker,
+            onPressed: _whenIdle(invoker),
             icon: ActionStateGlyph(
               icon: action.icon,
               label: action.label,

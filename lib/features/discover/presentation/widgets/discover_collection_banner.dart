@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_gradients.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/network/pinned_image_cache.dart';
 import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
@@ -62,6 +63,7 @@ class DiscoverCollectionBanner extends StatelessWidget {
               if (backdropUrl.isNotEmpty)
                 CachedNetworkImage(
                   imageUrl: backdropUrl,
+                  cacheManager: pinnedImageCacheFor(backdropUrl),
                   fit: BoxFit.cover,
                   errorWidget: (context, url, error) =>
                       Container(color: colorScheme.surfaceContainerHigh),

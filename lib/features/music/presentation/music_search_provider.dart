@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
@@ -12,10 +13,18 @@ final musicSearchQueryProvider = StateProvider<String>((ref) => '');
 /// Provider for search results in Music section.
 ///
 /// Returns null when query is empty, otherwise returns lookup results.
+///
+/// The lookup carries a [CancelToken] cancelled on dispose — see
+/// `moviesSearchResultsProvider` for why the superseded round has to stop.
 final musicSearchResultsProvider = FutureProvider<List<LidarrArtist>?>((
   ref,
 ) async {
   final query = ref.watch(musicSearchQueryProvider);
   final service = ref.read(lidarrServiceProvider);
-  return loadNullableSearchResults(query: query, lookup: service.lookupArtists);
+  final cancelToken = CancelToken();
+  ref.onDispose(cancelToken.cancel);
+  return loadNullableSearchResults(
+    query: query,
+    lookup: (term) => service.lookupArtists(term, cancelToken: cancelToken),
+  );
 });

@@ -63,7 +63,7 @@ class SettingsHomeScreen extends ConsumerWidget {
         children: [
           const _ConnectionsBlock(),
           const SizedBox(height: AppSpacing.xl),
-          ..._buildGeneralSection(context, settings),
+          ..._buildGeneralSection(context, ref, settings),
           const SizedBox(height: AppSpacing.xl),
           ..._buildAboutSection(context),
           const SizedBox(height: AppSpacing.xl),
@@ -75,6 +75,7 @@ class SettingsHomeScreen extends ConsumerWidget {
 
   List<Widget> _buildGeneralSection(
     BuildContext context,
+    WidgetRef ref,
     SettingsModel settings,
   ) {
     return [
@@ -96,6 +97,20 @@ class SettingsHomeScreen extends ConsumerWidget {
             subtitle: settings.themeMode.label,
             semanticHint: 'opens the appearance picker',
             onTap: () => context.push('/settings/appearance'),
+          ),
+          SettingsCard.grouped(
+            leading: const Icon(Icons.travel_explore_rounded),
+            title: 'Background search',
+            subtitle: 'How long to wait, and how many at once',
+            semanticHint: 'opens background release search settings',
+            onTap: () => context.push('/settings/background-search'),
+          ),
+          SettingsCard.grouped(
+            leading: const Icon(Icons.replay_rounded),
+            title: 'Revisit onboarding',
+            subtitle: 'Walk through the intro screens again',
+            semanticHint: 'restarts the onboarding flow for this session',
+            onTap: () => _confirmRevisitOnboarding(context, ref),
           ),
         ],
       ),
@@ -179,6 +194,27 @@ class SettingsHomeScreen extends ConsumerWidget {
       if (!context.mounted) return;
       SnackBarHelper.error(context, "Couldn't reset app data. ($e)");
     }
+  }
+
+  Future<void> _confirmRevisitOnboarding(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final result = await showAppConfirmDialog(
+      context: context,
+      icon: Icons.replay_rounded,
+      title: 'Revisit onboarding?',
+      message:
+          "You'll go through the intro screens again for this session. "
+          'Nothing about your services or settings is changed or removed.',
+      confirmLabel: 'Continue',
+    );
+
+    if (!result.confirmed) return;
+
+    await markOnboardingIncomplete(ref);
+    if (!context.mounted) return;
+    context.go('/onboarding');
   }
 
   String _formatRegionLabel(String region) {

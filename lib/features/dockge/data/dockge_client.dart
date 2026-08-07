@@ -129,6 +129,8 @@ class DockgeClient {
   }) async {
     final httpClient = buildPinnedHttpClient(
       pinnedFingerprint: certFingerprint,
+      pinnedHost: uri.host,
+      pinnedPort: uri.port,
     );
     final socket = await io.WebSocket.connect(
       uri.toString(),
@@ -446,11 +448,14 @@ class DockgeClient {
     required String composeYAML,
     String composeENV = '',
     required bool isAdd,
-  }) => _agent(
-    'deployStack',
-    args: [name, composeYAML, composeENV, isAdd],
-    timeout: _longOp,
-  );
+  }) async {
+    _refuseEmptyCompose(composeYAML, isAdd: isAdd, op: 'deploy');
+    await _agent(
+      'deployStack',
+      args: [name, composeYAML, composeENV, isAdd],
+      timeout: _longOp,
+    );
+  }
 
   /// Saves a stack's compose files without deploying.
   Future<void> saveStack({
@@ -458,7 +463,33 @@ class DockgeClient {
     required String composeYAML,
     String composeENV = '',
     required bool isAdd,
-  }) => _agent('saveStack', args: [name, composeYAML, composeENV, isAdd]);
+  }) async {
+    _refuseEmptyCompose(composeYAML, isAdd: isAdd, op: 'save');
+    await _agent('saveStack', args: [name, composeYAML, composeENV, isAdd]);
+  }
+
+  /// Refuses to write an empty compose file over a stack that already exists.
+  ///
+  /// Dockge takes the YAML it is handed as the new truth for the stack, so a
+  /// blank string is not a no-op — it is `docker-compose.yaml` replaced by
+  /// nothing, and for `deployStack` it is that followed by a `compose up` on the
+  /// result. The editor screen produced exactly that whenever it rendered before
+  /// its detail fetch resolved, so the guard belongs here as well: this is the
+  /// call that destroys the file, and any future caller inherits the protection
+  /// rather than having to remember it.
+  ///
+  /// `isAdd` is the exemption, not an oversight — creating a stack from a blank
+  /// editor overwrites nothing.
+  void _refuseEmptyCompose(
+    String composeYAML, {
+    required bool isAdd,
+    required String op,
+  }) {
+    if (isAdd || composeYAML.trim().isNotEmpty) return;
+    throw DockgeException(
+      'Refusing to $op an empty compose file over an existing stack.',
+    );
+  }
 
   // ---- Per-service actions ----------------------------------------------
 

@@ -17,6 +17,7 @@ import 'package:dio/dio.dart' show CancelToken;
 
 import 'package:seekarr/features/stream/domain/models/stream_item.dart';
 import 'package:seekarr/features/stream/domain/models/stream_library.dart';
+import 'package:seekarr/features/stream/domain/models/stream_library_page.dart';
 import 'package:seekarr/features/stream/domain/models/stream_session.dart';
 
 /// A viewer whose watch state a library can be read through.
@@ -90,6 +91,33 @@ abstract interface class StreamServerClient {
     CancelToken? cancelToken,
   });
 
+  /// [getLibraryItems] with the paging envelope kept.
+  ///
+  /// **What a paged browse must call.** [getLibraryItems] throws the rows away
+  /// from around the rows: it cannot say whether an empty result means the
+  /// library is empty, the request failed, or this particular page happened to
+  /// be filtered down to nothing — and each of those needs a different thing on
+  /// screen. See [StreamLibraryPage] for the two false claims that came out of
+  /// collapsing them.
+  ///
+  /// Never throws. A failure is [StreamPageOutcome.failed], for the same reason
+  /// [getLibraryItems] degrades to `[]`: the caller decides whether this is a
+  /// retry affordance or a quiet gap.
+  Future<StreamLibraryPage> getLibraryPage({
+    required String libraryId,
+    required StreamLibraryLens lens,
+    String? viewerId,
+    int startIndex = 0,
+    int limit = 50,
+    CancelToken? cancelToken,
+  });
+
+  // Deliberately no `hasViewer` here. "A per-viewer lens has no subject" is
+  // already carried by [StreamLibraryPage.needsViewer] — per request, where the
+  // browse actually needs it — so a second, connection-wide spelling of the same
+  // fact bought nothing and forced every implementer and test fake to declare a
+  // member no caller read.
+
   /// One item at any depth.
   Future<StreamItem?> getItem(
     String itemId, {
@@ -101,6 +129,33 @@ abstract interface class StreamServerClient {
   Future<List<StreamItem>> getChildren(
     String itemId, {
     String? viewerId,
+    CancelToken? cancelToken,
+  });
+
+  /// Whether an item the *arrs* know about is on this server, and where the
+  /// viewer stopped in it.
+  ///
+  /// This is what lets a Radarr or Sonarr detail page say "On Jellyfin · 34 min
+  /// in" instead of Seekarr shipping a second, near-identical catalogue. The join
+  /// is on an external database id rather than on a title, because a title match
+  /// across two catalogues is a guess and this has to be a fact: Radarr carries
+  /// `tmdbId`, Sonarr `tvdbId`, and both servers index the same ids
+  /// (Jellyfin as `ProviderIds`, Plex as `Guid[]` entries like `tmdb://1234`).
+  ///
+  /// Returns null when the item is not there or when the server is too old to
+  /// filter by provider id — both are "we cannot say it is watchable", and the
+  /// caller renders nothing rather than a wrong claim.
+  ///
+  /// A missing viewer is **not** one of those cases. It costs the *watch state*
+  /// — the slot reads "Ready to watch" instead of "34 min in" — but presence and
+  /// a route to open the item are still facts, and they are the media server's
+  /// facts rather than a restatement of the arr's: the arr knows a file is on
+  /// disk, the server knows it is in the library and playable. Refusing to
+  /// answer without a viewer made this slot Plex-only in practice.
+  Future<StreamItem?> findByExternalId({
+    String? tmdbId,
+    String? tvdbId,
+    String? imdbId,
     CancelToken? cancelToken,
   });
 

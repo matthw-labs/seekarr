@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
+import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
-import 'package:seekarr/core/widgets/app_empty_state.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
+import 'package:seekarr/core/widgets/service_ring.dart';
 import 'package:seekarr/features/services/presentation/service_kpi_provider.dart';
 import 'package:seekarr/features/services/presentation/service_matrix.dart';
 import 'package:seekarr/features/services/presentation/services_alert_band.dart';
@@ -57,8 +59,15 @@ class ServicesScreen extends ConsumerWidget {
               builder: (context, constraints) => SingleChildScrollView(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: _ServicesEmptyState(
-                    onSetUpServices: () => context.go('/settings/services'),
+                  // The nav bar floats *over* this branch, so centring in the
+                  // full viewport puts the optical centre behind it and the
+                  // block reads low. Reserving the clearance inside the centring
+                  // box is what lifts it back onto the visible middle.
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: bottomPadding),
+                    child: _ServicesEmptyState(
+                      onSetUpServices: () => context.go('/settings/services'),
+                    ),
                   ),
                 ),
               ),
@@ -92,30 +101,58 @@ class ServicesScreen extends ConsumerWidget {
   }
 }
 
+/// The ring at rest, and the claim it makes.
+///
+/// This is the same object onboarding opens with, which is what makes "Skip for
+/// now" cost nothing: the promise persists as the empty state instead of
+/// evaporating into a grey placeholder, and the button leads back into the same
+/// pick step. Deliberately *not* [AppEmptyState] — that widget is for a region
+/// that came up empty, and this screen is the product's front door on a first
+/// run.
 class _ServicesEmptyState extends StatelessWidget {
   const _ServicesEmptyState({required this.onSetUpServices});
   final VoidCallback onSetUpServices;
 
   @override
   Widget build(BuildContext context) {
-    return AppEmptyState(
-      icon: Icons.dns_outlined,
-      // "Connected" rather than "configured", because that is the word the rest
-      // of this screen uses for the same state: a service that stops answering
-      // "isn't answering", and the fix is a connection, not a config file.
-      title: 'No services connected',
-      // Says what a connection actually needs, which the title and the button do
-      // not. It used to say "to start managing them from one place" — a benefit
-      // pitched to someone who has already installed the app, in place of the
-      // one fact that gets them past this screen.
-      message:
-          "Add a service's address and credentials in Settings. "
-          'Seekarr talks to your instances directly.',
-      action: FilledButton.icon(
-        onPressed: onSetUpServices,
-        icon: const Icon(Icons.settings_outlined, size: 18),
-        // Same verb as the matrix's trailing cell, which goes to the same place.
-        label: const Text('Set up a service'),
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.xxl,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ServiceRing(
+            states: const {},
+            diameter: serviceRingDiameter(context, preferred: 268),
+            spin: true,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Nothing answers yet.',
+            style: theme.textTheme.titleLarge!
+                .weight(FontWeight.w700)
+                .copyWith(color: scheme.onSurface),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '${ServiceKey.values.length} services are waiting for an address. '
+            'Light one up and this screen fills in.',
+            style: theme.textTheme.bodyMedium!.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          FilledButton(
+            onPressed: onSetUpServices,
+            child: const Text('Pick your services'),
+          ),
+        ],
       ),
     );
   }

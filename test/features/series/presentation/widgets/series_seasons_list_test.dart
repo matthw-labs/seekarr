@@ -209,10 +209,17 @@ void main() {
         ],
       );
 
-      // The count the unbounded horizontal rail never had.
-      expect(find.text('All 40 seasons'), findsOneWidget);
+      // The count the unbounded horizontal rail never had. It rides in the
+      // accessible name and the tooltip rather than in a visible caption, so the
+      // control can sit at the end of the rail without eating the width the
+      // pills need.
+      // `byTooltip` is the assertion that matters: Flutter's `Tooltip` is what
+      // supplies the icon button's accessible name, so finding it proves both
+      // the hover affordance and the screen-reader name in one go.
+      final picker = find.byTooltip('All 40 seasons');
+      expect(picker, findsOneWidget);
 
-      await tester.tap(find.text('All 40 seasons'));
+      await tester.tap(picker);
       await tester.pumpAndSettle();
 
       // Every season is reachable, each with its status in words rather than as
@@ -259,7 +266,7 @@ void main() {
                   onSearchSeason: (_) {},
                   onInteractiveSearchSeason: (_) {},
                   onSearchEpisode: (_) {},
-                  onInteractiveSearchEpisode: (_) {},
+                  onInteractiveSearchEpisode: (_, _) {},
                   searchingSeasons: const {},
                   searchingEpisodes: const {},
                   onRetryEpisodes: () => retries++,
@@ -290,7 +297,7 @@ void main() {
                   onSearchSeason: (_) {},
                   onInteractiveSearchSeason: (_) {},
                   onSearchEpisode: (_) {},
-                  onInteractiveSearchEpisode: (_) {},
+                  onInteractiveSearchEpisode: (_, _) {},
                   searchingSeasons: const {},
                   searchingEpisodes: const {},
                 ),
@@ -354,6 +361,135 @@ void main() {
       });
     }
   });
+  group('the collapse control', () {
+    List<SonarrEpisode> _run(int count, {int seasonNumber = 1}) => [
+      for (var number = 1; number <= count; number++)
+        _episode(
+          id: seasonNumber * 1000 + number,
+          seasonNumber: seasonNumber,
+          episodeNumber: number,
+          title: 'S${seasonNumber}E$number',
+        ),
+    ];
+
+    /// A viewport tall enough to hold an expanded 25-episode season.
+    ///
+    /// The footer control lives after a lazy sliver, so on a short viewport it
+    /// is simply not built — and a test that scrolls to find it has to guess
+    /// which direction to scroll after every tap. Height is the honest fixture.
+    void _tallView(WidgetTester tester) {
+      tester.view.physicalSize = const Size(600, 3000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+    }
+
+    testWidgets('a short season is never collapsed', (tester) async {
+      await _pump(
+        tester,
+        seasons: [_season(1, episodeCount: 5, fileCount: 5)],
+        episodes: _run(5),
+      );
+
+      expect(find.text('S1E5'), findsOneWidget);
+      expect(find.textContaining('Show all'), findsNothing);
+      expect(find.text('Show fewer'), findsNothing);
+    });
+
+    testWidgets('a long season builds only the collapsed count', (
+      tester,
+    ) async {
+      _tallView(tester);
+      await _pump(
+        tester,
+        seasons: [_season(1, episodeCount: 25, fileCount: 25)],
+        episodes: _run(25),
+      );
+
+      // Capped, not hidden: the rows past the cap were never built.
+      expect(find.text('S1E8'), findsOneWidget);
+      expect(find.text('S1E9'), findsNothing);
+      expect(find.text('Show all 25 episodes'), findsOneWidget);
+    });
+
+    testWidgets('expanding reveals the rest and offers the way back', (
+      tester,
+    ) async {
+      _tallView(tester);
+      await _pump(
+        tester,
+        seasons: [_season(1, episodeCount: 25, fileCount: 25)],
+        episodes: _run(25),
+      );
+
+      await tester.tap(find.text('Show all 25 episodes'));
+      await tester.pump();
+
+      expect(find.text('Show all 25 episodes'), findsNothing);
+      expect(find.text('Show fewer'), findsOneWidget);
+      // The control names what shrinks for a reader, not just for the eye.
+      expect(find.bySemanticsLabel('Show fewer episodes'), findsOneWidget);
+
+      await tester.tap(find.text('Show fewer'));
+      await tester.pump();
+      expect(find.text('Show all 25 episodes'), findsOneWidget);
+    });
+
+    testWidgets('switching container returns to collapsed', (tester) async {
+      _tallView(tester);
+      await _pump(
+        tester,
+        seasons: [
+          _season(1, episodeCount: 25, fileCount: 25),
+          _season(2, episodeCount: 25, fileCount: 25),
+        ],
+        episodes: [..._run(25), ..._run(25, seasonNumber: 2)],
+      );
+
+      await tester.tap(find.text('Show all 25 episodes'));
+      await tester.pump();
+      expect(find.text('Show fewer'), findsOneWidget);
+
+      await tester.tap(find.text('S2'));
+      await tester.pump();
+
+      // Expanding season 1 must not drop the user into 25 rows of season 2.
+      expect(find.text('Show all 25 episodes'), findsOneWidget);
+      expect(find.text('Show fewer'), findsNothing);
+    });
+
+    testWidgets('the toggle clears the 48dp touch minimum', (tester) async {
+      _tallView(tester);
+      await _pump(
+        tester,
+        seasons: [_season(1, episodeCount: 25, fileCount: 25)],
+        episodes: _run(25),
+      );
+
+      // Matched as a `ButtonStyleButton`: `TextButton.icon` does not put a
+      // `TextButton` of its own in the tree, so naming the concrete type here
+      // would pass or fail on a framework detail rather than on the target size.
+      final toggle = find.ancestor(
+        of: find.text('Show all 25 episodes'),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is ButtonStyleButton,
+        ),
+      );
+      expect(toggle, findsOneWidget);
+      expect(tester.getSize(toggle).height, greaterThanOrEqualTo(48));
+    });
+  });
+
+  testWidgets('a rail that fits gets no jump-to picker', (tester) async {
+    await _pump(
+      tester,
+      seasons: [for (var number = 1; number <= 5; number++) _season(number)],
+      episodes: [_episode(id: 1)],
+    );
+
+    // Five pills fit, so a picker beside them would duplicate them in a band of
+    // dead space — which is exactly what it used to do.
+    expect(find.byIcon(Icons.unfold_more_rounded), findsNothing);
+  });
 }
 
 Future<void> _pumpAtScale(
@@ -382,7 +518,7 @@ Future<void> _pumpAtScale(
                   onSearchSeason: (_) {},
                   onInteractiveSearchSeason: (_) {},
                   onSearchEpisode: (_) {},
-                  onInteractiveSearchEpisode: (_) {},
+                  onInteractiveSearchEpisode: (_, _) {},
                   searchingSeasons: const {},
                   searchingEpisodes: const {},
                 ),
@@ -412,7 +548,7 @@ Future<void> _pump(
               onSearchSeason: (_) {},
               onInteractiveSearchSeason: (_) {},
               onSearchEpisode: (_) {},
-              onInteractiveSearchEpisode: (_) {},
+              onInteractiveSearchEpisode: (_, _) {},
               searchingSeasons: const {},
               searchingEpisodes: const {},
             ),

@@ -20,7 +20,11 @@ final manualImportServiceProvider =
       }
 
       return ManualImportService(
-        client: ApiClient(baseUrl: baseUrl, apiKey: apiKey),
+        client: ApiClient(
+          baseUrl: baseUrl,
+          apiKey: apiKey,
+          pinnedCertFingerprint: settings.pinForUrl(baseUrl),
+        ),
         service: service,
       );
     });

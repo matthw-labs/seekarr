@@ -97,8 +97,18 @@ class TrueNasPool {
     int? free = intOrNull(json['free']);
     final rootDataset = mapOrNull(json['root_dataset']);
     if (rootDataset != null) {
-      size ??= intOrNull(mapOrNull(rootDataset['available'])?['parsed']);
-      allocated ??= intOrNull(mapOrNull(rootDataset['used'])?['parsed']);
+      // `root_dataset.available` is ZFS FREE space, not capacity: reading it as
+      // the total made [usedFraction] compute used/free, which clamps every
+      // pool at or past half full to a flat 100%. Capacity is used + available.
+      final rootUsed = intOrNull(mapOrNull(rootDataset['used'])?['parsed']);
+      final rootAvailable = intOrNull(
+        mapOrNull(rootDataset['available'])?['parsed'],
+      );
+      allocated ??= rootUsed;
+      free ??= rootAvailable;
+      if (size == null && rootUsed != null && rootAvailable != null) {
+        size = rootUsed + rootAvailable;
+      }
     }
 
     final topology = <String, List<TrueNasVdev>>{};

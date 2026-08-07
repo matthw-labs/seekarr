@@ -65,6 +65,74 @@ bool manualImportIsSupportedFile(ServiceKey service, ManualImportItem item) {
   };
 }
 
+/// Leading articles, dropped from both sides of a title comparison.
+///
+/// Radarr stores "The Batman" while the release is `Batman.2022.1080p…`, and
+/// Sonarr the reverse. An article is the one word that routinely differs
+/// between a library title and the file named after it.
+const _titleArticles = {'the', 'a', 'an'};
+
+/// [value] as lowercase word tokens, punctuation and separators dropped.
+///
+/// Unicode-aware rather than `[a-z0-9]`: stripping accents on one side only
+/// would make `Amélie` and `Amelie` two different titles *and* two different
+/// filenames, which is worse than not matching at all.
+List<String> _titleTokens(String value) => value
+    .toLowerCase()
+    .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
+    .where((token) => token.isNotEmpty && !_titleArticles.contains(token))
+    .toList(growable: false);
+
+/// The text a guessed identity is checked against: the release folder and the
+/// file's own name.
+///
+/// Never the whole absolute path — a scan root like `/media/The Matrix/` would
+/// otherwise vouch for every file under it, which is exactly the failure mode
+/// the check exists to prevent.
+String _nameContext(ManualImportItem item) {
+  final parts = [item.folderName ?? '', item.relativePath ?? item.fileName];
+  final joined = parts.where((part) => part.trim().isNotEmpty).join(' ');
+  return joined.isEmpty ? item.path : joined;
+}
+
+/// Whether [item]'s name actually says it is [title].
+///
+/// **The guard on guessing an identity the user never chose.** A launch from a
+/// movie/series/artist page carries that title into the scan, and without this
+/// the only thing tying it to a file was the file extension — so browsing to a
+/// shared downloads root and scanning wrote "Target Movie" onto every
+/// unidentified rip in it, one "Select all ready files" from importing a
+/// stranger's film under the wrong title and moving it into the wrong library
+/// folder.
+///
+/// The rule is contiguity: every significant token of [title], in order, next
+/// to each other somewhere in the release folder or the filename. That is what
+/// `Target.Movie.2019.1080p-GRP.mkv` and `Target Movie (2019)/rip.mkv` both
+/// satisfy and `Some Other Movie.mkv` does not.
+///
+/// Deliberately conservative in the other direction: an abbreviated series name
+/// (`Boruto.S01E01.mkv` against "Boruto: Naruto Next Generations") does not
+/// match and gets no guess. The cost of a miss is one tap in the Fix sheet,
+/// where the launch title is already on offer; the cost of a false positive is
+/// a wrong import the service performs by moving files.
+bool manualImportFileNamesTitle(String title, ManualImportItem item) {
+  final wanted = _titleTokens(title);
+  if (wanted.isEmpty) return false;
+
+  final actual = _titleTokens(_nameContext(item));
+  for (var start = 0; start + wanted.length <= actual.length; start++) {
+    var matches = true;
+    for (var i = 0; i < wanted.length; i++) {
+      if (actual[start + i] != wanted[i]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return true;
+  }
+  return false;
+}
+
 /// Why a file is in the "other files" bucket, in the user's words.
 String manualImportUnsupportedReason(
   ServiceKey service,

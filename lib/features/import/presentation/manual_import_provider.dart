@@ -471,35 +471,65 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   /// ([applyBulkFixAssignments] + [libraryGuardError]) and only applies an
   /// assignment that is already valid, so it can never produce a broken import
   /// payload; the pre-filled matches remain fully editable before confirming.
+  ///
+  /// Three things keep the guess from becoming a decision.
+  ///
+  /// It only ever touches files the service could import at all
+  /// ([manualImportIsSupportedFile]) — Radarr's guard is satisfied by a
+  /// `movieId` alone, so without that filter a scan of a shared downloads folder
+  /// wrote the launch target into every unmatched row it returned: samples,
+  /// subtitles, artwork, NFOs.
+  ///
+  /// It only touches files whose *name* says they are the target
+  /// ([manualImportFileNamesTitle]). [targetId] survives every
+  /// [selectFolder]/scan for the rest of the flow, and nothing about the launch
+  /// pins it to a folder — the entry points that carry a target carry no path —
+  /// so "any video file in whatever folder is on screen" meant a scan of the
+  /// whole downloads root labelled every unidentified rip in it with the movie
+  /// the user happened to come from.
+  ///
+  /// And it does **not** select what it assigns: a guess the user never reviewed
+  /// must not arrive pre-ticked in the batch that "Confirm import" sends.
   Future<void> _applyTargetPreselection() async {
     final service = state.service;
     final targetId = state.targetId;
     if (service == null || targetId == null || targetId <= 0) return;
 
-    final unmatched = state.items
-        .where((item) => item.isSelectable && !item.hasMatchFor(service))
+    final importable = state.items
+        .where(
+          (item) =>
+              item.isSelectable &&
+              !item.hasMatchFor(service) &&
+              manualImportIsSupportedFile(service, item),
+        )
         .toList(growable: false);
-    if (unmatched.isEmpty) return;
+    if (importable.isEmpty) return;
 
     ManualImportLookupResult? target;
     try {
       final matches = await getLibraryMatches();
-      for (final match in matches) {
-        if (match.id == targetId) {
-          target = match;
+      for (final option in matches) {
+        if (option.id == targetId) {
+          target = option;
           break;
         }
       }
     } catch (_) {
       return; // Best-effort: fall back to fully manual matching.
     }
-    if (target == null) return;
+    final match = target;
+    if (match == null) return;
+
+    final unmatched = importable
+        .where((item) => manualImportFileNamesTitle(match.title, item))
+        .toList(growable: false);
+    if (unmatched.isEmpty) return;
 
     final assignments = <ManualImportItem, ManualImportFixAssignment>{};
     for (final item in unmatched) {
       final parsed = _assignmentForItem(service, item);
       final candidate = ManualImportFixAssignment(
-        match: target,
+        match: match,
         episode: parsed.episode,
         episodes: parsed.episodes,
         album: parsed.album,
@@ -512,7 +542,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     }
 
     if (assignments.isNotEmpty) {
-      await applyBulkFixAssignments(assignments);
+      await applyBulkFixAssignments(assignments, select: false);
     }
   }
 
@@ -753,11 +783,15 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     final resolved = item.resolvedWithAssignment(service, assignment);
     state = state.copyWith(
       items: [
+        // Matched on the path alone. The id used to be an alternative here, but
+        // it is not an identity: `ManualImportItem.fromJson` falls back to
+        // `path.hashCode` when the server sends none, so the clause was
+        // redundant for every conforming payload while leaving one service that
+        // returns a constant id able to splatter one resolved item over every
+        // row in the scan. The path is what the import command sends, so the
+        // path is what selects the row it belongs to.
         for (final existing in state.items)
-          if (existing.path == item.path || existing.id == item.id)
-            resolved
-          else
-            existing,
+          if (existing.path == item.path) resolved else existing,
       ],
       // Auto-select the now-ready item so "Confirm import" picks it up.
       selectedPaths: {...state.selectedPaths, resolved.path},
@@ -795,9 +829,14 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   ///
   /// Mirrors [applyFixAssignment] for the bulk fix flow. The actual import
   /// is triggered separately via [confirmImport].
+  ///
+  /// [select] adds the now-ready files to the import selection, which is right
+  /// when the user just assigned them by hand and wrong when the app guessed on
+  /// their behalf — see [_applyTargetPreselection].
   Future<List<ManualImportItem>> applyBulkFixAssignments(
-    Map<ManualImportItem, ManualImportFixAssignment> assignments,
-  ) async {
+    Map<ManualImportItem, ManualImportFixAssignment> assignments, {
+    bool select = true,
+  }) async {
     final service = state.service;
     if (service == null || assignments.isEmpty) return const [];
 
@@ -821,7 +860,9 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
           updatedByPath[existing.path] ?? existing,
       ],
       // Auto-select the now-ready items so "Confirm import" picks them up.
-      selectedPaths: {...state.selectedPaths, ...updatedByPath.keys},
+      selectedPaths: select
+          ? {...state.selectedPaths, ...updatedByPath.keys}
+          : state.selectedPaths,
       // They are no longer unmatched, so the shared-assignment tick is spent.
       fixSelectionPaths: state.fixSelectionPaths.difference(
         updatedByPath.keys.toSet(),

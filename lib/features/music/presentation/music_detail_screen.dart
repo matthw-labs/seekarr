@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/api/quality_profile_mixin.dart';
 import 'package:seekarr/core/app_animation.dart';
 import 'package:seekarr/core/status/arr_queue_snapshot.dart';
@@ -21,6 +22,9 @@ import 'package:seekarr/features/music/presentation/music_detail_provider.dart';
 import 'package:seekarr/features/music/presentation/music_detail_view_model.dart';
 import 'package:seekarr/features/music/presentation/music_provider.dart';
 import 'package:seekarr/features/music/presentation/widgets/music_albums_list.dart';
+import 'package:seekarr/features/release_search/domain/release_search_target.dart';
+import 'package:seekarr/features/release_search/presentation/release_search_entry.dart';
+import 'package:seekarr/features/release_search/presentation/widgets/release_search_status_card.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
@@ -281,6 +285,15 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
             data: (albums) => MediaDetailSlot.lazy(
               label: 'Albums',
               count: _albumsCount(viewModel),
+              leadingBox: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: ReleaseSearchStatusCard(
+                  target: ReleaseSearchTarget.artist(
+                    artistId: widget.artistId,
+                    label: truncateTitle(viewModel.title),
+                  ),
+                ),
+              ),
               sliver: MusicAlbumsList(
                 albums: albums,
                 lidarrService: ref.read(lidarrServiceProvider),
@@ -464,21 +477,15 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     BuildContext context, {
     required String title,
   }) async {
-    HapticFeedback.selectionClick();
-    final lidarrService = ref.read(lidarrServiceProvider);
-    await InteractiveSearchSheet.showAsync(
-      context: context,
-      accent: ServiceKey.lidarr.accent,
-      // The sheet heading already says "Releases"; this is its subtitle. Capped
-      // because that subtitle has no maxLines.
-      title: truncateTitle(title),
-      fetchReleases: (token) => lidarrService.getReleases(
+    // The sheet heading already says "Releases"; this is its subtitle. Capped
+    // because that subtitle has no maxLines.
+    await showReleaseSearch(
+      context,
+      ref,
+      ReleaseSearchTarget.artist(
         artistId: widget.artistId,
-        cancelToken: token,
+        label: truncateTitle(title),
       ),
-      onGrabRelease: (guid, indexerId) async {
-        await lidarrService.grabRelease(guid: guid, indexerId: indexerId);
-      },
     );
   }
 
@@ -507,19 +514,19 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     int albumId, {
     required String title,
   }) async {
-    HapticFeedback.selectionClick();
-    final lidarrService = ref.read(lidarrServiceProvider);
-    await InteractiveSearchSheet.showAsync(
-      context: context,
-      accent: ServiceKey.lidarr.accent,
-      // "Album Releases" under a heading reading "Releases" named neither the
-      // artist nor the scope. Same shape as the artist-wide sheet.
-      title: '${truncateTitle(title)} · one album',
-      fetchReleases: (token) =>
-          lidarrService.getReleases(albumId: albumId, cancelToken: token),
-      onGrabRelease: (guid, indexerId) async {
-        await lidarrService.grabRelease(guid: guid, indexerId: indexerId);
-      },
+    // "Album Releases" under a heading reading "Releases" named neither the
+    // artist nor the scope. Same shape as the artist-wide sheet.
+    //
+    // artistId travels with it so an album can be recognised as covered by an
+    // artist-wide search that may already be running.
+    await showReleaseSearch(
+      context,
+      ref,
+      ReleaseSearchTarget.album(
+        albumId: albumId,
+        artistId: widget.artistId,
+        label: '${truncateTitle(title)} · one album',
+      ),
     );
   }
 

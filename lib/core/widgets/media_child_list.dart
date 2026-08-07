@@ -341,6 +341,13 @@ class MediaChildGroupSliver extends StatefulWidget {
   /// Title of the picker sheet: `Seasons`.
   final String pickerTitle;
 
+  /// The feature's own plural for a child: `episodes`, `tracks`.
+  ///
+  /// Supplied by the caller so the collapse control can name what it is hiding —
+  /// "Show all 25 episodes", never "Show all items". The visible label carries
+  /// it too, because a count without its noun is a number floating under a list.
+  final String childNoun;
+
   const MediaChildGroupSliver({
     super.key,
     required this.groups,
@@ -350,9 +357,19 @@ class MediaChildGroupSliver extends StatefulWidget {
     required this.emptyState,
     required this.pickerLabel,
     required this.pickerTitle,
+    required this.childNoun,
     this.childOverride,
     this.groupAction,
   });
+
+  /// Children shown before the collapse control takes over.
+  ///
+  /// Eight is a season of a limited series in full, roughly a phone's worth of
+  /// rows, and enough of a 25-episode season to establish the shape of the list
+  /// before the page hands the scroll back to everything below it. Lower and a
+  /// four-track album would collapse for no reason; higher and a 250-episode
+  /// season still buries the regions under it.
+  static const int collapsedChildCount = 8;
 
   @override
   State<MediaChildGroupSliver> createState() => _MediaChildGroupSliverState();
@@ -372,9 +389,27 @@ class _MediaChildGroupSliverState extends State<MediaChildGroupSliver> {
     return widget.groups.first;
   }
 
+  /// Whether the selected container's children are fully shown.
+  ///
+  /// Deliberately reset on every [_select]: expanding season 1 and then tapping
+  /// season 2 must not drop the user into 25 rows they never asked for.
+  bool _expanded = false;
+
   void _select(int id) {
-    if (_selectedId == id) return;
-    setState(() => _selectedId = id);
+    // Compared against the *effective* selection, not against `_selectedId`.
+    // Until the first tap `_selectedId` is null while the rail already highlights
+    // `groups.first`, and `SelectionPills` fires `onSelected` unconditionally —
+    // so tapping the already-selected first pill fell straight through this
+    // guard and reset `_expanded`, silently collapsing an expanded 25-episode
+    // season back to eight rows.
+    // The emptiness test comes first because `_selectedGroup` reads
+    // `groups.first`: the picker awaits a sheet, and the containers can be gone
+    // by the time it answers.
+    if (widget.groups.isEmpty || _selectedGroup.id == id) return;
+    setState(() {
+      _selectedId = id;
+      _expanded = false;
+    });
   }
 
   Future<void> _openPicker(BuildContext context) async {
@@ -420,6 +455,10 @@ class _MediaChildGroupSliverState extends State<MediaChildGroupSliver> {
 
     final selected = _selectedGroup;
     final override = widget.childOverride?.call(context, selected);
+    final totalCount = widget.childCount(selected);
+    final shownCount = _expanded
+        ? totalCount
+        : totalCount.clamp(0, MediaChildGroupSliver.collapsedChildCount);
 
     return SliverMainAxisGroup(
       slivers: [
@@ -436,18 +475,89 @@ class _MediaChildGroupSliverState extends State<MediaChildGroupSliver> {
         ),
         if (override != null)
           SliverToBoxAdapter(child: override)
-        else
+        else ...[
           SliverList.builder(
             // Keyed by container so switching seasons swaps the list outright
             // instead of updating 250 elements in place.
             key: ValueKey<int>(selected.id),
-            itemCount: widget.childCount(selected),
+            // Capping the count is what keeps the collapse lazy: a collapsed
+            // 250-episode season builds eight rows, not 250 with 242 hidden.
+            itemCount: shownCount,
             itemBuilder: (context, index) => Padding(
               padding: EdgeInsets.only(top: index == 0 ? 0 : AppSpacing.xs),
               child: widget.childBuilder(context, selected, index),
             ),
           ),
+          if (totalCount > MediaChildGroupSliver.collapsedChildCount)
+            SliverToBoxAdapter(
+              child: _CollapseToggle(
+                expanded: _expanded,
+                totalCount: totalCount,
+                childNoun: widget.childNoun,
+                accent: widget.accent,
+                onToggle: () => setState(() => _expanded = !_expanded),
+              ),
+            ),
+        ],
       ],
+    );
+  }
+}
+
+/// The footer control that reveals the rest of a container's children.
+///
+/// A plain rebuild rather than an animated reveal: an implicit `AnimatedSize`
+/// around a rebuilt list is what the project bans outright, and a zero-duration
+/// one re-dirties itself inside its own `performLayout` and trips a framework
+/// assert — so there is no animator here to gate on Reduce Motion.
+class _CollapseToggle extends StatelessWidget {
+  final bool expanded;
+  final int totalCount;
+  final String childNoun;
+  final Color accent;
+  final VoidCallback onToggle;
+
+  const _CollapseToggle({
+    required this.expanded,
+    required this.totalCount,
+    required this.childNoun,
+    required this.accent,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // "Show fewer" and not "Collapse": collapse is a chrome word, and this
+    // control is about quantity, not geometry. The visible label stays short
+    // because it sits under a full-width list at any reading size, while the
+    // accessible name carries the noun so a reader hears what shrinks.
+    final label = expanded ? 'Show fewer' : 'Show all $totalCount $childNoun';
+    final semanticLabel = expanded ? 'Show fewer $childNoun' : label;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Semantics(
+        button: true,
+        label: semanticLabel,
+        child: ExcludeSemantics(
+          child: TextButton.icon(
+            onPressed: onToggle,
+            icon: Icon(
+              expanded
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              size: 18,
+            ),
+            label: Text(label, maxLines: 2, textAlign: TextAlign.center),
+            style: TextButton.styleFrom(
+              foregroundColor: accent,
+              // A floor rather than a fixed height, so the label may still grow
+              // with the reading size.
+              minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -484,6 +594,12 @@ class _GroupSelector extends StatelessWidget {
     // `SectionHeader`: past 1.4x the label and its controls stop fitting on one
     // line, and a reading size is not a window width.
     final stacked = MediaQuery.textScalerOf(context).scale(14) > 14 * 1.4;
+    // Six short pills and their gaps are about what a phone shows without
+    // scrubbing, and a grown reading size spends that budget on fewer. Keyed off
+    // the scaler and not a `LayoutBuilder` for the same reason `SectionHeader`
+    // is: a reading size is not a window width, and a shared widget sits inside
+    // callers that ask it for intrinsic dimensions.
+    final showPicker = groups.length > 6 || stacked;
 
     final summaryTitle = Semantics(
       container: true,
@@ -527,27 +643,45 @@ class _GroupSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (groups.length > 1) ...[
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: TextButton.icon(
-              onPressed: onOpenPicker,
-              icon: const Icon(Icons.unfold_more_rounded, size: 18),
-              label: Text(pickerLabel),
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurfaceVariant,
-                // 48dp Android / 44pt iOS, applied as a floor so the label can
-                // still grow with the reading size.
-                minimumSize: const Size(0, 48),
+          Row(
+            children: [
+              Expanded(
+                child: SelectionPills<int>(
+                  values: groups
+                      .map((group) => group.id)
+                      .toList(growable: false),
+                  selected: selected.id,
+                  accent: accent,
+                  labelBuilder: (id) =>
+                      groups.firstWhere((group) => group.id == id).shortLabel,
+                  onSelected: onSelected,
+                ),
               ),
-            ),
-          ),
-          SelectionPills<int>(
-            values: groups.map((group) => group.id).toList(growable: false),
-            selected: selected.id,
-            accent: accent,
-            labelBuilder: (id) =>
-                groups.firstWhere((group) => group.id == id).shortLabel,
-            onSelected: onSelected,
+              // The jump-to exists only where the rail genuinely cannot serve.
+              // It used to render on its own right-aligned row above the pills
+              // whenever there was more than one container, so a five-season
+              // series got a control that duplicated the five pills below it in
+              // a band of dead space. Past the threshold — or once a reading size
+              // has grown the pills — reaching season 40 without scrubbing is a
+              // real problem, and then it earns the space, at the end of the rail
+              // it belongs to rather than above it.
+              if (showPicker) ...[
+                const SizedBox(width: AppSpacing.xs),
+                SizedBox.square(
+                  dimension: 48,
+                  child: IconButton(
+                    onPressed: onOpenPicker,
+                    // The count lives in the accessible name and the tooltip:
+                    // spelling it out beside the rail would eat the width the
+                    // pills need, which is the space this control is here to
+                    // give back.
+                    tooltip: pickerLabel,
+                    icon: const Icon(Icons.unfold_more_rounded, size: 18),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
         if (stacked)

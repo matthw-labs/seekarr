@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/theme.dart';
@@ -29,57 +28,12 @@ class UnraidScreen extends ConsumerWidget {
       accent: AppColors.unraid,
       appBar: showAppBar ? const GlassAppBar(title: Text('Unraid')) : null,
       body: SafeArea(
+        // The shared placeholder, not a private copy: four dashboards had each
+        // grown their own "this service isn't set up" card, which is the state
+        // `NotConfiguredPlaceholder` exists to unify.
         child: isConfigured
             ? _UnraidDashboard(topPadding: topPadding)
-            : _UnraidNotConfigured(
-                onOpenSettings: () => context.go(
-                  '/settings/service/${ServiceKey.unraid.routeParam}',
-                ),
-              ),
-      ),
-    );
-  }
-}
-
-class _UnraidNotConfigured extends StatelessWidget {
-  const _UnraidNotConfigured({required this.onOpenSettings});
-
-  final VoidCallback onOpenSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.developer_board_rounded,
-              size: 48,
-              color: AppColors.unraid,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Unraid is not configured yet.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Enable the GraphQL API and create an API key in Unraid '
-              '(Settings → Management Access → API Keys).',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onOpenSettings,
-              child: const Text('Open settings'),
-            ),
-          ],
-        ),
+            : NotConfiguredPlaceholder.forService(ServiceKey.unraid),
       ),
     );
   }

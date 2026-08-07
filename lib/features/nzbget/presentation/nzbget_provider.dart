@@ -17,6 +17,7 @@ final nzbgetClientProvider = Provider<NzbgetClient>((ref) {
     url: settings.nzbgetUrl,
     username: settings.nzbgetUsername.isEmpty ? null : settings.nzbgetUsername,
     password: settings.nzbgetPassword.isEmpty ? null : settings.nzbgetPassword,
+    certFingerprint: settings.pinForUrl(settings.nzbgetUrl),
   );
   ref.onDispose(() => client.close());
   return client;

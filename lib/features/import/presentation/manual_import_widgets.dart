@@ -7,6 +7,7 @@ import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/service_theme.dart';
 import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/utils/byte_format.dart';
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -364,17 +365,16 @@ class ImportPrimaryButton extends StatelessWidget {
   }
 }
 
+/// A file size for the manual-import surfaces, or `Unknown size` when the
+/// service reported none.
+///
+/// Only the sentinel is local: the ladder is the shared [formatBytesPrecise]
+/// one, the same the qBittorrent list and Interactive Search read from. This
+/// was a sixth private ladder with its own precision rule (`unit <= 1 ? 0 : 1`),
+/// so the same file read `5.0 GB` here and `5.00 GB` two screens away.
 String formatImportBytes(int size) {
   if (size <= 0) return 'Unknown size';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  var value = size.toDouble();
-  var unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit++;
-  }
-  final precision = unit <= 1 ? 0 : 1;
-  return '${value.toStringAsFixed(precision)} ${units[unit]}';
+  return formatBytesPrecise(size);
 }
 
 List<String> _segmentsFor(String path) {

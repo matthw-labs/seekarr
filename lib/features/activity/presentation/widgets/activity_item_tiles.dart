@@ -526,7 +526,15 @@ class GlobalActivityItemTile extends ConsumerWidget {
           raw,
           actions: _writeActions.isEmpty
               ? null
-              : _SheetActions(item: item, actions: _writeActions),
+              : _SheetActions(
+                  actions: _writeActions,
+                  // The tile's own context and ref, deliberately: the sheet
+                  // closes before the action runs, so anything captured from
+                  // *inside* it is disposed by the time the confirmation
+                  // dialog returns. See [_SheetActions].
+                  onSelected: (action) =>
+                      _runRowAction(context, ref, item, action),
+                ),
         );
         break;
       case GlobalActivityKind.history:
@@ -564,7 +572,7 @@ class GlobalActivityItemTile extends ConsumerWidget {
   ) {
     showWantedInteractiveSearch(
       context,
-      ref.read(resolvedArrServiceProvider(item.serviceType)),
+      ref,
       item.serviceType,
       raw,
       // The subject alone: the sheet's own heading already says "Releases", and
@@ -614,16 +622,36 @@ enum _RowAction {
 ///
 /// A row can only afford an overflow glyph; a sheet the user deliberately opened
 /// on a stalled download can afford to name the actions outright.
-class _SheetActions extends ConsumerWidget {
-  final GlobalActivityItem item;
+///
+/// Deliberately dumb: it closes the sheet and hands the choice back to whoever
+/// opened it, rather than running the mutation itself. Running it here was the
+/// bug — the button popped the sheet and then called the action with the
+/// *sheet's own* context. `showAppConfirmDialog` still opened (its navigator is
+/// captured synchronously), but by the time the user confirmed, the sheet route
+/// was disposed, so every `if (!context.mounted) return;` guard in
+/// [ActivityActions] short-circuited and the request was never sent — no
+/// mutation, no snackbar, no error. Remove, blocklist-and-retry, un-blocklist
+/// and approve/decline were all silently inert from this surface, while the row
+/// overflow menu — which passes the tile's context — kept working and hid it.
+class _SheetActions extends StatelessWidget {
   final List<_RowAction> actions;
 
-  const _SheetActions({required this.item, required this.actions});
+  /// Invoked after the sheet is closed, with a context that outlives it.
+  final ValueChanged<_RowAction> onSelected;
+
+  const _SheetActions({required this.actions, required this.onSelected});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final menu = _RowActionsMenu(item: item, actions: actions);
+
+    void select(_RowAction action) {
+      // Close the sheet first: the confirmation dialog is the thing that should
+      // hold focus, and leaving the sheet up behind it stacks two modals over
+      // the row being removed.
+      Navigator.of(context).pop();
+      onSelected(action);
+    }
 
     return Wrap(
       spacing: AppSpacing.sm,
@@ -632,13 +660,7 @@ class _SheetActions extends ConsumerWidget {
         for (final action in actions)
           action.destructive
               ? OutlinedButton.icon(
-                  onPressed: () {
-                    // Close the sheet first: the confirmation dialog is the
-                    // thing that should hold focus, and leaving the sheet up
-                    // behind it stacks two modals over the row being removed.
-                    Navigator.of(context).pop();
-                    menu._run(context, ref, action);
-                  },
+                  onPressed: () => select(action),
                   icon: Icon(action.icon, size: 18),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: colorScheme.error,
@@ -649,10 +671,7 @@ class _SheetActions extends ConsumerWidget {
                   label: Text(action.label),
                 )
               : FilledButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    menu._run(context, ref, action);
-                  },
+                  onPressed: () => select(action),
                   icon: Icon(action.icon, size: 18),
                   label: Text(action.label),
                 ),
@@ -680,7 +699,7 @@ class _RowActionsMenu extends ConsumerWidget {
         size: 18,
         color: colorScheme.onSurfaceVariant,
       ),
-      onSelected: (action) => _run(context, ref, action),
+      onSelected: (action) => _runRowAction(context, ref, item, action),
       itemBuilder: (context) => [
         for (final action in actions)
           PopupMenuItem<_RowAction>(
@@ -713,75 +732,86 @@ class _RowActionsMenu extends ConsumerWidget {
       ],
     );
   }
+}
 
-  /// Each case reads the key it actually needs.
-  ///
-  /// There used to be one `recordId == null` guard covering the whole method,
-  /// which quietly made every action \*arr-shaped: a Seerr request is keyed by its
-  /// own id and has no \*arr record, so it could never have reached the switch.
-  void _run(BuildContext context, WidgetRef ref, _RowAction action) {
-    switch (action) {
-      case _RowAction.approveRequest:
-        final requestId = item.request?.id;
-        if (requestId == null) return;
-        ActivityActions.approveRequest(
-          context,
-          ref,
-          requestId: requestId,
-          title: item.title,
-        );
-      case _RowAction.declineRequest:
-        final requestId = item.request?.id;
-        if (requestId == null) return;
-        ActivityActions.declineRequest(
-          context,
-          ref,
-          requestId: requestId,
-          title: item.title,
-        );
-      case _RowAction.manualImport:
-        final folder = manualImportFolderFromOutputPath(
-          dynamic_utils.stringOrNull(item.raw?['outputPath']),
-        );
-        if (folder == null || !item.service.supportsManualImport) return;
-        context.push(
-          manualImportLocation(
-            manualImportBrowsePath,
-            item.service,
-            folderPath: folder,
-          ),
-        );
-      case _RowAction.blocklistAndRetry:
-        final recordId = item.recordId;
-        if (recordId == null) return;
-        ActivityActions.blocklistAndRetry(
-          context,
-          ref,
-          serviceType: item.serviceType,
-          recordId: recordId,
-          title: item.title,
-        );
-      case _RowAction.removeFromQueue:
-        final recordId = item.recordId;
-        if (recordId == null) return;
-        ActivityActions.removeFromQueue(
-          context,
-          ref,
-          serviceType: item.serviceType,
-          recordId: recordId,
-          title: item.title,
-        );
-      case _RowAction.removeFromBlocklist:
-        final recordId = item.recordId;
-        if (recordId == null) return;
-        ActivityActions.removeFromBlocklist(
-          context,
-          ref,
-          serviceType: item.serviceType,
-          recordId: recordId,
-          title: item.title,
-        );
-    }
+/// Dispatches one [_RowAction] against [item].
+///
+/// Top-level rather than a method on the menu, because the detail sheet needs
+/// the same dispatch driven by a context that is *not* the sheet's — see
+/// [_SheetActions]. [context] and [ref] must therefore belong to something that
+/// outlives any modal the action opens.
+///
+/// Each case reads the key it actually needs. There used to be one
+/// `recordId == null` guard covering the whole method, which quietly made every
+/// action \*arr-shaped: a Seerr request is keyed by its own id and has no \*arr
+/// record, so it could never have reached the switch.
+void _runRowAction(
+  BuildContext context,
+  WidgetRef ref,
+  GlobalActivityItem item,
+  _RowAction action,
+) {
+  switch (action) {
+    case _RowAction.approveRequest:
+      final requestId = item.request?.id;
+      if (requestId == null) return;
+      ActivityActions.approveRequest(
+        context,
+        ref,
+        requestId: requestId,
+        title: item.title,
+      );
+    case _RowAction.declineRequest:
+      final requestId = item.request?.id;
+      if (requestId == null) return;
+      ActivityActions.declineRequest(
+        context,
+        ref,
+        requestId: requestId,
+        title: item.title,
+      );
+    case _RowAction.manualImport:
+      final folder = manualImportFolderFromOutputPath(
+        dynamic_utils.stringOrNull(item.raw?['outputPath']),
+      );
+      if (folder == null || !item.service.supportsManualImport) return;
+      context.push(
+        manualImportLocation(
+          manualImportBrowsePath,
+          item.service,
+          folderPath: folder,
+        ),
+      );
+    case _RowAction.blocklistAndRetry:
+      final recordId = item.recordId;
+      if (recordId == null) return;
+      ActivityActions.blocklistAndRetry(
+        context,
+        ref,
+        serviceType: item.serviceType,
+        recordId: recordId,
+        title: item.title,
+      );
+    case _RowAction.removeFromQueue:
+      final recordId = item.recordId;
+      if (recordId == null) return;
+      ActivityActions.removeFromQueue(
+        context,
+        ref,
+        serviceType: item.serviceType,
+        recordId: recordId,
+        title: item.title,
+      );
+    case _RowAction.removeFromBlocklist:
+      final recordId = item.recordId;
+      if (recordId == null) return;
+      ActivityActions.removeFromBlocklist(
+        context,
+        ref,
+        serviceType: item.serviceType,
+        recordId: recordId,
+        title: item.title,
+      );
   }
 }
 
@@ -1006,7 +1036,7 @@ String? _historyEpisodeCode(Map<String, dynamic> item) {
 }
 
 String? _historySizeLabel(Map<String, dynamic> item) {
-  final size = formatSizeInGb(
+  final size = formatActivitySize(
     asActivityMap(item['data'])?['size'] ?? item['size'],
   );
   return size == '—' ? null : size;

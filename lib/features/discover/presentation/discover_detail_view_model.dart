@@ -266,7 +266,7 @@ class DiscoverDetailViewModel {
       voteCount:
           (details['voteCount'] as num?)?.toInt() ??
           (details['vote_count'] as num?)?.toInt(),
-      cast: cast.take(20).map(_toCastMember).toList(growable: false),
+      cast: _takeCast(cast),
       directors: _takeCrewNames(crew, jobs: const {'Director'}),
       writers: _takeCrewNames(crew, jobs: const {'Writer', 'Screenplay'}),
       keywords: _takeNames(_asMapList(details['keywords'])),
@@ -325,6 +325,51 @@ int _movieReleasePriority(int type) {
     6 => 5,
     _ => 99,
   };
+}
+
+/// The first 20 billed cast members, one entry per **person**.
+///
+/// TMDB bills one credits entry per *role*, so an actor who plays a dual role or
+/// voices two characters comes back twice under the same person id. The cast
+/// rail turns each tappable tile into a `Hero` tagged `person_<id>`, and two
+/// Heroes sharing a tag on one screen trip Flutter's assert on the next route
+/// push (and fly the wrong source in release). Deduping here rather than in the
+/// rail keeps the fix on the data: the two entries are the same face, the same
+/// name and the same destination, so the second one was never anything but a
+/// duplicate tile. The characters are merged so the extra role is not lost.
+///
+/// Dedupe runs *before* the cap, so a duplicated credit no longer costs the
+/// twentieth actor their place. Entries with no usable id (0) cannot collide —
+/// the rail does not make them tappable and builds no Hero for them — so they
+/// are kept as-is.
+List<DiscoverCastMember> _takeCast(List<Map<String, dynamic>> cast) {
+  final members = <DiscoverCastMember>[];
+  final indexById = <int, int>{};
+
+  for (final entry in cast) {
+    final member = _toCastMember(entry);
+    final index = member.id > 0 ? indexById[member.id] : null;
+    if (index == null) {
+      if (member.id > 0) indexById[member.id] = members.length;
+      members.add(member);
+      continue;
+    }
+    final existing = members[index];
+    members[index] = (
+      id: existing.id,
+      name: existing.name,
+      character: _mergeCharacters(existing.character, member.character),
+      profilePath: existing.profilePath ?? member.profilePath,
+    );
+  }
+
+  return members.take(20).toList(growable: false);
+}
+
+String _mergeCharacters(String first, String second) {
+  if (second.isEmpty || first == second) return first;
+  if (first.isEmpty) return second;
+  return '$first / $second';
 }
 
 DiscoverCastMember _toCastMember(Map<String, dynamic> member) {

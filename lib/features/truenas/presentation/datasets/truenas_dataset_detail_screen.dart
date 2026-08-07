@@ -9,6 +9,7 @@ import 'package:seekarr/core/widgets/app_card.dart';
 import 'package:seekarr/core/widgets/app_dialog.dart';
 import 'package:seekarr/core/widgets/app_error_state.dart';
 import 'package:seekarr/core/widgets/app_skeleton.dart';
+import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/section_header.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:seekarr/features/truenas/domain/models/dataset.dart';
@@ -206,7 +207,16 @@ class _SnapshotTile extends ConsumerWidget {
                   style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
                 ),
                 Text(
-                  'used ${snapshot.usedBytes != null ? formatSize(snapshot.usedBytes!) : '—'}',
+                  [
+                    'used ${snapshot.usedBytes != null ? formatSize(snapshot.usedBytes!) : '—'}',
+                    // The dense-row date voice, matching the activity feed.
+                    if (snapshot.createdMs != null)
+                      formatIsoDate(
+                        DateTime.fromMillisecondsSinceEpoch(
+                          snapshot.createdMs!,
+                        ).toIso8601String(),
+                      ),
+                  ].join(' · '),
                   style: theme.textTheme.labelSmall!.tabular.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

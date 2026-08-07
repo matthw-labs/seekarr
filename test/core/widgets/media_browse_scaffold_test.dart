@@ -18,6 +18,93 @@ final testSearchResultsProvider = FutureProvider<List<String>?>(
 );
 
 void main() {
+  group('mediaBrowseFilterMatches', () {
+    test('every availability answers to a chip, the unreleased one aside', () {
+      for (final availability in MediaAvailability.values) {
+        final status = MediaStatusInfo(availability: availability);
+        final underAvailable = mediaBrowseFilterMatches(
+          MediaBrowseFilter.available,
+          status,
+        );
+        final underMissing = mediaBrowseFilterMatches(
+          MediaBrowseFilter.missing,
+          status,
+        );
+
+        if (availability == MediaAvailability.unavailable) {
+          // The one deliberate exception: an unreleased title is not a gap
+          // anyone can close, so it answers to `All` alone.
+          expect(underAvailable, isFalse, reason: '$availability');
+          expect(underMissing, isFalse, reason: '$availability');
+          continue;
+        }
+
+        // Exactly one, never both and never neither — otherwise an item is
+        // either double-counted or invisible under every chip but `All`.
+        expect(underAvailable ^ underMissing, isTrue, reason: '$availability');
+      }
+    });
+
+    test('an unresolved or departed item is a gap, not nothing at all', () {
+      // `sonarrSeriesAvailability` returns `unknown` whenever the server omits
+      // `statistics`, which is what a freshly added series looks like.
+      for (final availability in const [
+        MediaAvailability.unknown,
+        MediaAvailability.deleted,
+        MediaAvailability.notTracked,
+        MediaAvailability.missing,
+      ]) {
+        expect(
+          mediaBrowseBucketOf(MediaStatusInfo(availability: availability)),
+          MediaBrowseBucket.gap,
+          reason: '$availability',
+        );
+      }
+    });
+
+    test('a partial manifest counts as on disk', () {
+      for (final availability in const [
+        MediaAvailability.available,
+        MediaAvailability.upgradable,
+        MediaAvailability.partial,
+      ]) {
+        expect(
+          mediaBrowseBucketOf(MediaStatusInfo(availability: availability)),
+          MediaBrowseBucket.onDisk,
+          reason: '$availability',
+        );
+      }
+    });
+
+    test('a screen with no status extractor sees gaps', () {
+      expect(mediaBrowseFilterMatches(MediaBrowseFilter.all, null), isTrue);
+      expect(mediaBrowseFilterMatches(MediaBrowseFilter.missing, null), isTrue);
+      expect(
+        mediaBrowseFilterMatches(MediaBrowseFilter.available, null),
+        isFalse,
+      );
+      expect(
+        mediaBrowseFilterMatches(MediaBrowseFilter.inQueue, null),
+        isFalse,
+      );
+    });
+
+    test('what is moving is a different question from what is on disk', () {
+      const downloading = MediaStatusInfo(
+        availability: MediaAvailability.missing,
+        pipeline: MediaPipeline.downloading,
+      );
+      expect(
+        mediaBrowseFilterMatches(MediaBrowseFilter.inQueue, downloading),
+        isTrue,
+      );
+      expect(
+        mediaBrowseFilterMatches(MediaBrowseFilter.missing, downloading),
+        isTrue,
+      );
+    });
+  });
+
   group('MediaBrowseScaffold', () {
     testWidgets('renders title in AppBar', (tester) async {
       await tester.pumpWidget(_buildTestApp());
@@ -183,6 +270,51 @@ void main() {
 
       expect(find.text('Available Item'), findsNothing);
       expect(find.text('Missing Item'), findsOneWidget);
+    });
+
+    testWidgets('lists a series the server never resolved under Missing', (
+      tester,
+    ) async {
+      final libraryProvider = FutureProvider<List<String>>(
+        (ref) async => ['Available Item', 'Unresolved Item'],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: libraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          titleExtractor: (item) => item,
+          statusExtractor: (item) => switch (item) {
+            'Available Item' => const MediaStatusInfo(
+              availability: MediaAvailability.available,
+            ),
+            // Sonarr omitting `statistics` on a freshly added series, which
+            // used to leave the row visible under `All` and under nothing else.
+            _ => const MediaStatusInfo(availability: MediaAvailability.unknown),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Missing'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unresolved Item'), findsOneWidget);
+      expect(find.text('Available Item'), findsNothing);
+
+      await tester.tap(find.text('Available'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unresolved Item'), findsNothing);
+      expect(find.text('Available Item'), findsOneWidget);
     });
 
     testWidgets('filters grouped browse content by pipeline state', (

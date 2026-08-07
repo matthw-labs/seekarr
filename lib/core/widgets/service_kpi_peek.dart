@@ -6,8 +6,10 @@ import 'package:seekarr/core/app_elevation.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/models/service_kpi.dart';
+import 'package:seekarr/core/reel_motion.dart';
 import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/widgets/reel_line.dart';
 import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
 
 /// A premium horizontal rail of KPI "stat cards" shown at the top of a service
@@ -137,13 +139,20 @@ class _KpiCard extends StatelessWidget {
             children: [
               Icon(kpi.icon, size: 14, color: accent),
               const SizedBox(width: AppSpacing.xs),
-              Text(
+              // The instrument readout, and the one number on a dashboard that
+              // is worth watching change — a library total ticking up after an
+              // import, a queue count draining. Safe to roll because the card is
+              // `minWidth`, not a fixed width, inside a horizontally scrolling
+              // rail: a wider value makes the card wider instead of overflowing,
+              // and no ellipsis is being relied on here to save it.
+              ReelLine(
                 kpi.value,
-                maxLines: 1,
+                options: ReelMotion.figure,
                 style: theme.textTheme.titleMedium!
                     .weight(FontWeight.w800)
                     .tabular
                     .copyWith(color: colorScheme.onSurface, height: 1.1),
+                fallbackMaxLines: 1,
               ),
             ],
           ),

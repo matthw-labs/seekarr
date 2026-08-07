@@ -8,11 +8,14 @@ export 'shimmer_placeholder.dart';
 export 'app_skeleton.dart';
 export 'staggered_entrance.dart';
 export 'pressable_scale.dart';
+export 'reel_line.dart';
+export 'reel_command_button.dart';
 
 // Cards
 export 'app_card.dart';
 export 'content_card.dart';
 export 'service_kpi_peek.dart';
+export 'service_ring.dart';
 
 // States
 export 'app_empty_state.dart';
@@ -45,6 +48,7 @@ export 'media_info_card.dart';
 export 'media_metadata_line.dart';
 export 'header_action_row.dart';
 export 'library_detail_actions.dart';
+export 'download_queue_tile.dart';
 
 // Form & Input
 export 'search_bar_header.dart';

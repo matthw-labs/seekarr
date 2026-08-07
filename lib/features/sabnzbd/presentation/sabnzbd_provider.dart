@@ -16,6 +16,7 @@ final sabnzbdClientProvider = Provider<SabnzbdClient>((ref) {
   final client = SabnzbdClient(
     url: settings.sabnzbdUrl,
     apiKey: settings.sabnzbdApiKey,
+    certFingerprint: settings.pinForUrl(settings.sabnzbdUrl),
   );
   ref.onDispose(() => client.close());
   return client;

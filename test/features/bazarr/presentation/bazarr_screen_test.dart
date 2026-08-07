@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_screen.dart';
 import 'package:seekarr/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
+import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
+import '../../../test_helpers/reel_finders.dart';
 
 void main() {
   testWidgets('shows not-configured message when Bazarr is not configured', (
@@ -21,8 +25,63 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('not configured'), findsOneWidget);
-    expect(find.text('Open settings'), findsOneWidget);
+    // Bazarr's private "is not configured yet." card was the fifth copy of this
+    // state and now renders the shared `NotConfiguredPlaceholder`, so the
+    // asserted strings are the shared widget's voice ("isn't set up" / "Open
+    // Settings"). The invariant the test is actually about — an unconfigured
+    // Bazarr shows the placeholder and a way to go fix it — is unchanged, and
+    // asserting the widget type as well pins it to the shared implementation.
+    expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
+    expect(find.textContaining("isn't set up"), findsOneWidget);
+    expect(find.text('Open Settings'), findsOneWidget);
+  });
+
+  testWidgets('the not-configured button opens the Bazarr settings page', (
+    tester,
+  ) async {
+    // The only thing that distinguishes `NotConfiguredPlaceholder.forService`
+    // from the generic constructor is where its button lands — both paint the
+    // same title and the same "Open Settings" label, so every assertion above
+    // stays green if the deep link degrades to the Settings root. The private
+    // card this replaced went straight to Bazarr's own form; that is the part
+    // worth pinning.
+    final router = GoRouter(
+      initialLocation: '/services/bazarr',
+      routes: [
+        GoRoute(
+          path: '/services/bazarr',
+          builder: (context, state) => const BazarrScreen(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SizedBox.shrink(),
+          routes: [
+            GoRoute(
+              path: 'service/:service',
+              builder: (context, state) => const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+
+    await tester.tap(find.text('Open Settings'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.state.uri.toString(),
+      '/settings/service/${ServiceKey.bazarr.routeParam}',
+    );
   });
 
   testWidgets('shows dashboard with badges and wanted list', (tester) async {
@@ -83,10 +142,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     // Stat row
-    expect(find.text('16'), findsOneWidget);
-    expect(find.text('12'), findsOneWidget);
-    expect(find.text('4'), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
+    expect(findLine('16'), findsOneWidget);
+    expect(findLine('12'), findsOneWidget);
+    expect(findLine('4'), findsOneWidget);
+    expect(findLine('3'), findsOneWidget);
 
     // Wanted list
     expect(find.text('Foundation'), findsOneWidget);
@@ -203,50 +262,60 @@ void main() {
   });
 
   testWidgets('shows retryable error state when wanted fails', (tester) async {
-    // Verify the _ErrorRetry widget surface directly so the dashboard wires
-    // it up consistently. Driving a full BazarrScreen through a thrown
-    // FutureProvider is flaky under widget tests because the dashboard
-    // depends on multiple async providers that resolve at different
-    // cadences.
-    const message = 'Failed to load wanted subtitles';
-    var retryCount = 0;
+    // Drives the real BazarrScreen. The previous version of this test built a
+    // hand-rolled replica of `_ErrorRetry` inside its own body and tapped that
+    // — it stayed green with the widget it names deleted, which is worse than
+    // no coverage because it hides the gap from a coverage report.
+    var wantedLoads = 0;
+
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) {
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 200,
-                        height: 40,
-                        color: Theme.of(context).colorScheme.surface,
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed: () => retryCount++,
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Retry'),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(message),
-                    ],
-                  ),
-                ),
-              );
-            },
+      ProviderScope(
+        // Riverpod 3 re-runs a failed provider on its own exponential backoff
+        // (200 ms and up), which would count as a "retry" here without anyone
+        // tapping anything. Off, so the only thing that can re-run the load is
+        // the button under test.
+        retry: (_, _) => null,
+        overrides: [
+          currentSettingsProvider.overrideWith(
+            (ref) => const SettingsModel(
+              bazarrUrl: 'http://bazarr.local',
+              bazarrApiKey: 'key',
+            ),
           ),
-        ),
+          bazarrBadgesProvider.overrideWith(
+            (ref) async => const BazarrBadges(
+              episodes: 0,
+              movies: 0,
+              providers: 0,
+              status: false,
+              sonarrSignalR: false,
+              radarrSignalR: false,
+              announcements: 0,
+            ),
+          ),
+          bazarrDashboardWantedProvider.overrideWith((ref) async {
+            wantedLoads++;
+            throw Exception('bazarr is down');
+          }),
+          bazarrDashboardHistoryProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: BazarrScreen()),
       ),
     );
 
-    await tester.tap(find.text('Retry'));
     await tester.pump();
-    expect(retryCount, 1);
-    expect(find.text(message), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(wantedLoads, 1);
+    expect(find.text('Failed to load wanted subtitles'), findsOneWidget);
+
+    // The retry has to re-run the failed load, not merely exist.
+    await tester.tap(find.widgetWithText(TextButton, 'Retry'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(wantedLoads, 2);
+    expect(find.text('Failed to load wanted subtitles'), findsOneWidget);
   });
 }

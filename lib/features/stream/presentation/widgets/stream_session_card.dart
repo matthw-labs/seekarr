@@ -141,9 +141,7 @@ class _TitleRow extends StatelessWidget {
                 session.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
               ),
               if (subtitle != null && subtitle.isNotEmpty)
                 Text(
@@ -210,10 +208,9 @@ class _CostRow extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             Text(
               session.playMethod.label,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.labelMedium!
+                  .weight(FontWeight.w600)
+                  .copyWith(color: color),
             ),
           ],
         ),
@@ -228,9 +225,8 @@ class _CostRow extends StatelessWidget {
             // server reports measured throughput, so an unqualified figure would
             // assert egress the API never gave us.
             session.bitrateIsNominal ? '~$rate' : rate!,
-            style: theme.textTheme.labelMedium?.copyWith(
+            style: theme.textTheme.labelMedium!.tabular.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
-              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
       ],

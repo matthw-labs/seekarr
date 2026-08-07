@@ -132,6 +132,12 @@ void main() {
       c.close();
     });
 
+    // This client used to prepend `http://`. It now shares
+    // `UrlUtils.normalizeBaseUrl` with every other client, whose default is
+    // `https://` so an omitted scheme can never downgrade a WebUI password to
+    // cleartext. Configurations saved before there was a validator stored the
+    // scheme-less form verbatim; those are rewritten to `http://` by the
+    // one-shot settings migration, not by guessing here.
     test('prepends https:// when scheme missing (secure default)', () {
       final c = QbittorrentClient(url: 'localhost:8080');
       expect(c.baseUrl, 'https://localhost:8080');
@@ -144,15 +150,55 @@ void main() {
       c.close();
     });
 
+    // The landing zone for the migrated legacy configs: once a stored URL says
+    // `http://`, this client must carry it through untouched, or every
+    // construction would undo the migration and take the TLS handshake failure
+    // all over again.
+    test('never upgrades an explicit http:// address', () {
+      for (final url in const [
+        'http://192.168.1.5:8080',
+        'http://qb.lan:8080/',
+        'http://proxy.example.com/qbittorrent/',
+      ]) {
+        final c = QbittorrentClient(url: url);
+        expect(c.baseUrl, startsWith('http://'), reason: url);
+        expect(c.baseUrl, isNot(contains('https://')), reason: url);
+        c.close();
+      }
+    });
+
     test('preserves https scheme', () {
       final c = QbittorrentClient(url: 'https://qb.example/');
       expect(c.baseUrl, 'https://qb.example');
       c.close();
     });
 
+    test('preserves a reverse-proxy base path', () {
+      final c = QbittorrentClient(url: 'https://proxy.example.com/qb/');
+      expect(c.baseUrl, 'https://proxy.example.com/qb');
+      c.close();
+    });
+
     test('returns empty string for blank input', () {
       final c = QbittorrentClient(url: '   ');
       expect(c.baseUrl, '');
+      c.close();
+    });
+
+    // The WebUI rejects a request whose Referer/Origin does not match the host
+    // it is served from, so these have to be the *normalised* URL — the raw
+    // scheme-less string would produce `Referer: localhost:8080`.
+    test('sends Referer and Origin as the normalised base URL', () async {
+      final adapter = _MockAdapter(response: 'v4.6.5');
+      final dio = Dio(BaseOptions(baseUrl: 'https://qb.example:8080'));
+      dio.httpClientAdapter = adapter;
+      final c = QbittorrentClient(url: 'qb.example:8080/', dio: dio);
+
+      await c.getVersion();
+
+      expect(c.baseUrl, 'https://qb.example:8080');
+      expect(adapter.lastHeaders?['Referer'], 'https://qb.example:8080');
+      expect(adapter.lastHeaders?['Origin'], 'https://qb.example:8080');
       c.close();
     });
   });

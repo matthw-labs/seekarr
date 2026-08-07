@@ -63,6 +63,43 @@ void main() {
       expect(client.getQueue(), throwsA(isA<SabnzbdException>()));
     });
 
+    test('a bare {"status": false} is a failure, not a silent success', () {
+      // Regression: the guard used to require BOTH `status == false` AND a
+      // non-null `error`, so SABnzbd's bare refusal — what it answers for a
+      // queue command against an nzo_id that left the queue between the poll
+      // and the tap — fell through as success and the UI reported "Job
+      // removed" for work the server never did.
+      final adapter = CapturingHttpAdapter(response: {'status': false});
+      final client = _client(adapter);
+
+      expect(
+        client.deleteJob('nzo_gone'),
+        throwsA(
+          isA<SabnzbdException>().having(
+            (e) => e.message,
+            'message',
+            contains('rejected'),
+          ),
+        ),
+      );
+    });
+
+    test('a bare refusal is not misreported as an auth problem', () {
+      final adapter = CapturingHttpAdapter(response: {'status': false});
+      final client = _client(adapter);
+
+      expect(
+        client.pauseJob('nzo_gone'),
+        throwsA(
+          isA<SabnzbdException>().having(
+            (e) => e.reason,
+            'reason',
+            ServiceFailureReason.unknown,
+          ),
+        ),
+      );
+    });
+
     test('a rejected API key is reported as unauthorized, not unreachable', () {
       // SABnzbd answers 200 for a bad key, so the reason comes from the
       // message — this is what lets onboarding say "key rejected".

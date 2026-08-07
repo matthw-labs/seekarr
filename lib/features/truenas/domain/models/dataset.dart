@@ -114,13 +114,20 @@ class TrueNasSnapshot {
 
   factory TrueNasSnapshot.fromJson(Map<String, dynamic> json) {
     final props = mapOrNull(json['properties']);
-    final created = mapOrNull(json['properties'])?['creation'];
+    final created = props?['creation'];
     int? createdMs;
     if (created is Map) {
-      final parsed = intOrNull(
-        created['parsed'] is Map ? null : created['parsed'],
-      );
-      if (parsed != null) createdMs = parsed * 1000;
+      final parsed = created['parsed'];
+      if (parsed is Map) {
+        // TrueNAS serialises ZFS timestamps as `{'$date': <ms since epoch>}`,
+        // the same shape `alert.list` uses. Discarding it (the previous
+        // behaviour) left every snapshot with no creation date at all.
+        createdMs = intOrNull(parsed[r'$date']);
+      } else {
+        // A bare `parsed` is epoch *seconds*.
+        final seconds = intOrNull(parsed);
+        if (seconds != null) createdMs = seconds * 1000;
+      }
     }
     return TrueNasSnapshot(
       id: stringOrNull(json['id']) ?? stringOrNull(json['name']) ?? '',

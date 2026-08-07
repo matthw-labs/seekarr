@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
@@ -23,25 +24,69 @@ final globalSearchQueryProvider = StateProvider<String>((ref) => '');
 
 final globalSearchResultsProvider = FutureProvider.autoDispose((ref) async {
   final query = ref.watch(globalSearchQueryProvider).trim();
-  final settings = ref.watch(currentSettingsProvider);
+  // The five connections this fans out to, not the whole model. A bare
+  // `ref.watch(currentSettingsProvider)` re-ran on every settings write — and
+  // with the cancel token below, a theme-mode toggle would abort the user's
+  // in-flight five-service search and start it again. Same shape as
+  // `serviceSummaryProvider`: watch the narrow keys, read the model for the
+  // work. A record, not a list, because `select` compares with `==` and lists
+  // have identity equality.
+  ref.watch(
+    currentSettingsProvider.select(
+      (s) => (
+        _connectionOf(s, ServiceKey.seerr),
+        _connectionOf(s, ServiceKey.radarr),
+        _connectionOf(s, ServiceKey.sonarr),
+        _connectionOf(s, ServiceKey.lidarr),
+        _connectionOf(s, ServiceKey.bazarr),
+      ),
+    ),
+  );
+  final settings = ref.read(currentSettingsProvider);
   if (query.isEmpty) return const <GlobalSearchServiceResults>[];
 
+  // One token for the whole fan-out. Riverpod disposes this build before it
+  // starts the next one, so the moment a keystroke supersedes the query every
+  // request still in flight for the old one is aborted instead of running to
+  // completion — five services answering a question nobody is asking any more.
+  final cancelToken = CancelToken();
+  ref.onDispose(cancelToken.cancel);
+
   return Future.wait([
-    _loadSeerrResults(ref, query),
-    _loadRadarrResults(ref, query, settings),
-    _loadSonarrResults(ref, query, settings),
-    _loadLidarrResults(ref, query, settings),
-    _loadBazarrResults(ref, query),
+    _loadSeerrResults(ref, query, cancelToken),
+    _loadRadarrResults(ref, query, settings, cancelToken),
+    _loadSonarrResults(ref, query, settings, cancelToken),
+    _loadLidarrResults(ref, query, settings, cancelToken),
+    _loadBazarrResults(ref, query, cancelToken),
   ]);
 });
+
+/// Everything one search leg reads out of settings, as a single comparable
+/// value. A record, so `select` gets structural equality for free.
+typedef _SearchConnection = ({
+  String url,
+  String apiKey,
+  String? certFingerprint,
+});
+
+_SearchConnection _connectionOf(SettingsModel settings, ServiceKey service) {
+  final url = settings.urlFor(service);
+  return (
+    url: url,
+    apiKey: settings.apiKeyFor(service),
+    certFingerprint: settings.pinForUrl(url),
+  );
+}
 
 Future<GlobalSearchServiceResults> _loadSeerrResults(
   Ref ref,
   String query,
+  CancelToken cancelToken,
 ) async {
   return _loadServiceResults(
     service: ServiceKey.seerr,
-    loadItems: () => ref.read(seerrServiceProvider).search(query),
+    loadItems: () =>
+        ref.read(seerrServiceProvider).search(query, cancelToken: cancelToken),
     toResult: _seerrResult,
   );
 }
@@ -50,10 +95,13 @@ Future<GlobalSearchServiceResults> _loadRadarrResults(
   Ref ref,
   String query,
   SettingsModel settings,
+  CancelToken cancelToken,
 ) async {
   return _loadServiceResults(
     service: ServiceKey.radarr,
-    loadItems: () => ref.read(radarrServiceProvider).lookupMovies(query),
+    loadItems: () => ref
+        .read(radarrServiceProvider)
+        .lookupMovies(query, cancelToken: cancelToken),
     toResult: (item) => _radarrResult(item, settings),
   );
 }
@@ -62,10 +110,13 @@ Future<GlobalSearchServiceResults> _loadSonarrResults(
   Ref ref,
   String query,
   SettingsModel settings,
+  CancelToken cancelToken,
 ) async {
   return _loadServiceResults(
     service: ServiceKey.sonarr,
-    loadItems: () => ref.read(sonarrServiceProvider).lookupSeries(query),
+    loadItems: () => ref
+        .read(sonarrServiceProvider)
+        .lookupSeries(query, cancelToken: cancelToken),
     toResult: (item) => _sonarrResult(item, settings),
   );
 }
@@ -74,21 +125,35 @@ Future<GlobalSearchServiceResults> _loadLidarrResults(
   Ref ref,
   String query,
   SettingsModel settings,
+  CancelToken cancelToken,
 ) async {
   return _loadServiceResults(
     service: ServiceKey.lidarr,
-    loadItems: () => ref.read(lidarrServiceProvider).lookupArtists(query),
+    loadItems: () => ref
+        .read(lidarrServiceProvider)
+        .lookupArtists(query, cancelToken: cancelToken),
     toResult: (item) => _lidarrResult(item, settings),
   );
 }
 
+/// Bazarr is the one leg with no server-side search: `searchLibrary` matches
+/// client side against a snapshot of the library it caches for a short window,
+/// so a debounced round of keystrokes costs one download rather than one each.
+/// See `BazarrService._libraryIndex`.
+///
+/// Which is also why this is the one leg whose token cannot abort the transfer:
+/// the download in flight belongs to the *next* query as much as to this one.
+/// It still stops the match once the round is superseded.
 Future<GlobalSearchServiceResults> _loadBazarrResults(
   Ref ref,
   String query,
+  CancelToken cancelToken,
 ) async {
   return _loadServiceResults(
     service: ServiceKey.bazarr,
-    loadItems: () => ref.read(bazarrServiceProvider).searchLibrary(query),
+    loadItems: () => ref
+        .read(bazarrServiceProvider)
+        .searchLibrary(query, cancelToken: cancelToken),
     toResult: _bazarrResult,
   );
 }

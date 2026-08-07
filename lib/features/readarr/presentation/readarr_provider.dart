@@ -15,7 +15,11 @@ final readarrServiceProvider = Provider<ReadarrService>((ref) {
     throw Exception('Readarr not configured');
   }
   final service = ReadarrService(
-    ApiClient(baseUrl: settings.readarrUrl, apiKey: settings.readarrApiKey),
+    ApiClient(
+      baseUrl: settings.readarrUrl,
+      apiKey: settings.readarrApiKey,
+      pinnedCertFingerprint: settings.pinForUrl(settings.readarrUrl),
+    ),
   );
   // The provider is rebuilt whenever the config changes; close the previous
   // Dio instance so its connections are not leaked.

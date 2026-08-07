@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/route_utils.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
 import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_history_format.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider.dart';
 
 class ProwlarrIndexerDetailScreen extends ConsumerWidget {
@@ -33,6 +35,18 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
             orElse: () => 'Indexer',
           ),
         ),
+        actions: [
+          indexerAsync.maybeWhen(
+            data: (indexer) => indexer == null
+                ? const SizedBox.shrink()
+                : IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: 'Edit indexer',
+                    onPressed: () => _edit(context, ref, indexer),
+                  ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+        ],
       ),
       body: indexerAsync.when(
         data: (indexer) {
@@ -57,6 +71,7 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
                 _StatusBanner(indexerId: indexerId),
+                _ActionRow(indexer: indexer),
                 _InfoCard(indexer: indexer),
                 const SizedBox(height: 8),
                 _StatsSection(indexerId: indexerId),
@@ -86,6 +101,77 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Opens the edit form; leaves the screen when the indexer ends up deleted.
+Future<void> _edit(
+  BuildContext context,
+  WidgetRef ref,
+  ProwlarrIndexer indexer,
+) async {
+  final deleted = await editIndexerFlow(context, ref, indexer);
+  if (deleted && context.mounted) {
+    RouteUtils.popOrGo(context, ServiceRoutes.prowlarrLibrary);
+  }
+}
+
+/// Per-indexer write actions, matching what the web UI offers on an indexer.
+class _ActionRow extends ConsumerWidget {
+  const _ActionRow({required this.indexer});
+
+  final ProwlarrIndexer indexer;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () => testIndexerFlow(context, ref, indexer),
+              icon: const Icon(Icons.network_check_rounded, size: 18),
+              label: const Text('Test'),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => toggleIndexerFlow(context, ref, indexer),
+              icon: Icon(
+                indexer.enable
+                    ? Icons.pause_circle_outline_rounded
+                    : Icons.play_circle_outline_rounded,
+                size: 18,
+              ),
+              label: Text(indexer.enable ? 'Disable' : 'Enable'),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          IconButton.filled(
+            onPressed: () async {
+              final deleted = await deleteIndexerFlow(context, ref, indexer);
+              if (deleted && context.mounted) {
+                RouteUtils.popOrGo(context, ServiceRoutes.prowlarrLibrary);
+              }
+            },
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+            tooltip: 'Delete indexer',
+            style: IconButton.styleFrom(
+              backgroundColor: colorScheme.errorContainer,
+              foregroundColor: colorScheme.onErrorContainer,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -140,23 +226,37 @@ class _StatusBanner extends ConsumerWidget {
   }
 }
 
-class _InfoCard extends StatelessWidget {
+class _InfoCard extends ConsumerWidget {
   const _InfoCard({required this.indexer});
 
   final ProwlarrIndexer indexer;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final tagLabels = ref.watch(prowlarrTagLabelsProvider);
+    final profiles = ref.watch(prowlarrAppProfilesProvider).asData?.value;
+    final profileName = profiles
+        ?.where((profile) => profile.id == indexer.appProfileId)
+        .map((profile) => profile.name)
+        .whereType<String>()
+        .firstOrNull;
+    final tags = indexer.tags
+        .map((id) => tagLabels[id] ?? '#$id')
+        .toList(growable: false);
+
     final rows = <(String, String)>[
       ('Status', indexer.enable ? 'Enabled' : 'Disabled'),
       if (indexer.protocol != null) ('Protocol', indexer.protocol!),
       if (indexer.privacy != null) ('Privacy', indexer.privacy!),
       if (indexer.language != null) ('Language', indexer.language!),
       if (indexer.priority != null) ('Priority', '${indexer.priority}'),
+      if (profileName != null) ('Sync profile', profileName),
       ('RSS', indexer.supportsRss ? 'Yes' : 'No'),
       ('Search', indexer.supportsSearch ? 'Yes' : 'No'),
-      if (indexer.tags.isNotEmpty) ('Tags', '${indexer.tags.length}'),
+      if (indexer.supportsRedirect)
+        ('Redirect', indexer.redirect ? 'On' : 'Off'),
+      if (tags.isNotEmpty) ('Tags', tags.join(', ')),
     ];
 
     return Padding(

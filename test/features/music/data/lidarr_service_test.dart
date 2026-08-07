@@ -203,6 +203,17 @@ void main() {
       expect(artists.single.artistName, 'Metallica');
     });
 
+    test('lookupArtists forwards the cancel token to ApiClient', () async {
+      client.getResponseData = const [];
+      final cancelToken = CancelToken();
+
+      await service.lookupArtists('metallica', cancelToken: cancelToken);
+
+      // Global search re-runs this leg on every debounced keystroke; without a
+      // token the superseded request runs to completion.
+      expect(client.lastGetCancelToken, same(cancelToken));
+    });
+
     test('getQualityProfiles returns mapped profiles', () async {
       client.getResponseData = [
         {'id': 1, 'name': 'Lossless'},

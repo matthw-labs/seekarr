@@ -132,7 +132,7 @@ class _WantedTabState extends ConsumerState<WantedTab> with ActivityTabHelpers {
             ? () {
                 showWantedInteractiveSearch(
                   context,
-                  service,
+                  ref,
                   widget.serviceType,
                   wantedItem,
                 );

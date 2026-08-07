@@ -1,24 +1,54 @@
 import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
 
 /// A single indexer row shared by the dashboard preview and the library list.
 ///
-/// When [onTap] is provided the tile becomes tappable (InkWell) and shows a
-/// trailing chevron; when it is null the tile is a static preview.
+/// Three variants, one layout:
+/// - [ProwlarrIndexerTile.preview] is static (dashboard).
+/// - [ProwlarrIndexerTile.navigable] opens the detail screen and offers a
+///   long-press action menu.
+/// - [ProwlarrIndexerTile.selectable] replaces the status dot with a checkbox
+///   for the library's bulk-edit mode.
 class ProwlarrIndexerTile extends StatelessWidget {
-  const ProwlarrIndexerTile({
+  const ProwlarrIndexerTile.preview({
     super.key,
     required this.indexer,
     required this.failing,
-    this.onTap,
-  });
+    this.tagLabels = const [],
+  }) : onTap = null,
+       onLongPress = null,
+       selected = null;
+
+  const ProwlarrIndexerTile.navigable({
+    super.key,
+    required this.indexer,
+    required this.failing,
+    required this.onTap,
+    this.onLongPress,
+    this.tagLabels = const [],
+  }) : selected = null;
+
+  const ProwlarrIndexerTile.selectable({
+    super.key,
+    required this.indexer,
+    required this.failing,
+    required bool this.selected,
+    required VoidCallback this.onTap,
+    this.tagLabels = const [],
+  }) : onLongPress = null;
 
   final ProwlarrIndexer indexer;
   final bool failing;
+  final List<String> tagLabels;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+
+  /// Non-null only in the selectable variant.
+  final bool? selected;
 
   @override
   Widget build(BuildContext context) {
@@ -34,25 +64,41 @@ class ProwlarrIndexerTile extends StatelessWidget {
       if (indexer.protocol != null) indexer.protocol!,
       if (indexer.privacy != null) indexer.privacy!,
       if (indexer.language != null) indexer.language!,
+      if (indexer.priority != null) 'priority ${indexer.priority}',
     ];
 
     final content = Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        border: Border.all(color: colorScheme.outlineVariant),
+        border: Border.all(
+          color: selected == true
+              ? AppColors.prowlarr.withValues(alpha: 0.6)
+              : colorScheme.outlineVariant,
+        ),
         borderRadius: AppRadius.borderRadiusMd,
       ),
       child: Row(
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
+          if (selected == null)
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+              ),
+            )
+          else
+            Icon(
+              selected!
+                  ? Icons.check_box_rounded
+                  : Icons.check_box_outline_blank_rounded,
+              size: 20,
+              color: selected!
+                  ? AppColors.prowlarr
+                  : colorScheme.onSurfaceVariant,
             ),
-          ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,12 +120,36 @@ class ProwlarrIndexerTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                if (tagLabels.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xs),
+                    child: Text(
+                      tagLabels.join(' · '),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.prowlarr,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
+          if (!indexer.enable && selected == null)
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: Icon(
+                Icons.pause_circle_outline_rounded,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 3,
+            ),
             decoration: BoxDecoration(
               color: protocolColor.withValues(alpha: 0.12),
               borderRadius: AppRadius.borderRadiusSm,
@@ -91,8 +161,8 @@ class ProwlarrIndexerTile extends StatelessWidget {
                   .copyWith(color: protocolColor),
             ),
           ),
-          if (onTap != null) ...[
-            const SizedBox(width: 4),
+          if (onTap != null && selected == null) ...[
+            const SizedBox(width: AppSpacing.xs),
             Icon(
               Icons.chevron_right_rounded,
               size: 18,
@@ -104,14 +174,20 @@ class ProwlarrIndexerTile extends StatelessWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
-        color: colorScheme.surface,
+        color: selected == true
+            ? AppColors.prowlarr.withValues(alpha: 0.08)
+            : colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
         child: onTap == null
             ? content
             : InkWell(
                 onTap: onTap,
+                onLongPress: onLongPress,
                 borderRadius: AppRadius.borderRadiusMd,
                 child: content,
               ),

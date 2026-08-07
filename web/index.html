@@ -26,7 +26,11 @@
   <meta name="apple-mobile-web-app-title" content="Seekarr">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
+  <!-- Favicon. The dark-ground mark would disappear against a light browser
+       chrome, so each scheme gets its own ground. The last matching link wins
+       in browsers that ignore `media`, so the dark one stays the fallback. -->
+  <link rel="icon" type="image/png" href="favicon-light.png" media="(prefers-color-scheme: light)"/>
+  <link rel="icon" type="image/png" href="favicon.png" media="(prefers-color-scheme: dark)"/>
   <link rel="icon" type="image/png" href="favicon.png"/>
 
   <title>Seekarr</title>

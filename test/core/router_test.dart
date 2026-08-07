@@ -387,7 +387,17 @@ Future<ProviderContainer> _pumpRouter(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: container.read(routerProvider)),
+      // Reduce Motion, because these cases are about *where* the router lands
+      // and one of the destinations owns a continuous animation: the onboarding
+      // ring sweeps forever by design, so with motion on `pumpAndSettle` waits
+      // for a frame that never stops coming.
+      child: MaterialApp.router(
+        routerConfig: container.read(routerProvider),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();

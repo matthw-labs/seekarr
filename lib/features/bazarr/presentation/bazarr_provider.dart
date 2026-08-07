@@ -20,7 +20,11 @@ final bazarrServiceProvider = Provider<BazarrService>((ref) {
     throw Exception('Bazarr not configured');
   }
   return BazarrService(
-    ApiClient(baseUrl: settings.bazarrUrl, apiKey: settings.bazarrApiKey),
+    ApiClient(
+      baseUrl: settings.bazarrUrl,
+      apiKey: settings.bazarrApiKey,
+      pinnedCertFingerprint: settings.pinForUrl(settings.bazarrUrl),
+    ),
   );
 });
 

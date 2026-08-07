@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/network/pinned_image_cache.dart';
 import 'package:seekarr/core/status/arr_queue_snapshot.dart';
 import 'package:seekarr/core/utils/image_utils.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
@@ -308,6 +309,7 @@ class _AlbumArtwork extends StatelessWidget {
           ? CachedNetworkImage(
               imageUrl: imageSource.url,
               httpHeaders: imageSource.headers,
+              cacheManager: pinnedImageCacheFor(imageSource.url),
               width: _width,
               height: _height,
               fit: BoxFit.cover,

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon background. A flat colour cannot match iOS, whose Icon Composer
+  bundle uses an `automatic-gradient`. These three stops are that gradient:
+  the mid is the icon.json base colour converted display-p3 -> sRGB (#003DA4),
+  and the top/bottom were sampled off a simulator screenshot of the shipped
+  iOS icon so the two platforms read as the same object.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#005BBD"
+        android:centerColor="#003DA4"
+        android:endColor="#001F8B"
+        android:type="linear" />
+</shape>

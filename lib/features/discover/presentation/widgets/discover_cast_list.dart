@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/network/pinned_image_cache.dart';
 import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/service_routes.dart';
@@ -86,13 +87,20 @@ class _CastTile extends StatelessWidget {
         ? 'https://image.tmdb.org/t/p/w185$profilePath'
         : null;
     final tappable = member.id > 0;
+    // One tile per person is an invariant of the list this widget is given —
+    // `DiscoverDetailViewModel` dedupes the credits by person id precisely so
+    // this tag stays unique. TMDB bills one entry per *role*, so a dual-role
+    // actor arrives twice and two Heroes with one tag assert on the next push.
     final heroTag = 'person_${member.id}';
 
     Widget avatar = CircleAvatar(
       radius: 32,
       backgroundColor: colorScheme.surfaceContainer,
       backgroundImage: imageUrl != null
-          ? CachedNetworkImageProvider(imageUrl)
+          ? CachedNetworkImageProvider(
+              imageUrl,
+              cacheManager: pinnedImageCacheFor(imageUrl),
+            )
           : null,
       child: imageUrl == null
           ? Icon(Icons.person, size: 28, color: colorScheme.onSurfaceVariant)

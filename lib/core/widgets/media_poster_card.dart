@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_elevation.dart';
 import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/network/pinned_image_cache.dart';
 
 /// A reusable poster card for media detail screens.
 ///
@@ -58,6 +59,7 @@ class MediaPosterCard extends StatelessWidget {
         ? CachedNetworkImage(
             imageUrl: imageUrl!,
             httpHeaders: imageHeaders,
+            cacheManager: pinnedImageCacheFor(imageUrl),
             fit: BoxFit.cover,
             // No cross-fade: keeps the Hero flight crisp when the poster is
             // already cached from the source grid/carousel.

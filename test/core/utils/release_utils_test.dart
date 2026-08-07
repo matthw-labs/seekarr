@@ -3,20 +3,33 @@ import 'package:seekarr/core/utils/release_utils.dart';
 
 void main() {
   group('formatReleaseSize', () {
+    // Delegates to the shared precise ladder: three significant digits above
+    // bytes, whole bytes, and every rung up to PB. The old private copy spent
+    // one decimal at KB/MB and two at GB, and had no rung above GB at all.
     const cases = {
       0: '0 B',
       512: '512 B',
-      1024: '1.0 KB',
-      1536: '1.5 KB',
-      1048576: '1.0 MB',
+      1024: '1.00 KB',
+      1536: '1.50 KB',
+      1048576: '1.00 MB',
       1073741824: '1.00 GB',
       2147483648: '2.00 GB',
+      // Resolution where releases are actually compared: two candidates a few
+      // hundred MB apart stay distinguishable.
+      4700000000: '4.38 GB',
+      27917287424: '26.0 GB',
+      837000000: '798 MB',
     };
     for (final entry in cases.entries) {
       test('${entry.key} -> ${entry.value}', () {
         expect(formatReleaseSize(entry.key), entry.value);
       });
     }
+
+    test('a season pack past a terabyte promotes instead of printing GB', () {
+      // The private copy bottomed out at GB and rendered this as "2048.00 GB".
+      expect(formatReleaseSize(2199023255552), '2.00 TB');
+    });
   });
 
   group('formatReleaseAge', () {

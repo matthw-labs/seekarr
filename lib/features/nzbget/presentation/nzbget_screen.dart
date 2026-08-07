@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
-import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/nzbget/domain/models/nzbget_models.dart';
@@ -32,48 +32,11 @@ class NzbgetScreen extends ConsumerWidget {
       accent: AppColors.nzbget,
       appBar: showAppBar ? const GlassAppBar(title: Text('NZBGet')) : null,
       body: SafeArea(
+        // The shared placeholder, not a private copy — see the note on the
+        // SABnzbd dashboard, which had grown the same widget independently.
         child: isConfigured
             ? _NzbgetDashboard(topPadding: topPadding)
-            : _NzbgetNotConfigured(
-                onOpenSettings: () => context.go(
-                  '/settings/service/${ServiceKey.nzbget.routeParam}',
-                ),
-              ),
-      ),
-    );
-  }
-}
-
-class _NzbgetNotConfigured extends StatelessWidget {
-  const _NzbgetNotConfigured({required this.onOpenSettings});
-
-  final VoidCallback onOpenSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.cloud_sync_rounded,
-              size: 48,
-              color: AppColors.nzbget,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'NZBGet is not configured yet.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onOpenSettings,
-              child: const Text('Open settings'),
-            ),
-          ],
-        ),
+            : NotConfiguredPlaceholder.forService(ServiceKey.nzbget),
       ),
     );
   }
@@ -155,10 +118,13 @@ class _NzbgetActionsBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final paused =
-        ref.watch(nzbgetStatusProvider).asData?.value.paused ?? false;
+    // Null until the first status load lands. Defaulting that to `false` meant
+    // an already-paused client rendered "Pause all" for the duration of the
+    // first fetch, and a tap in that window sent `pausedownload()` to something
+    // that was already paused. The toggle is inert until its state is known.
+    final paused = ref.watch(nzbgetStatusProvider).value?.paused;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Row(
         children: [
           Expanded(
@@ -168,89 +134,38 @@ class _NzbgetActionsBar extends ConsumerWidget {
               label: const Text('Add NZB'),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: FilledButton.tonalIcon(
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                runNzbgetAction(
-                  context,
-                  ref,
-                  action: (c) =>
-                      paused ? c.resumeDownload() : c.pauseDownload(),
-                  successMessage: paused
-                      ? 'Downloads resumed'
-                      : 'Downloads paused',
-                  failureMessage: paused
-                      ? 'Failed to resume downloads'
-                      : 'Failed to pause downloads',
-                  invalidate: _nzbgetInvalidateAfterAction,
-                );
-              },
+              onPressed: paused == null
+                  ? null
+                  : () {
+                      HapticFeedback.selectionClick();
+                      runNzbgetAction(
+                        context,
+                        ref,
+                        action: (c) =>
+                            paused ? c.resumeDownload() : c.pauseDownload(),
+                        successMessage: paused
+                            ? 'Downloads resumed'
+                            : 'Downloads paused',
+                        failureMessage: paused
+                            ? 'Failed to resume downloads'
+                            : 'Failed to pause downloads',
+                        invalidate: _nzbgetInvalidateAfterAction,
+                      );
+                    },
               icon: Icon(
-                paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                paused ?? false
+                    ? Icons.play_arrow_rounded
+                    : Icons.pause_rounded,
                 size: 18,
               ),
-              label: Text(paused ? 'Resume all' : 'Pause all'),
+              label: Text(paused ?? false ? 'Resume all' : 'Pause all'),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Per-item overflow menu: pause / resume / delete a single group.
-class _QueueItemMenu extends ConsumerWidget {
-  const _QueueItemMenu({required this.group});
-
-  final NzbgetGroup group;
-
-  bool get _paused => group.status.toUpperCase().contains('PAUSED');
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert_rounded, size: 18),
-      tooltip: 'Job actions',
-      onSelected: (value) {
-        switch (value) {
-          case 'pause':
-            runNzbgetAction(
-              context,
-              ref,
-              action: (c) => c.pauseGroup(group.nzbId),
-              successMessage: 'Job paused',
-              failureMessage: 'Failed to pause the job',
-              invalidate: _nzbgetInvalidateAfterAction,
-            );
-          case 'resume':
-            runNzbgetAction(
-              context,
-              ref,
-              action: (c) => c.resumeGroup(group.nzbId),
-              successMessage: 'Job resumed',
-              failureMessage: 'Failed to resume the job',
-              invalidate: _nzbgetInvalidateAfterAction,
-            );
-          case 'delete':
-            runNzbgetAction(
-              context,
-              ref,
-              action: (c) => c.deleteGroup(group.nzbId),
-              successMessage: 'Job removed',
-              failureMessage: 'Failed to remove the job',
-              invalidate: _nzbgetInvalidateAfterAction,
-            );
-        }
-      },
-      itemBuilder: (context) => [
-        if (_paused)
-          const PopupMenuItem(value: 'resume', child: Text('Resume'))
-        else
-          const PopupMenuItem(value: 'pause', child: Text('Pause')),
-        const PopupMenuItem(value: 'delete', child: Text('Delete')),
-      ],
     );
   }
 }
@@ -315,7 +230,10 @@ class _QueueList extends ConsumerWidget {
       data: (groups) {
         if (groups.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('Queue is empty.'),
           );
         }
@@ -340,77 +258,57 @@ class _QueueTile extends ConsumerWidget {
 
   final NzbgetGroup group;
 
+  bool get _paused => group.status.toUpperCase().contains('PAUSED');
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final subtitle = <String>[
-      if (group.status.isNotEmpty) group.status,
-      if (group.category.isNotEmpty) group.category,
-      group.remainingLabel,
-    ].join(' · ');
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Material(
-        color: colorScheme.surface,
-        borderRadius: AppRadius.borderRadiusMd,
-        child: Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            border: Border.all(color: colorScheme.outlineVariant),
-            borderRadius: AppRadius.borderRadiusMd,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      group.name,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium!.weight(FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${group.percentage}%',
-                    style: Theme.of(context).textTheme.labelMedium!
-                        .weight(FontWeight.w700)
-                        .tabular
-                        .copyWith(color: AppColors.nzbget),
-                  ),
-                  _QueueItemMenu(group: group),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: group.progress,
-                  minHeight: 4,
-                  backgroundColor: colorScheme.surfaceContainerHighest,
-                  valueColor: const AlwaysStoppedAnimation(AppColors.nzbget),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                // Carries the remaining size, which counts down in place.
-                style: Theme.of(context).textTheme.bodySmall!.tabular.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
+    return DownloadQueueTile(
+      title: group.name,
+      subtitle: <String>[
+        if (group.status.isNotEmpty) group.status,
+        if (group.category.isNotEmpty) group.category,
+        group.remainingLabel,
+      ].join(' · '),
+      progress: group.progress,
+      percentage: group.percentage,
+      accent: AppColors.nzbget,
+      actions: DownloadQueueActionsMenu(
+        paused: _paused,
+        onCommand: (command) => _run(context, ref, command),
       ),
     );
+  }
+
+  void _run(BuildContext context, WidgetRef ref, DownloadQueueCommand command) {
+    switch (command) {
+      case DownloadQueueCommand.pause:
+        runNzbgetAction(
+          context,
+          ref,
+          action: (c) => c.pauseGroup(group.nzbId),
+          successMessage: 'Job paused',
+          failureMessage: 'Failed to pause the job',
+          invalidate: _nzbgetInvalidateAfterAction,
+        );
+      case DownloadQueueCommand.resume:
+        runNzbgetAction(
+          context,
+          ref,
+          action: (c) => c.resumeGroup(group.nzbId),
+          successMessage: 'Job resumed',
+          failureMessage: 'Failed to resume the job',
+          invalidate: _nzbgetInvalidateAfterAction,
+        );
+      case DownloadQueueCommand.delete:
+        runNzbgetAction(
+          context,
+          ref,
+          action: (c) => c.deleteGroup(group.nzbId),
+          successMessage: 'Job removed',
+          failureMessage: 'Failed to remove the job',
+          invalidate: _nzbgetInvalidateAfterAction,
+        );
+    }
   }
 }
 
@@ -425,7 +323,10 @@ class _HistoryList extends ConsumerWidget {
       data: (items) {
         if (items.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No history yet.'),
           );
         }

@@ -15,7 +15,7 @@
   ~ limitations under the License.
   -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/seekarr_icon_background"/>
+    <background android:drawable="@drawable/seekarr_icon_bg_gradient"/>
     <foreground android:drawable="@mipmap/seekarr_icon_foreground"/>
-    <monochrome android:drawable="@mipmap/seekarr_icon_foreground"/>
+    <monochrome android:drawable="@mipmap/seekarr_icon_monochrome"/>
 </adaptive-icon>

@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/utils/duration_format.dart';
 import 'package:seekarr/core/utils/grab_error_utils.dart';
 import 'package:seekarr/core/utils/release_utils.dart';
 import 'package:seekarr/core/widgets/app_bottom_sheet.dart';
@@ -16,11 +20,40 @@ import 'package:seekarr/core/widgets/shimmer_placeholder.dart';
 // Re-export ReleaseSortType for backwards compatibility
 export 'package:seekarr/core/utils/release_utils.dart' show ReleaseSortType;
 
+/// Signals that a grab callback deliberately did **not** grab.
+///
+/// The sheet infers "the release was grabbed" from "the callback returned
+/// without throwing", and closes under a green *Download started* on that
+/// inference. It is right for a callback that only ever grabs, and wrong for one
+/// that may decide not to: the release-search sheet asks *"Search again for this
+/// release?"* once the service has dropped the release list, and both of that
+/// prompt's non-grab outcomes — cancelling it, or accepting and starting a fresh
+/// search — return normally. Cancelling used to close the sheet and claim a
+/// download had started.
+///
+/// It rides the error channel because that is where "no grab happened" already
+/// lives: the callback's return type is `Future<void>`, so a throw is the only
+/// thing it can say. Unlike a real failure it is silent — the row stops
+/// spinning, the sheet stays open, and no snackbar is shown, because a caller
+/// that abandons a grab has just shown the user why.
+class ReleaseGrabAbandoned implements Exception {
+  const ReleaseGrabAbandoned();
+
+  @override
+  String toString() => 'ReleaseGrabAbandoned';
+}
+
 /// A reusable bottom sheet for displaying and selecting releases (Interactive Search).
 class InteractiveSearchSheet extends StatefulWidget {
   final List<dynamic> releases;
   final String title;
+
+  /// Grabs the release. Returning normally means it was grabbed — the sheet
+  /// closes and reports a started download on exactly that. A callback that can
+  /// decide *not* to grab must say so by throwing [ReleaseGrabAbandoned];
+  /// anything else it throws is reported as a failure.
   final Future<void> Function(String guid, int indexerId) onGrabRelease;
+
   final ScrollController scrollController;
 
   const InteractiveSearchSheet({
@@ -189,6 +222,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
               ? _EmptyReleases(
                   hasActiveFilters: _hasActiveFilters,
                   onClearFilters: _clearFilters,
+                  scrollController: widget.scrollController,
                 )
               : ListView.builder(
                   controller: widget.scrollController,
@@ -227,13 +261,25 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
     );
   }
 
-  Future<void> _handleGrab(BuildContext context, dynamic release) async {
+  /// Grabs one release.
+  ///
+  /// [rowContext] is the list row's element, and it is deliberately *not* what
+  /// the outcome is reported through. The toolbar stays live during a grab, so
+  /// a filter or query that empties the list mid-flight swaps the `ListView`
+  /// for `_EmptyReleases` and deactivates that row — while the request, and the
+  /// sheet, carry on. Reporting through it meant a **successful** grab silently
+  /// skipped both the pop and the confirmation and simply re-armed every button:
+  /// the download had started, nothing on screen said so, and tapping the same
+  /// row again grabbed it twice. So the row's context is used only for the
+  /// confirmation dialog it belongs to; everything after the await goes through
+  /// the sheet's own, which is alive exactly while [mounted] is true.
+  Future<void> _handleGrab(BuildContext rowContext, dynamic release) async {
     final guid = release['guid'] as String?;
     final indexerId = release['indexerId'] as int?;
     final releaseTitle = release['title'] as String? ?? 'Release';
 
     if (guid == null || indexerId == null) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Invalid release data')));
@@ -243,7 +289,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
 
     final rejections = releaseRejectionReasons(release);
     final result = await showAppConfirmDialog(
-      context: context,
+      context: rowContext,
       title: rejections.isEmpty ? 'Grab Release' : 'Grab Rejected Release',
       message: rejections.isEmpty
           ? 'Download "$releaseTitle"?'
@@ -254,33 +300,40 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
       cancelLabel: 'Cancel',
     );
 
-    if (!result.confirmed || !context.mounted) return;
+    if (!result.confirmed || !mounted) return;
 
     HapticFeedback.mediumImpact();
     setState(() => _grabbingGuid = guid);
 
     try {
       await widget.onGrabRelease(guid, indexerId);
-      if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Download started'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
-      }
-    } catch (e) {
+      if (!mounted) return;
+      // Both resolved before the pop, which takes this element out of the tree.
+      final messenger = ScaffoldMessenger.of(context);
+      final accent = Theme.of(context).colorScheme.primary;
+      Navigator.pop(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('Download started'),
+          backgroundColor: accent,
+        ),
+      );
+    } on ReleaseGrabAbandoned {
+      // No grab, and the caller has already said why. Re-arm the list and stay.
       if (mounted) setState(() => _grabbingGuid = null);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(translateGrabError(e)),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
+    } catch (e) {
+      if (!mounted) return;
+      // Re-armed rather than popped: the sheet is where the user retries, and
+      // the failure has to be reported even when the row it started from is
+      // gone — the busy state is the State's, not the row's.
+      setState(() => _grabbingGuid = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(translateGrabError(e)),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 5),
+        ),
+      );
     }
   }
 }
@@ -718,21 +771,31 @@ class _IndexerChip extends StatelessWidget {
 }
 
 /// Empty state for "no results" and "filtered everything out".
+///
+/// A scrollable, not a `Center`: every branch of a sheet body has to be attached
+/// to the controller [AppBottomSheet.showScrollable] hands in, or the sheet
+/// stops answering drag-to-resize and flick-to-close the moment a filter empties
+/// the list — the same rule `music_albums_list.dart` states for its own loading
+/// and error branches.
 class _EmptyReleases extends StatelessWidget {
   final bool hasActiveFilters;
   final VoidCallback onClearFilters;
+  final ScrollController scrollController;
 
   const _EmptyReleases({
     required this.hasActiveFilters,
     required this.onClearFilters,
+    required this.scrollController,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: hasActiveFilters
+    return ListView(
+      controller: scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      children: [
+        hasActiveFilters
             ? AppEmptyState.compact(
                 icon: Icons.filter_alt_off_rounded,
                 title: 'No releases match filters',
@@ -749,18 +812,35 @@ class _EmptyReleases extends StatelessWidget {
                     'No indexer returned a result for this search. Try again '
                     'later or check your indexer settings.',
               ),
-      ),
+      ],
     );
   }
 }
 
 /// Skeleton list shown while indexers are queried.
+///
+/// A release search is the one arr call that legitimately runs for minutes, so
+/// this is an instrument rather than a spinner. The elapsed readout appears only
+/// once the search crosses [readoutAfter] — a clock on a search that answers in
+/// two seconds is noise — and Cancel makes the exit explicit rather than leaving
+/// it to be discovered by dismissing the sheet.
+///
+/// There is deliberately no percentage: the server reports no per-indexer
+/// progress, so any bar would be invented. Elapsed is the only honest readout.
 class _ReleaseSearchLoading extends StatelessWidget {
-  const _ReleaseSearchLoading();
+  const _ReleaseSearchLoading({required this.elapsed, required this.onCancel});
+
+  final Duration elapsed;
+  final VoidCallback onCancel;
+
+  /// Below this the search is about to answer anyway; a clock only adds noise.
+  static const readoutAfter = Duration(seconds: 3);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final showElapsed = elapsed >= readoutAfter;
+    const label = 'Searching for releases…';
 
     return Column(
       children: [
@@ -771,18 +851,50 @@ class _ReleaseSearchLoading extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Text(
-                'Searching for releases...',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              // The status summary is one node; Cancel stays a sibling so it
+              // keeps its own, rather than being swallowed by the summary's.
+              Expanded(
+                child: Semantics(
+                  container: true,
+                  // Not a live region: announcing a clock every second is
+                  // hostile, so this is read on focus, not pushed at the user.
+                  label: showElapsed
+                      ? '$label ${formatElapsedForSpeech(elapsed)} elapsed.'
+                      : label,
+                  child: ExcludeSemantics(
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Text(
+                            label,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        if (showElapsed)
+                          Padding(
+                            padding: const EdgeInsets.only(left: AppSpacing.sm),
+                            child: Text(
+                              formatElapsed(elapsed),
+                              style: theme.textTheme.bodySmall?.tabular
+                                  .copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+              TextButton(onPressed: onCancel, child: const Text('Cancel')),
             ],
           ),
         ),
@@ -832,23 +944,47 @@ class _AsyncInteractiveSearchSheetState
   List<dynamic>? _releases;
   Object? _error;
 
+  /// Drives the elapsed readout. A release search can run for minutes, so how
+  /// long it has been waiting is the only progress the server lets us report.
+  Timer? _ticker;
+  Duration _elapsed = Duration.zero;
+
   @override
   void initState() {
     super.initState();
     _cancelToken = CancelToken();
-    _loadReleases();
+    _startSearch();
   }
 
   @override
   void dispose() {
+    _ticker?.cancel();
     _cancelToken.cancel();
     super.dispose();
+  }
+
+  void _startSearch() {
+    _elapsed = Duration.zero;
+    _ticker?.cancel();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _elapsed += const Duration(seconds: 1));
+    });
+    _loadReleases();
+  }
+
+  /// Stops the clock as soon as the search resolves, so a settled sheet is not
+  /// rebuilding once a second behind the release list.
+  void _stopTicker() {
+    _ticker?.cancel();
+    _ticker = null;
   }
 
   Future<void> _loadReleases() async {
     try {
       final releases = await widget.fetchReleases(_cancelToken);
       if (mounted && !_cancelToken.isCancelled) {
+        _stopTicker();
         setState(() {
           _releases = releases;
           _error = null;
@@ -856,6 +992,7 @@ class _AsyncInteractiveSearchSheetState
       }
     } catch (e) {
       if (_cancelToken.isCancelled || !mounted) return;
+      _stopTicker();
       setState(() => _error = e);
     }
   }
@@ -866,7 +1003,15 @@ class _AsyncInteractiveSearchSheetState
       _error = null;
       _releases = null;
     });
-    _loadReleases();
+    _startSearch();
+  }
+
+  /// Dismissing the sheet already cancels the fetch in [dispose]; this only
+  /// makes that exit visible, because a search that may run for minutes needs a
+  /// way out the user can see.
+  void _cancel() {
+    HapticFeedback.selectionClick();
+    Navigator.of(context).maybePop();
   }
 
   @override
@@ -881,7 +1026,7 @@ class _AsyncInteractiveSearchSheetState
     }
 
     if (_releases == null) {
-      return const _ReleaseSearchLoading();
+      return _ReleaseSearchLoading(elapsed: _elapsed, onCancel: _cancel);
     }
 
     return InteractiveSearchSheet(

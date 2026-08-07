@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/providers/navigation_refresh_provider.dart';
+import 'package:seekarr/core/reel_motion.dart';
 import 'package:seekarr/core/service_theme.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/ambient_scaffold.dart';
@@ -18,6 +19,7 @@ import 'package:seekarr/core/widgets/content_card.dart';
 import 'package:seekarr/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:seekarr/core/widgets/glass_app_bar.dart';
 import 'package:seekarr/core/widgets/media_poster_card.dart';
+import 'package:seekarr/core/widgets/reel_line.dart';
 import 'package:seekarr/core/widgets/search_bar_header.dart';
 import 'package:seekarr/features/search/domain/global_search_result.dart';
 import 'package:seekarr/features/search/presentation/global_search_provider.dart';
@@ -277,15 +279,20 @@ class _SearchSection extends StatelessWidget {
                 ).textTheme.labelLarge?.weight(FontWeight.w700),
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(
+              // A global search fans out to every configured service and they
+              // answer at their own pace, so this count genuinely arrives — it
+              // is not a number that was always there. Rolling it is the section
+              // reporting in. `.tabular` still does the anti-jitter work; the
+              // roll is what marks the arrival.
+              ReelLine(
                 group.hasError
                     ? 'offline'
                     : '$count result${count == 1 ? '' : 's'}',
-                // The result count moves as each service answers, so the
-                // digits are locked to one advance width.
+                options: ReelMotion.figure,
                 style: Theme.of(context).textTheme.labelSmall?.tabular.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
+                fallbackMaxLines: 1,
               ),
             ],
           ),

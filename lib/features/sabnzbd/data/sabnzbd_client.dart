@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 
+import 'package:seekarr/core/network/cert_trust.dart';
 import 'package:seekarr/core/network/connection_failure.dart';
+import 'package:seekarr/core/network/redirect_guard.dart';
 import 'package:seekarr/core/utils/url_utils.dart';
 
 import 'package:seekarr/features/sabnzbd/domain/models/sabnzbd_models.dart';
@@ -42,9 +44,17 @@ String redactSabnzbdSecrets(String input) {
 /// and authenticates with an `apikey` query parameter (not a header), so it
 /// needs a dedicated client rather than the shared header-auth [ApiClient].
 class SabnzbdClient {
-  SabnzbdClient({required String url, required String apiKey, Dio? dio})
-    : baseUrl = UrlUtils.normalizeBaseUrl(url),
-      _apiKey = apiKey.trim() {
+  /// [certFingerprint], when non-empty, is a self-signed certificate the user
+  /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
+  /// when [dio] is injected — a caller supplying its own transport owns its
+  /// TLS behaviour too.
+  SabnzbdClient({
+    required String url,
+    required String apiKey,
+    Dio? dio,
+    String? certFingerprint,
+  }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
+       _apiKey = apiKey.trim() {
     _dio =
         dio ??
         Dio(
@@ -52,8 +62,26 @@ class SabnzbdClient {
             baseUrl: baseUrl,
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 15),
+            // Follow redirects by hand. This client is the one that most needs
+            // it: the API key travels in the **query string**, and a redirect
+            // is resolved against `$request_uri`, which includes the query by
+            // definition. `dart:io`'s only protection is a header filter — it
+            // cannot strip a credential that is part of the URL — so a single
+            // `return 301 https://elsewhere$request_uri;` in a reverse proxy
+            // delivers the key to another host, where it lands in that
+            // server's access log in plaintext.
+            followRedirects: false,
+            validateStatus: allowRedirectStatus,
           ),
         );
+    if (dio == null) {
+      _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
+      final adapter = pinnedHttpClientAdapterFor(
+        baseUrl,
+        pinnedFingerprint: certFingerprint,
+      );
+      if (adapter != null) _dio.httpClientAdapter = adapter;
+    }
   }
 
   final String baseUrl;
@@ -77,11 +105,20 @@ class SabnzbdClient {
       );
       final data = response.data;
       if (data is Map<String, dynamic>) {
-        // SABnzbd reports auth/other failures as {"status": false, "error": …}.
-        if (data['status'] == false && data['error'] != null) {
+        // SABnzbd reports failures as {"status": false} — usually, but *not
+        // always*, with an "error" string alongside. The bare form comes back
+        // for a queue command against an unknown `nzo_id`, which is exactly
+        // what a user hits by deleting a job that finished between the last
+        // poll and the tap. Requiring the error string as well meant that
+        // response fell through as a success and the UI cheerfully reported
+        // "Job removed" for a call the server had refused.
+        if (data['status'] == false) {
+          final reported = data['error'];
           // SABnzbd answers 200 even for "API Key Incorrect", so the reason
           // has to come from the message.
-          final message = redactSabnzbdSecrets(data['error'].toString());
+          final message = reported == null
+              ? 'SABnzbd rejected the request'
+              : redactSabnzbdSecrets(reported.toString());
           throw SabnzbdException(
             message,
             reason: looksUnauthorizedMessage(message)

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
-import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/sabnzbd/domain/models/sabnzbd_models.dart';
@@ -32,48 +32,13 @@ class SabnzbdScreen extends ConsumerWidget {
       accent: AppColors.sabnzbd,
       appBar: showAppBar ? const GlassAppBar(title: Text('SABnzbd')) : null,
       body: SafeArea(
+        // The shared placeholder, not a private copy. Four dashboards had grown
+        // their own version of "this service isn't set up" — same shape, four
+        // different icons, paddings and sentences — while
+        // `NotConfiguredPlaceholder` exists precisely to unify that state.
         child: isConfigured
             ? _SabnzbdDashboard(topPadding: topPadding)
-            : _SabnzbdNotConfigured(
-                onOpenSettings: () => context.go(
-                  '/settings/service/${ServiceKey.sabnzbd.routeParam}',
-                ),
-              ),
-      ),
-    );
-  }
-}
-
-class _SabnzbdNotConfigured extends StatelessWidget {
-  const _SabnzbdNotConfigured({required this.onOpenSettings});
-
-  final VoidCallback onOpenSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.cloud_download_rounded,
-              size: 48,
-              color: AppColors.sabnzbd,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'SABnzbd is not configured yet.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onOpenSettings,
-              child: const Text('Open settings'),
-            ),
-          ],
-        ),
+            : NotConfiguredPlaceholder.forService(ServiceKey.sabnzbd),
       ),
     );
   }
@@ -155,9 +120,13 @@ class _SabnzbdActionsBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final paused = queueAsync.asData?.value.paused ?? false;
+    // Null until the first queue load lands. Defaulting that to `false` meant
+    // an already-paused queue rendered "Pause all" for the duration of the
+    // first fetch, and a tap in that window sent `pause()` to a queue that was
+    // already paused. The toggle is inert until its own state is known.
+    final paused = queueAsync.value?.paused;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Row(
         children: [
           Expanded(
@@ -167,27 +136,33 @@ class _SabnzbdActionsBar extends ConsumerWidget {
               label: const Text('Add NZB'),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: FilledButton.tonalIcon(
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                runSabnzbdAction(
-                  context,
-                  ref,
-                  action: (c) => paused ? c.resume() : c.pause(),
-                  successMessage: paused ? 'Queue resumed' : 'Queue paused',
-                  failureMessage: paused
-                      ? 'Failed to resume the queue'
-                      : 'Failed to pause the queue',
-                  invalidate: _sabnzbdInvalidateAfterAction,
-                );
-              },
+              onPressed: paused == null
+                  ? null
+                  : () {
+                      HapticFeedback.selectionClick();
+                      runSabnzbdAction(
+                        context,
+                        ref,
+                        action: (c) => paused ? c.resume() : c.pause(),
+                        successMessage: paused
+                            ? 'Queue resumed'
+                            : 'Queue paused',
+                        failureMessage: paused
+                            ? 'Failed to resume the queue'
+                            : 'Failed to pause the queue',
+                        invalidate: _sabnzbdInvalidateAfterAction,
+                      );
+                    },
               icon: Icon(
-                paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                paused ?? false
+                    ? Icons.play_arrow_rounded
+                    : Icons.pause_rounded,
                 size: 18,
               ),
-              label: Text(paused ? 'Resume all' : 'Pause all'),
+              label: Text(paused ?? false ? 'Resume all' : 'Pause all'),
             ),
           ),
         ],
@@ -196,126 +171,119 @@ class _SabnzbdActionsBar extends ConsumerWidget {
   }
 }
 
-/// Per-item overflow menu: pause / resume / delete a single job.
-class _QueueItemMenu extends ConsumerWidget {
-  const _QueueItemMenu({required this.slot, required this.paused});
-
-  final SabnzbdQueueSlot slot;
-  final bool paused;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert_rounded, size: 18),
-      tooltip: 'Job actions',
-      onSelected: (value) {
-        switch (value) {
-          case 'pause':
-            runSabnzbdAction(
-              context,
-              ref,
-              action: (c) => c.pauseJob(slot.nzoId),
-              successMessage: 'Job paused',
-              failureMessage: 'Failed to pause the job',
-              invalidate: _sabnzbdInvalidateAfterAction,
-            );
-          case 'resume':
-            runSabnzbdAction(
-              context,
-              ref,
-              action: (c) => c.resumeJob(slot.nzoId),
-              successMessage: 'Job resumed',
-              failureMessage: 'Failed to resume the job',
-              invalidate: _sabnzbdInvalidateAfterAction,
-            );
-          case 'delete':
-            runSabnzbdAction(
-              context,
-              ref,
-              action: (c) => c.deleteJob(slot.nzoId),
-              successMessage: 'Job removed',
-              failureMessage: 'Failed to remove the job',
-              invalidate: _sabnzbdInvalidateAfterAction,
-            );
-        }
-      },
-      itemBuilder: (context) => [
-        if (paused)
-          const PopupMenuItem(value: 'resume', child: Text('Resume'))
-        else
-          const PopupMenuItem(value: 'pause', child: Text('Pause')),
-        const PopupMenuItem(value: 'delete', child: Text('Delete')),
-      ],
-    );
-  }
-}
-
 /// Prompts for an NZB URL (and optional category) and enqueues it.
 Future<void> _showAddNzbDialog(BuildContext context, WidgetRef ref) async {
-  final urlController = TextEditingController();
-  final categories = ref.read(sabnzbdCategoriesProvider).asData?.value;
-  String? category;
-
-  final submitted = await showDialog<bool>(
+  final result = await showDialog<_AddNzbRequest>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Add NZB by URL'),
-      content: StatefulBuilder(
-        builder: (context, setState) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: urlController,
-              autofocus: true,
-              keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                labelText: 'NZB URL',
-                hintText: 'https://…/download.nzb',
-              ),
-            ),
-            if (categories != null && categories.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: category,
-                decoration: const InputDecoration(labelText: 'Category'),
-                items: categories
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (v) => setState(() => category = v),
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Add'),
-        ),
-      ],
-    ),
+    builder: (context) => const _AddNzbDialog(),
   );
 
-  if (submitted != true) {
-    urlController.dispose();
-    return;
-  }
-  final url = urlController.text.trim();
-  urlController.dispose();
-  if (url.isEmpty || !context.mounted) return;
+  if (result == null || !context.mounted) return;
 
   await runSabnzbdAction(
     context,
     ref,
-    action: (c) => c.addUrl(url, category: category),
+    action: (c) => c.addUrl(result.url, category: result.category),
     successMessage: 'NZB added',
     failureMessage: 'Failed to add the NZB',
     invalidate: _sabnzbdInvalidateAfterAction,
   );
+}
+
+/// What the add dialog hands back once the user commits.
+class _AddNzbRequest {
+  const _AddNzbRequest({required this.url, this.category});
+
+  final String url;
+  final String? category;
+}
+
+/// The add-NZB form.
+///
+/// A `ConsumerStatefulWidget` that **watches** the categories rather than
+/// reading them once. `ref.read(sabnzbdCategoriesProvider).asData?.value` was
+/// the previous shape, and nothing else in the app watches that provider — so
+/// on first open it was cold, the read returned `AsyncLoading` with no value,
+/// the dropdown was hidden entirely and the NZB went in with no category at
+/// all. The captured local was never re-read either, so the dropdown stayed
+/// hidden even after the fetch landed while the dialog was still open.
+class _AddNzbDialog extends ConsumerStatefulWidget {
+  const _AddNzbDialog();
+
+  @override
+  ConsumerState<_AddNzbDialog> createState() => _AddNzbDialogState();
+}
+
+class _AddNzbDialogState extends ConsumerState<_AddNzbDialog> {
+  final _urlController = TextEditingController();
+  String? _category;
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final url = _urlController.text.trim();
+    if (url.isEmpty) return;
+    Navigator.of(context).pop(_AddNzbRequest(url: url, category: _category));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categoriesAsync = ref.watch(sabnzbdCategoriesProvider);
+
+    return AlertDialog(
+      title: const Text('Add NZB by URL'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _urlController,
+            autofocus: true,
+            keyboardType: TextInputType.url,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+            decoration: const InputDecoration(
+              labelText: 'NZB URL',
+              hintText: 'https://…/download.nzb',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          categoriesAsync.when(
+            data: (categories) => categories.isEmpty
+                ? const SizedBox.shrink()
+                : DropdownButtonFormField<String>(
+                    initialValue: _category,
+                    decoration: const InputDecoration(labelText: 'Category'),
+                    items: categories
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _category = v),
+                  ),
+            // Plain text rather than a spinner: it says the same thing, and an
+            // indeterminate indicator inside a dialog is a frame the eye has to
+            // keep discarding.
+            loading: () => const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Loading categories…'),
+            ),
+            // A category is optional; SABnzbd applies its default. Failing to
+            // list them is not a reason to block adding the NZB.
+            error: (_, _) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Add')),
+      ],
+    );
+  }
 }
 
 class _QueueList extends ConsumerWidget {
@@ -329,7 +297,10 @@ class _QueueList extends ConsumerWidget {
       data: (queue) {
         if (queue.slots.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('Queue is empty.'),
           );
         }
@@ -358,75 +329,53 @@ class _QueueTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final subtitle = <String>[
-      if (slot.status.isNotEmpty) slot.status,
-      if (slot.timeLeft.isNotEmpty) slot.timeLeft,
-      slot.sizeLeftLabel,
-    ].join(' · ');
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Material(
-        color: colorScheme.surface,
-        borderRadius: AppRadius.borderRadiusMd,
-        child: Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            border: Border.all(color: colorScheme.outlineVariant),
-            borderRadius: AppRadius.borderRadiusMd,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      slot.filename,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium!.weight(FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${slot.percentage}%',
-                    style: Theme.of(context).textTheme.labelMedium!
-                        .weight(FontWeight.w700)
-                        .tabular
-                        .copyWith(color: AppColors.sabnzbd),
-                  ),
-                  _QueueItemMenu(slot: slot, paused: _paused),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: slot.progress,
-                  minHeight: 4,
-                  backgroundColor: colorScheme.surfaceContainerHighest,
-                  valueColor: const AlwaysStoppedAnimation(AppColors.sabnzbd),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                // Carries the ETA and the remaining size, both counting down.
-                style: Theme.of(context).textTheme.bodySmall!.tabular.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
+    return DownloadQueueTile(
+      title: slot.filename,
+      subtitle: <String>[
+        if (slot.status.isNotEmpty) slot.status,
+        if (slot.timeLeft.isNotEmpty) slot.timeLeft,
+        slot.sizeLeftLabel,
+      ].join(' · '),
+      progress: slot.progress,
+      percentage: slot.percentage,
+      accent: AppColors.sabnzbd,
+      actions: DownloadQueueActionsMenu(
+        paused: _paused,
+        onCommand: (command) => _run(context, ref, command),
       ),
     );
+  }
+
+  void _run(BuildContext context, WidgetRef ref, DownloadQueueCommand command) {
+    switch (command) {
+      case DownloadQueueCommand.pause:
+        runSabnzbdAction(
+          context,
+          ref,
+          action: (c) => c.pauseJob(slot.nzoId),
+          successMessage: 'Job paused',
+          failureMessage: 'Failed to pause the job',
+          invalidate: _sabnzbdInvalidateAfterAction,
+        );
+      case DownloadQueueCommand.resume:
+        runSabnzbdAction(
+          context,
+          ref,
+          action: (c) => c.resumeJob(slot.nzoId),
+          successMessage: 'Job resumed',
+          failureMessage: 'Failed to resume the job',
+          invalidate: _sabnzbdInvalidateAfterAction,
+        );
+      case DownloadQueueCommand.delete:
+        runSabnzbdAction(
+          context,
+          ref,
+          action: (c) => c.deleteJob(slot.nzoId),
+          successMessage: 'Job removed',
+          failureMessage: 'Failed to remove the job',
+          invalidate: _sabnzbdInvalidateAfterAction,
+        );
+    }
   }
 }
 
@@ -441,7 +390,10 @@ class _HistoryList extends ConsumerWidget {
       data: (slots) {
         if (slots.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No history yet.'),
           );
         }

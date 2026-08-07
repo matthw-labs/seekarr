@@ -89,12 +89,41 @@ class _TaskTile extends ConsumerWidget {
   final TrueNasProtectionTask task;
   const _TaskTile({required this.task});
 
+  /// A scrub is started by pool name, so a task that arrived without one can't
+  /// be run; every other kind runs by id.
+  bool get _canRun =>
+      task.kind != TrueNasTaskKind.scrub ||
+      (task.poolName?.isNotEmpty ?? false);
+
+  Future<void> _run(BuildContext context, WidgetRef ref) async {
+    // A scrub reads every block in the pool — worth a confirmation, unlike the
+    // cheap per-task runs.
+    if (task.kind == TrueNasTaskKind.scrub) {
+      final result = await showAppConfirmDialog(
+        context: context,
+        title: 'Start scrub?',
+        message:
+            'Scrubbing "${task.poolName}" reads the whole pool and can take '
+            'hours.',
+        confirmLabel: 'Start',
+      );
+      if (!result.confirmed || !context.mounted) return;
+    }
+    await runTrueNasAction(
+      context,
+      ref,
+      action: () => ref.read(truenasDataProtectionApiProvider).run(task),
+      successMessage: 'Started ${task.title}',
+      failureMessage: 'Could not run task',
+      invalidate: [truenasProtectionTasksProvider(task.kind)],
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final api = ref.read(truenasDataProtectionApiProvider);
     final provider = truenasProtectionTasksProvider(task.kind);
-    final canRun = task.kind != TrueNasTaskKind.scrub;
 
     return AppCard.surfaceOutlined(
       padding: const EdgeInsets.symmetric(
@@ -130,18 +159,11 @@ class _TaskTile extends ConsumerWidget {
               ],
             ),
           ),
-          if (canRun)
+          if (_canRun)
             IconButton(
               icon: const Icon(Icons.play_arrow_rounded, size: 20),
               tooltip: 'Run now',
-              onPressed: () => runTrueNasAction(
-                context,
-                ref,
-                action: () => api.run(task.kind, task.id),
-                successMessage: 'Started ${task.title}',
-                failureMessage: 'Could not run task',
-                invalidate: [provider],
-              ),
+              onPressed: () => _run(context, ref),
             ),
           IconButton(
             icon: Icon(

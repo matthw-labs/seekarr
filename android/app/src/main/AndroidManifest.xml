@@ -1,5 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Tells the user a background release search finished. This is the only
+         permission the notification plugin needs, because `zonedSchedule` is
+         never called — which is what keeps this clear of the Play-restricted
+         exact-alarm permissions and their declaration form. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Seekarr"
         android:name="${applicationName}"

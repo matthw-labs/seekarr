@@ -12,6 +12,10 @@ import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/utils/string_utils.dart';
 import 'package:seekarr/core/widgets/widgets.dart';
 import 'package:seekarr/features/discover/presentation/widgets/arr_media_extras_section.dart';
+import 'package:seekarr/features/release_search/domain/release_search_target.dart';
+import 'package:seekarr/features/release_search/presentation/release_search_entry.dart';
+import 'package:seekarr/features/release_search/presentation/widgets/release_search_status_card.dart';
+import 'package:seekarr/features/stream/presentation/widgets/stream_availability_slot.dart';
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/movies/data/radarr_service.dart';
 import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
@@ -223,6 +227,15 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       operate: [
         if (viewModel.isInLibrary)
           MediaDetailSlot.box(
+            child: ReleaseSearchStatusCard(
+              target: ReleaseSearchTarget.movie(
+                movieId: widget.movieId,
+                label: truncateTitle(viewModel.title),
+              ),
+            ),
+          ),
+        if (viewModel.isInLibrary)
+          MediaDetailSlot.box(
             label: 'File',
             child: viewModel.hasFile && viewModel.path != null
                 ? FileInfoSection(
@@ -230,13 +243,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
                     filename: viewModel.filename,
                     accent: accent,
                   )
-                : const AppEmptyState.compact(
-                    icon: Icons.search_off_rounded,
-                    title: 'Nothing on disk',
-                    message:
-                        'Radarr is tracking this but no file has been '
-                        'imported.',
-                  ),
+                // One footprint in both states: the region does not jump when a
+                // file arrives, and the hint spends its two lines suggesting the
+                // route the promoted "Auto search" button does not cover.
+                : FileInfoSection.missing(accent: accent),
           ),
       ],
       synopsis: [
@@ -279,12 +289,23 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       // One `CAST` slot and one `COLLECTION` slot, each labelled by the spine and
       // each omitted when Seerr has nothing for it — rather than one
       // undifferentiated extras section that drew its own headings.
-      related: arrMediaExtrasSlots(
-        ref,
-        tmdbId: tmdbId,
-        mediaType: 'movie',
-        accent: accent,
-      ),
+      related: [
+        // "On Jellyfin · 34 min in" — the pipeline closing. Radarr answers "do I
+        // own it"; only a media server knows whether anyone can play it and where
+        // they stopped. Omitted entirely when there is nothing to say, so it never
+        // leaves a labelled region over empty air.
+        ...streamAvailabilitySlots(
+          ref,
+          accent: accent,
+          tmdbId: tmdbId == 0 ? null : '$tmdbId',
+        ),
+        ...arrMediaExtrasSlots(
+          ref,
+          tmdbId: tmdbId,
+          mediaType: 'movie',
+          accent: accent,
+        ),
+      ],
     );
   }
 
@@ -457,21 +478,17 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     BuildContext context, {
     required String title,
   }) async {
-    HapticFeedback.selectionClick();
-    final radarrService = ref.read(radarrServiceProvider);
-    await InteractiveSearchSheet.showAsync(
-      context: context,
-      accent: ServiceKey.radarr.accent,
-      // The sheet's own heading is already "Releases" and this string lands in
-      // the subtitle beneath it, so "Releases for X" printed the word twice.
-      // Capped because the subtitle Text has no maxLines: a long title used to
-      // grow the header until it ate the list it was introducing.
-      title: truncateTitle(title),
-      fetchReleases: (token) =>
-          radarrService.getReleases(widget.movieId, cancelToken: token),
-      onGrabRelease: (guid, indexerId) async {
-        await radarrService.grabRelease(guid: guid, indexerId: indexerId);
-      },
+    // The sheet's own heading is already "Releases" and this string lands in
+    // the subtitle beneath it, so "Releases for X" printed the word twice.
+    // Capped because the subtitle Text has no maxLines: a long title used to
+    // grow the header until it ate the list it was introducing.
+    await showReleaseSearch(
+      context,
+      ref,
+      ReleaseSearchTarget.movie(
+        movieId: widget.movieId,
+        label: truncateTitle(title),
+      ),
     );
   }
 }

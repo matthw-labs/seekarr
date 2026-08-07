@@ -19,18 +19,23 @@ import 'package:seekarr/features/truenas/presentation/widgets/charts/sparkline.d
 import 'package:seekarr/features/truenas/presentation/widgets/truenas_info_row.dart';
 import 'package:seekarr/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 
-/// Live metrics for the dashboard: interfaces + CPU/memory reporting graphs.
+/// Live metrics for the dashboard: the CPU/memory gauges and the network
+/// sparkline, all derived from the newest reporting samples.
 class TrueNasDashboardMetrics {
-  final List<TrueNasInterface> interfaces;
   final TrueNasReportingGraph? cpu;
   final TrueNasReportingGraph? memory;
   final TrueNasReportingGraph? network;
 
+  /// The network sparkline series, derived once per fetch. Deriving it in the
+  /// widget re-walked every sample on every rebuild — and the dashboard
+  /// rebuilds on a timer.
+  final List<double> networkSeries;
+
   const TrueNasDashboardMetrics({
-    required this.interfaces,
     this.cpu,
     this.memory,
     this.network,
+    this.networkSeries = const [],
   });
 
   /// CPU busy fraction from the last sample: `(total - idle) / total`, where
@@ -38,57 +43,72 @@ class TrueNasDashboardMetrics {
   double? get cpuUsage => _busyFraction(cpu, idleLabel: 'idle');
 
   /// Memory used fraction from the last sample: `used / sum(all series)`.
-  double? get memoryUsage {
-    final g = memory;
-    if (g == null || g.data.isEmpty) return null;
-    final last = g.data.last;
-    final labels = g.seriesLabels;
-    double total = 0;
-    double used = 0;
-    for (var i = 0; i < labels.length; i++) {
-      final v = (i + 1) < last.length ? (last[i + 1] ?? 0) : 0;
-      total += v;
-      if (labels[i].toLowerCase().contains('used')) used += v;
-    }
-    if (total <= 0) return null;
-    return (used / total).clamp(0, 1).toDouble();
-  }
+  double? get memoryUsage => _fractionOf(memory, matching: 'used');
 
   static double? _busyFraction(
     TrueNasReportingGraph? g, {
     required String idleLabel,
   }) {
+    final idle = _fractionOf(g, matching: idleLabel);
+    return idle == null ? null : (1 - idle).clamp(0, 1).toDouble();
+  }
+
+  /// Fraction of the newest sample carried by the series whose label contains
+  /// [matching], or null when **no** series matches.
+  ///
+  /// Answering null rather than a number is the whole point. Netdata's
+  /// `system.cpu` chart is a stacked percentage that *excludes* idle, so with
+  /// no `idle` dimension the old arithmetic returned `total/total` — a flat
+  /// 100% CPU on a completely idle box, and non-null, so the load-per-core
+  /// fallback never got a chance to run. The memory side had the mirror bug:
+  /// no `used` dimension meant `0/total`, a confident 0%. A metric we cannot
+  /// compute has to say so.
+  static double? _fractionOf(
+    TrueNasReportingGraph? g, {
+    required String matching,
+  }) {
     if (g == null || g.data.isEmpty) return null;
     final last = g.data.last;
     final labels = g.seriesLabels;
     double total = 0;
-    double idle = 0;
+    double matched = 0;
+    var sawMatch = false;
     for (var i = 0; i < labels.length; i++) {
       final v = (i + 1) < last.length ? (last[i + 1] ?? 0) : 0;
       total += v;
-      if (labels[i].toLowerCase().contains(idleLabel)) idle += v;
+      if (labels[i].toLowerCase().contains(matching)) {
+        matched += v;
+        sawMatch = true;
+      }
     }
-    if (total <= 0) return null;
-    return ((total - idle) / total).clamp(0, 1).toDouble();
+    if (!sawMatch || total <= 0) return null;
+    return (matched / total).clamp(0, 1).toDouble();
   }
 }
 
-/// Fetches interfaces + reporting graphs. Reporting is best-effort: a missing
-/// graph namespace degrades to null rather than failing the whole section.
+/// Network interfaces. Split off the live metrics because addresses change on
+/// a human timescale, not a 3-second one — this rides the slow refresh tick.
+final truenasDashboardInterfacesProvider = FutureProvider.autoDispose((
+  ref,
+) async {
+  ref.watch(truenasClientProvider);
+  return ref.watch(truenasNetworkApiProvider).getInterfaces();
+});
+
+/// Fetches the reporting graphs behind the gauges and the sparkline.
+///
+/// Best-effort: if the whole call fails, or an individual graph is missing,
+/// the affected metric degrades to null rather than failing the section.
 final truenasDashboardMetricsProvider =
     FutureProvider.autoDispose<TrueNasDashboardMetrics>((ref) async {
       ref.watch(truenasClientProvider);
-      final network = ref.watch(truenasNetworkApiProvider);
       final reporting = ref.watch(truenasReportingApiProvider);
 
-      final interfaces = await network.getInterfaces();
-
-      // Fetch all reporting graphs in a single WS round-trip. Best-effort: if
-      // the whole call fails, or an individual graph is missing, the affected
-      // metric degrades to null rather than failing the whole section.
+      // One WS round-trip for all three graphs, over the shortest window that
+      // still feeds a sparkline — the gauges only ever read the last sample.
       List<TrueNasReportingGraph> graphs;
       try {
-        graphs = await reporting.getGraphs(['cpu', 'memory', 'interface']);
+        graphs = await reporting.getLiveGraphs(['cpu', 'memory', 'interface']);
       } catch (_) {
         graphs = const [];
       }
@@ -100,11 +120,14 @@ final truenasDashboardMetricsProvider =
         return null;
       }
 
+      final network = byName('interface');
       return TrueNasDashboardMetrics(
-        interfaces: interfaces,
         cpu: byName('cpu'),
         memory: byName('memory'),
-        network: byName('interface'),
+        network: network,
+        networkSeries: (network == null || network.seriesLabels.isEmpty)
+            ? const []
+            : network.series(0).map((p) => p.v ?? 0).toList(growable: false),
       );
     });
 
@@ -123,8 +146,9 @@ class _TrueNasDashboardScreenState extends ConsumerState<TrueNasDashboardScreen>
   /// Fast cadence for live metrics (CPU / memory / network).
   static const _liveInterval = Duration(seconds: 3);
 
-  /// The heavier system/pools/alerts snapshot refreshes every [_slowEvery]
-  /// live ticks (~15s) so it stays fresh without hammering the server.
+  /// The heavier system/pools/alerts snapshot — and the interface list, which
+  /// changes on a human timescale — refresh every [_slowEvery] live ticks
+  /// (~15s) so they stay fresh without hammering the server.
   static const _slowEvery = 5;
   int _tick = 0;
 
@@ -160,6 +184,7 @@ class _TrueNasDashboardScreenState extends ConsumerState<TrueNasDashboardScreen>
       _tick++;
       if (_tick % _slowEvery == 0) {
         ref.invalidate(truenasDashboardProvider);
+        ref.invalidate(truenasDashboardInterfacesProvider);
       }
     });
   }
@@ -167,6 +192,7 @@ class _TrueNasDashboardScreenState extends ConsumerState<TrueNasDashboardScreen>
   void _refresh() {
     ref.invalidate(truenasDashboardProvider);
     ref.invalidate(truenasDashboardMetricsProvider);
+    ref.invalidate(truenasDashboardInterfacesProvider);
   }
 
   @override
@@ -256,7 +282,10 @@ class _DashboardBody extends ConsumerWidget {
 
         const SectionHeader(title: 'Network', showChevron: false),
         const SizedBox(height: AppSpacing.sm),
-        _NetworkCard(metrics: metrics),
+        _NetworkCard(
+          metrics: metrics,
+          interfaces: ref.watch(truenasDashboardInterfacesProvider),
+        ),
         const SizedBox(height: AppSpacing.md),
 
         const SectionHeader(title: 'Pool health', showChevron: false),
@@ -358,12 +387,13 @@ class _MemoryCard extends StatelessWidget {
 
 class _NetworkCard extends StatelessWidget {
   final AsyncValue<TrueNasDashboardMetrics> metrics;
-  const _NetworkCard({required this.metrics});
+  final AsyncValue<List<TrueNasInterface>> interfaces;
+  const _NetworkCard({required this.metrics, required this.interfaces});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return metrics.when(
+    return interfaces.when(
       skipLoadingOnReload: true,
       loading: () => AppSkeleton.listRows(count: 2),
       error: (_, __) => AppCard.surfaceOutlined(
@@ -372,21 +402,16 @@ class _NetworkCard extends StatelessWidget {
           style: theme.textTheme.bodySmall,
         ),
       ),
-      data: (m) {
-        final upInterfaces = m.interfaces.where((i) => i.addresses.isNotEmpty);
-        final graph = m.network;
+      data: (list) {
+        final upInterfaces = list.where((i) => i.addresses.isNotEmpty);
+        // Already derived once per fetch by the provider.
+        final series = metrics.value?.networkSeries ?? const <double>[];
         return AppCard.surfaceOutlined(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (graph != null && graph.seriesLabels.isNotEmpty) ...[
-                Sparkline(
-                  values: graph
-                      .series(0)
-                      .map((p) => p.v ?? 0)
-                      .toList(growable: false),
-                  color: AppColors.truenas,
-                ),
+              if (series.isNotEmpty) ...[
+                Sparkline(values: series, color: AppColors.truenas),
                 const SizedBox(height: AppSpacing.sm),
               ],
               if (upInterfaces.isEmpty)

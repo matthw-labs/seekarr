@@ -77,12 +77,7 @@ class _Body extends ConsumerWidget {
         FloatingNavBarMetrics.getScrollViewBottomPadding(context),
       ),
       children: [
-        Text(
-          item.title,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        Text(item.title, style: theme.textTheme.headlineSmall),
         if (item.subtitle != null && item.subtitle!.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),

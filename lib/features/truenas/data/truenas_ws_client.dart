@@ -42,12 +42,20 @@ class TrueNasWsClient {
   /// store like any HTTPS client.
   final String? certFingerprint;
 
+  /// How long a single RPC may go unanswered before it is treated as a
+  /// transport failure. Injectable so tests need not wait it out.
+  final Duration callTimeout;
+
   WebSocket? _socket;
   HttpClient? _httpClient;
   bool _authed = false;
   int _nextId = 1;
   Completer<void>? _connecting;
   final Map<int, Completer<dynamic>> _pending = {};
+
+  /// When the socket last delivered a frame — the liveness signal the call
+  /// timeout uses to decide whether the connection is worth keeping.
+  DateTime? _lastMessageAt;
 
   /// Cached method names from `core.get_methods` (capability discovery).
   Set<String>? _methods;
@@ -57,6 +65,7 @@ class TrueNasWsClient {
     required this.baseUrl,
     required this.apiKey,
     this.certFingerprint,
+    this.callTimeout = const Duration(seconds: 15),
   });
 
   /// Derives the `wss://host:port/api/current` endpoint from the base URL.
@@ -93,34 +102,30 @@ class TrueNasWsClient {
   Future<void> _connect() async {
     // Verify TLS against the platform trust store, additionally trusting the
     // user-pinned self-signed certificate (if any). See [buildPinnedHttpClient].
+    final endpoint = resolveEndpoint();
     final httpClient = buildPinnedHttpClient(
       pinnedFingerprint: certFingerprint,
+      pinnedHost: endpoint.host,
+      pinnedPort: endpoint.port,
     );
     _httpClient = httpClient;
     try {
       final socket = await WebSocket.connect(
-        resolveEndpoint().toString(),
+        endpoint.toString(),
         customClient: httpClient,
       ).timeout(const Duration(seconds: 10));
       _socket = socket;
       socket.listen(
         _onMessage,
-        onError: (Object e) {
-          // Reset the socket state so the next call forces a fresh
-          // reconnection instead of writing to a dead socket.
-          _authed = false;
-          _socket = null;
-          _httpClient?.close(force: true);
-          _httpClient = null;
-          _failAll(TrueNasException(e.toString()));
-        },
-        onDone: () {
-          _authed = false;
-          _socket = null;
-          _httpClient?.close(force: true);
-          _httpClient = null;
-          _failAll(const TrueNasException('Connection closed'));
-        },
+        // Reset the socket state so the next call forces a fresh reconnection
+        // instead of writing to a dead socket. The socket is passed along so a
+        // late event from a connection we already replaced cannot tear down its
+        // successor.
+        onError: (Object e) => _dropConnection(socket, TrueNasException('$e')),
+        onDone: () => _dropConnection(
+          socket,
+          const TrueNasException('Connection closed'),
+        ),
         cancelOnError: false,
       );
 
@@ -134,8 +139,12 @@ class TrueNasWsClient {
       _authed = true;
     } catch (e) {
       _authed = false;
-      await _socket?.close();
+      final socket = _socket;
       _socket = null;
+      // Never `await` this: a socket that failed to authenticate may also be
+      // half-open, and a close handshake that never lands would leave
+      // `_connecting` pending forever — wedging every later call.
+      if (socket != null) _closeQuietly(socket);
       httpClient.close(force: true);
       _httpClient = null;
       if (e is TrueNasException) rethrow;
@@ -260,9 +269,30 @@ class TrueNasWsClient {
       }),
     );
     return completer.future.timeout(
-      const Duration(seconds: 15),
+      callTimeout,
       onTimeout: () {
         _pending.remove(id);
+        // A call that never came back means one of two things. If the socket
+        // answered *something* inside the timeout window it is alive and merely
+        // slow, so only this call fails. If it has gone completely silent it is
+        // almost certainly half-open — a suspend or a Wi-Fi→cellular handoff
+        // drops the TCP connection without ever delivering `onDone`/`onError` —
+        // and leaving `_socket`/`_authed` set would wedge `_ensureConnected` on
+        // a dead socket for the rest of the app session, with every poll tick
+        // stacking another doomed timeout. Drop it so the next call reconnects.
+        final lastMessage = _lastMessageAt;
+        final alive =
+            lastMessage != null &&
+            DateTime.now().difference(lastMessage) < callTimeout;
+        if (!alive) {
+          _dropConnection(
+            socket,
+            const TrueNasException(
+              'Connection lost',
+              reason: ServiceFailureReason.timeout,
+            ),
+          );
+        }
         throw TrueNasException(
           'Timed out calling $method',
           reason: ServiceFailureReason.timeout,
@@ -271,7 +301,35 @@ class TrueNasWsClient {
     );
   }
 
+  /// Tears the transport down so the next call reconnects, failing everything
+  /// still in flight with [error].
+  ///
+  /// [socket] identifies the connection the failure belongs to: a late
+  /// `onDone`/`onError` — or a timeout — from a socket that has already been
+  /// replaced must not null out its successor or fail the successor's calls.
+  void _dropConnection(WebSocket socket, Object error) {
+    if (!identical(_socket, socket)) {
+      _closeQuietly(socket);
+      return;
+    }
+    _authed = false;
+    _socket = null;
+    _httpClient?.close(force: true);
+    _httpClient = null;
+    _failAll(error);
+    _closeQuietly(socket);
+  }
+
+  /// Closes a socket without waiting on it: a half-open connection may never
+  /// complete its close handshake, and no caller can be blocked on that.
+  void _closeQuietly(WebSocket socket) {
+    unawaited(socket.close().then<void>((_) {}, onError: (Object _) {}));
+  }
+
   void _onMessage(dynamic data) {
+    // Any frame at all proves the socket is still alive; the timeout path uses
+    // this to tell a slow server from a dead connection.
+    _lastMessageAt = DateTime.now();
     if (data is! String) return;
     final Object? decoded;
     try {

@@ -90,6 +90,25 @@ class SettingsConnectionsScreen extends ConsumerWidget {
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
+          // Omitted rather than shown empty: trust is per origin, so an
+          // origin can outlive every service that once used it — but with
+          // nothing ever trusted there is nothing this row could find.
+          if (settings.trustedCertificates.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xl),
+            SettingsGroupCard(
+              children: [
+                SettingsCard.grouped(
+                  leading: const Icon(Icons.verified_user_outlined),
+                  title: 'Trusted certificates',
+                  subtitle: settings.trustedCertificates.length == 1
+                      ? '1 self-signed certificate trusted'
+                      : '${settings.trustedCertificates.length} self-signed '
+                            'certificates trusted',
+                  onTap: () => context.push('/settings/certificates'),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

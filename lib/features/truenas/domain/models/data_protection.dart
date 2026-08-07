@@ -15,7 +15,14 @@ enum TrueNasTaskKind {
   String get queryMethod => '$namespace.query';
   String get deleteMethod => '$namespace.delete';
   String get updateMethod => '$namespace.update';
-  String get runMethod => '$namespace.run';
+
+  /// The RPC that starts the task immediately.
+  ///
+  /// Most namespaces expose `<namespace>.run`, but cloud sync is the exception:
+  /// the middleware method is `cloudsync.sync` — `cloudsync.run` does not exist
+  /// and every "Run now" against it failed server-side.
+  String get runMethod =>
+      this == TrueNasTaskKind.cloudSync ? 'cloudsync.sync' : '$namespace.run';
 }
 
 /// A normalized data-protection task for list display + generic actions.
@@ -27,6 +34,11 @@ class TrueNasProtectionTask {
   final bool enabled;
   final String? state;
 
+  /// The pool a scrub task belongs to. `pool.scrub.run` is keyed by pool *name*
+  /// (`run(name: str, threshold: int)`), not by task id, so the name has to
+  /// survive parsing for "Run now" to work at all. Null for every other kind.
+  final String? poolName;
+
   const TrueNasProtectionTask({
     required this.kind,
     required this.id,
@@ -34,6 +46,7 @@ class TrueNasProtectionTask {
     required this.subtitle,
     required this.enabled,
     this.state,
+    this.poolName,
   });
 
   factory TrueNasProtectionTask.fromJson(
@@ -44,6 +57,7 @@ class TrueNasProtectionTask {
     String title;
     String subtitle;
     String? state;
+    String? poolName;
 
     switch (kind) {
       case TrueNasTaskKind.snapshot:
@@ -68,7 +82,10 @@ class TrueNasProtectionTask {
         final host = stringOrNull(json['remotehost']) ?? '';
         subtitle = '${stringOrNull(json['direction']) ?? ''} · $host';
       case TrueNasTaskKind.scrub:
-        title = stringOrNull(json['pool_name']) ?? 'Scrub';
+        poolName =
+            stringOrNull(json['pool_name']) ??
+            stringOrNull(mapOrNull(json['pool'])?['name']);
+        title = poolName ?? 'Scrub';
         subtitle =
             stringOrNull(json['description']) ??
             'Threshold '
@@ -82,6 +99,7 @@ class TrueNasProtectionTask {
       subtitle: subtitle.trim().replaceAll(RegExp(r'^·\s*|\s*·$'), ''),
       enabled: json['enabled'] == true,
       state: state,
+      poolName: poolName,
     );
   }
 }

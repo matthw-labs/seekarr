@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:seekarr/core/app_radius.dart';
 import 'package:seekarr/core/app_spacing.dart';
+import 'package:seekarr/core/network/pinned_image_cache.dart';
 import 'package:seekarr/core/text_scale.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/features/discover/domain/models/discover_detail_model.dart';
@@ -156,6 +157,9 @@ class _WatchProviderTile extends StatelessWidget {
               child: logoPath != null && logoPath.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: 'https://image.tmdb.org/t/p/w92$logoPath',
+                      cacheManager: pinnedImageCacheFor(
+                        'https://image.tmdb.org/t/p/w92$logoPath',
+                      ),
                       fit: BoxFit.cover,
                       errorWidget: (context, url, error) => Icon(
                         Icons.play_circle_outline,

@@ -1,4 +1,5 @@
 import 'package:seekarr/features/truenas/data/truenas_api_base.dart';
+import 'package:seekarr/features/truenas/data/truenas_ws_client.dart';
 import 'package:seekarr/features/truenas/domain/models/data_protection.dart';
 
 /// Data-protection tasks: periodic snapshots, replication, cloud sync, rsync,
@@ -28,17 +29,32 @@ class TrueNasDataProtectionApi extends TrueNasApiBase {
         {'enabled': enabled},
       ]);
 
-  /// Runs a task now. Snapshot/scrub tasks are fire-and-forget; replication,
-  /// cloud sync and rsync return a job id.
-  Future<dynamic> run(TrueNasTaskKind kind, int id) {
-    switch (kind) {
+  /// Runs [task] now.
+  ///
+  /// The RPC *and* its parameters differ per kind, so this takes the whole task
+  /// rather than a bare id:
+  /// * replication / rsync — `<namespace>.run(id)`, a job we wait on.
+  /// * cloud sync — `cloudsync.sync(id)`, a job. (`cloudsync.run` does not
+  ///   exist; sending it made every "Run now" fail server-side.)
+  /// * snapshot — `pool.snapshottask.run(id)`, fire-and-forget.
+  /// * scrub — `pool.scrub.run(name, threshold)`, keyed by *pool name*, not by
+  ///   task id. `threshold` is "skip if scrubbed within N days", so an explicit
+  ///   0 is what makes "Run now" actually run now. Fire-and-forget: a scrub
+  ///   runs for hours and the UI must not block on it.
+  Future<dynamic> run(TrueNasProtectionTask task) {
+    switch (task.kind) {
       case TrueNasTaskKind.replication:
       case TrueNasTaskKind.cloudSync:
       case TrueNasTaskKind.rsync:
-        return client.callJob(kind.runMethod, [id]);
+        return client.callJob(task.kind.runMethod, [task.id]);
       case TrueNasTaskKind.snapshot:
+        return client.call(task.kind.runMethod, [task.id]);
       case TrueNasTaskKind.scrub:
-        return client.call(kind.runMethod, [id]);
+        final pool = task.poolName;
+        if (pool == null || pool.isEmpty) {
+          throw const TrueNasException('Scrub task is missing its pool name');
+        }
+        return client.call(task.kind.runMethod, [pool, 0]);
     }
   }
 

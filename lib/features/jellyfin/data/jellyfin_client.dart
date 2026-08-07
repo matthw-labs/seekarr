@@ -11,6 +11,7 @@ import 'package:seekarr/features/jellyfin/domain/models/jellyfin_item_mapper.dar
 import 'package:seekarr/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:seekarr/features/stream/domain/models/stream_item.dart';
 import 'package:seekarr/features/stream/domain/models/stream_library.dart';
+import 'package:seekarr/features/stream/domain/models/stream_library_page.dart';
 import 'package:seekarr/features/stream/domain/models/stream_session.dart';
 import 'package:seekarr/features/stream/domain/stream_server_client.dart';
 
@@ -52,6 +53,7 @@ class JellyfinClient implements StreamServerClient {
     String? deviceName,
     String? deviceId,
     String appVersion = kJellyfinClientVersion,
+    String? pinnedCertFingerprint,
   }) : _baseUrl = UrlUtils.normalizeBaseUrl(baseUrl),
        _userId = userId.trim(),
        _authHeader = buildJellyfinAuthorizationHeader(
@@ -69,6 +71,7 @@ class JellyfinClient implements StreamServerClient {
     _api = ApiClient.authenticatedBy(
       baseUrl: _baseUrl,
       headers: {'Authorization': _authHeader},
+      pinnedCertFingerprint: pinnedCertFingerprint,
     );
   }
 
@@ -233,12 +236,37 @@ class JellyfinClient implements StreamServerClient {
     int limit = 50,
     CancelToken? cancelToken,
   }) async {
+    final page = await getLibraryPage(
+      libraryId: libraryId,
+      lens: lens,
+      viewerId: viewerId,
+      startIndex: startIndex,
+      limit: limit,
+      cancelToken: cancelToken,
+    );
+    return page.items;
+  }
+
+  @override
+  Future<StreamLibraryPage> getLibraryPage({
+    required String libraryId,
+    required StreamLibraryLens lens,
+    String? viewerId,
+    int startIndex = 0,
+    int limit = 50,
+    CancelToken? cancelToken,
+  }) async {
     final userId = _resolveViewerId(viewerId);
-    // Every lens above `recentlyAdded` is user-scoped, and the endpoints behind
-    // them 404 without a userId rather than falling back to the token's own
-    // identity — the API key has none. Degrading to an empty page keeps the
-    // failure legible (an empty lens) instead of a request we know will fail.
-    if (userId == null && lens.isPerViewer) return const [];
+    // The genuinely per-viewer lenses are user-scoped end to end, and the
+    // endpoints behind them 404 without a userId rather than falling back to the
+    // token's own identity — the API key has none. Saying so is the point:
+    // returning a bare empty list here is what made the browse claim the library
+    // was empty when the user had simply not picked a household member yet.
+    //
+    // `all` is deliberately not in that set — see [StreamLibraryLens.isPerViewer].
+    if (userId == null && lens.isPerViewer) {
+      return const StreamLibraryPage.viewerRequired();
+    }
 
     try {
       // Only the `/Items` lenses take `includeItemTypes`, so only they need the
@@ -249,6 +277,7 @@ class JellyfinClient implements StreamServerClient {
         await _ensureLibraryKind(libraryId);
       }
 
+      final _JellyfinItemsPage page;
       switch (lens) {
         case StreamLibraryLens.continueWatching:
           // `/UserItems/Resume` replaces the deprecated
@@ -257,7 +286,7 @@ class JellyfinClient implements StreamServerClient {
           // the item somebody is watching *right now* out of their own
           // continue-watching row, where it would be a duplicate of the session
           // board.
-          return await _fetchItems('/UserItems/Resume', {
+          page = await _fetchItemsPage('/UserItems/Resume', {
             'userId': userId,
             'parentId': libraryId,
             'startIndex': startIndex,
@@ -267,7 +296,7 @@ class JellyfinClient implements StreamServerClient {
             'excludeActiveSessions': true,
           }, cancelToken: cancelToken);
         case StreamLibraryLens.nextUp:
-          return await _fetchItems('/Shows/NextUp', {
+          page = await _fetchItemsPage('/Shows/NextUp', {
             'userId': userId,
             'parentId': libraryId,
             'startIndex': startIndex,
@@ -279,27 +308,28 @@ class JellyfinClient implements StreamServerClient {
             'enableRewatching': false,
           }, cancelToken: cancelToken);
         case StreamLibraryLens.recentlyAdded:
-          return await _fetchItems('/Items', {
+          page = await _fetchItemsPage('/Items', {
             ..._itemsBaseQuery(libraryId, userId, startIndex, limit),
             'sortBy': 'DateCreated',
             'sortOrder': 'Descending',
           }, cancelToken: cancelToken);
         case StreamLibraryLens.unplayed:
-          return await _fetchItems('/Items', {
+          page = await _fetchItemsPage('/Items', {
             ..._itemsBaseQuery(libraryId, userId, startIndex, limit),
             'isPlayed': false,
             'sortBy': 'SortName',
             'sortOrder': 'Ascending',
           }, cancelToken: cancelToken);
         case StreamLibraryLens.all:
-          return await _fetchItems('/Items', {
+          page = await _fetchItemsPage('/Items', {
             ..._itemsBaseQuery(libraryId, userId, startIndex, limit),
             'sortBy': 'SortName',
             'sortOrder': 'Ascending',
           }, cancelToken: cancelToken);
       }
+      return page.toLibraryPage(startIndex);
     } catch (_) {
-      return const [];
+      return StreamLibraryPage.failed(startIndex: startIndex);
     }
   }
 
@@ -309,11 +339,13 @@ class JellyfinClient implements StreamServerClient {
     String? viewerId,
     CancelToken? cancelToken,
   }) async {
+    // `userId` is optional on `GET /Items/{itemId}` — it is a `Guid?`, and
+    // omitting it costs the `UserData` block (played flag, resume point) and
+    // nothing else. Refusing to call at all without one is what made a deep link
+    // into `/services/jellyfin/item/<id>` render "Not on the server" on an
+    // install where the item plainly was, before the household member had been
+    // chosen in settings.
     final userId = _resolveViewerId(viewerId);
-    // `UserLibraryController.GetItem` resolves the user from the query parameter
-    // and 404s when it cannot, so there is no version of this call that works
-    // without one.
-    if (userId == null) return null;
     try {
       final item = await _fetchRawItem(
         itemId,
@@ -321,6 +353,47 @@ class JellyfinClient implements StreamServerClient {
         cancelToken: cancelToken,
       );
       return item == null ? null : jellyfinStreamItemFromJson(item);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<StreamItem?> findByExternalId({
+    String? tmdbId,
+    String? tvdbId,
+    String? imdbId,
+    CancelToken? cancelToken,
+  }) async {
+    // `anyProviderIdEquals` takes `provider.value` pairs; passing several is an
+    // OR, which is what we want — an arr may know a film by TMDB and a series by
+    // TVDB, and either identifies the same thing here.
+    final pairs = <String>[
+      if (tmdbId != null && tmdbId.isNotEmpty) 'tmdb.$tmdbId',
+      if (tvdbId != null && tvdbId.isNotEmpty) 'tvdb.$tvdbId',
+      if (imdbId != null && imdbId.isNotEmpty) 'imdb.$imdbId',
+    ];
+    if (pairs.isEmpty) return null;
+
+    // A viewer is a bonus here, not a precondition. Without one `/Items` still
+    // answers "is this in the library", which is the media server's own fact and
+    // the one the availability slot needs to exist; what is lost is the watch
+    // state, so the slot reads "Ready to watch" rather than "34 min in". Bailing
+    // out without a viewer made the slot Plex-only in practice.
+    final userId = _resolveViewerId(null);
+
+    try {
+      final items = await _fetchItems('/Items', {
+        'recursive': true,
+        'anyProviderIdEquals': pairs.join(','),
+        'limit': 1,
+        'fields': _browseFields,
+        // `UserData` is omitted from the response entirely unless both are
+        // present, so they travel together or not at all.
+        if (userId != null) 'userId': userId,
+        if (userId != null) 'enableUserData': true,
+      }, cancelToken: cancelToken);
+      return items.isEmpty ? null : items.first;
     } catch (_) {
       return null;
     }
@@ -523,6 +596,23 @@ class JellyfinClient implements StreamServerClient {
     Map<String, dynamic> queryParameters, {
     CancelToken? cancelToken,
   }) async {
+    final page = await _fetchItemsPage(
+      path,
+      queryParameters,
+      cancelToken: cancelToken,
+    );
+    return page.items;
+  }
+
+  /// [_fetchItems] with the `BaseItemDtoQueryResult` envelope kept.
+  ///
+  /// [_JellyfinItemsPage.rows] is the count the *server* sent, before mapping
+  /// dropped anything, because that is what a pager has to advance by.
+  Future<_JellyfinItemsPage> _fetchItemsPage(
+    String path,
+    Map<String, dynamic> queryParameters, {
+    CancelToken? cancelToken,
+  }) async {
     final response = await _api.get(
       path,
       queryParameters: {
@@ -536,20 +626,33 @@ class JellyfinClient implements StreamServerClient {
     // (`/Shows/{id}/Seasons`) also wrap their array in `Items`, but a bare array
     // has shown up behind reverse proxies that unwrap single-key objects, so both
     // shapes are accepted.
-    final items = data is Map ? data['Items'] : data;
-    return _mapInIsolate(items, jellyfinStreamItemsFromJson);
+    final raw = data is Map ? data['Items'] : data;
+    return (
+      items: await _mapInIsolate(raw, jellyfinStreamItemsFromJson),
+      rows: raw is List ? raw.length : 0,
+      // Absent on the unwrapped shape and on some builds of `/Shows/NextUp`,
+      // which is why it is nullable rather than defaulted — see
+      // [_JellyfinItemsPage.toLibraryPage].
+      total: data is Map ? _asInt(data['TotalRecordCount']) : null,
+    );
+  }
+
+  static int? _asInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 
   Future<Map<String, dynamic>?> _fetchRawItem(
     String itemId,
-    String userId, {
+    String? userId, {
     CancelToken? cancelToken,
   }) async {
     // `fields` is ignored by this endpoint — it always returns the full DTO
     // including MediaSources, MediaStreams and People — so none is sent.
     final response = await _api.get(
       '/Items/$itemId',
-      queryParameters: {'userId': userId},
+      queryParameters: {if (userId != null) 'userId': userId},
       cancelToken: cancelToken,
     );
     final data = response.data;
@@ -576,6 +679,30 @@ class JellyfinClient implements StreamServerClient {
     if (raw is! List) return const [];
     if (raw.length <= kJellyfinIsolateMapThreshold) return mapper(raw);
     return Isolate.run(() => mapper(raw));
+  }
+}
+
+/// A `BaseItemDtoQueryResult` reduced to what a pager needs.
+///
+/// [rows] is the number of elements the *server* sent, which is deliberately not
+/// `items.length`: mapping drops anything malformed, and a page whose rows all
+/// failed to parse still has to move the offset forward rather than declare the
+/// library finished.
+typedef _JellyfinItemsPage = ({List<StreamItem> items, int rows, int? total});
+
+extension _JellyfinItemsPageX on _JellyfinItemsPage {
+  StreamLibraryPage toLibraryPage(int startIndex) {
+    final nextStartIndex = startIndex + rows;
+    final total = this.total;
+    return StreamLibraryPage(
+      items: items,
+      nextStartIndex: nextStartIndex,
+      // With a `TotalRecordCount` this is arithmetic. Without one — the
+      // unwrapped shape, and some builds of `/Shows/NextUp` — the only honest
+      // signal is "the server sent rows", so the pager asks once more and stops
+      // on the empty answer.
+      hasMore: total == null ? rows > 0 : nextStartIndex < total,
+    );
   }
 }
 

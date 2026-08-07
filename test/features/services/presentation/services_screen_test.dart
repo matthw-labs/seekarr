@@ -18,10 +18,12 @@ import 'package:seekarr/features/services/presentation/service_kpi_provider.dart
 import 'package:seekarr/features/services/presentation/service_matrix_collapse_provider.dart';
 import 'package:seekarr/features/services/presentation/services_alert_band.dart';
 import 'package:seekarr/features/services/presentation/services_provider.dart';
+import 'package:seekarr/core/widgets/service_ring.dart';
 import 'package:seekarr/features/services/presentation/services_screen.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
+import '../../../test_helpers/reel_finders.dart';
 
 /// How many services the more-services hint has left to offer, derived rather
 /// than written down.
@@ -62,11 +64,8 @@ void main() {
     // the down count, so a closed band never swallows its news entirely.
     // Radarr's "12 missing" is second in line and stays covered until the
     // band opens.
-    expect(
-      find.textContaining('3 pending', findRichText: true),
-      findsOneWidget,
-    );
-    expect(find.textContaining('1 down', findRichText: true), findsOneWidget);
+    expect(findLineContaining('3 pending'), findsOneWidget);
+    expect(findLineContaining('1 down'), findsOneWidget);
     expect(find.textContaining('missing', findRichText: true), findsNothing);
 
     // Reachability on a folded card is a coloured dot, not a state word —
@@ -976,13 +975,43 @@ void main() {
       );
     });
 
+    testWidgets('the unconfigured empty state clears the floating nav bar', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _providerOverrides(settings: const SettingsModel()),
+          child: const MaterialApp(home: ServicesScreen()),
+        ),
+      );
+      await _pumpDashboard(tester);
+
+      // The nav bar floats over this branch, so centring in the full viewport
+      // puts the optical centre behind it and the whole block reads low. The
+      // clearance is reserved inside the centring box, which lifts the ring
+      // above the geometric middle by half of it.
+      final viewport =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final ring = tester.getCenter(find.byType(ServiceRing));
+      final block = tester.getRect(find.text('Pick your services'));
+      expect(
+        ring.dy,
+        lessThan(viewport / 2),
+        reason: 'the instrument sits above the geometric centre',
+      );
+      expect(
+        block.bottom,
+        lessThan(viewport - 60),
+        reason: 'the action clears the bar rather than hiding under it',
+      );
+    });
+
     testWidgets('the unconfigured empty state scrolls rather than clipping', (
       tester,
     ) async {
-      // A 72pt icon well, a wrapped title, a two-line message and a button, at
-      // three times the reading size, on the shortest phone this ships to. The
-      // page owns the viewport precisely so this can grow past it — see the
-      // contract on `AppEmptyState`.
+      // The ring, a title, a two-line message and a button, at three times the
+      // reading size, on the shortest phone this ships to. The page owns the
+      // viewport precisely so this can grow past it.
       tester.view.physicalSize = const Size(750, 1334);
       tester.view.devicePixelRatio = 2.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -1000,9 +1029,9 @@ void main() {
       await _pumpDashboard(tester);
 
       expect(tester.takeException(), isNull);
-      expect(find.text('No services connected'), findsOneWidget);
-      await _scrollTo(tester, find.text('Set up a service'));
-      expect(find.text('Set up a service'), findsOneWidget);
+      expect(find.text('Nothing answers yet.'), findsOneWidget);
+      await _scrollTo(tester, find.text('Pick your services'));
+      expect(find.text('Pick your services'), findsOneWidget);
     });
   });
 

@@ -215,6 +215,48 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the collapsing header never listens to the route animation', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(
+                  context,
+                ).push(CupertinoPageRoute<void>(builder: (_) => _detailView())),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // The delegate's `shouldRebuild` is deliberately always true and its build
+    // sits inside a `LayoutBuilder`, so the destination-settle animation is
+    // rebuilt once per frame across the whole collapse range. A
+    // `CurvedAnimation` registers a status listener on its parent in its
+    // constructor that only `dispose()` removes — and the parent here is the
+    // *route's* animation, which outlives the page — so building one here left
+    // a listener behind on every scroll frame.
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    final fades = tester.widgetList<FadeTransition>(
+      find.descendant(
+        of: find.byType(SliverPersistentHeader),
+        matching: find.byType(FadeTransition),
+      ),
+    );
+    expect(fades, isNotEmpty);
+    expect(fades.where((fade) => fade.opacity is CurvedAnimation), isEmpty);
+  });
+
   testWidgets('disables overscroll stretch under Reduce Motion', (
     tester,
   ) async {

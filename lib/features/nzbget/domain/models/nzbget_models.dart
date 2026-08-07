@@ -3,7 +3,14 @@
 /// NZBGet splits large 64-bit integers into `<field>Hi` / `<field>Lo` unsigned
 /// 32-bit halves; [combineHiLo] recomposes them. Most sizes are also exposed
 /// directly in MB, which the dashboard prefers.
+///
+/// Size and rate labels go through `core/utils/byte_format.dart`. This file
+/// used to carry `formatNzbgetRate` and `formatNzbgetMb`, which disagreed with
+/// SABnzbd's equivalents on both thresholds and precision — so an identical
+/// quantity read differently depending on which download client reported it.
 library;
+
+import 'package:seekarr/core/utils/byte_format.dart';
 
 int _asInt(dynamic value) {
   if (value is num) return value.toInt();
@@ -19,23 +26,6 @@ bool _asBool(dynamic value) {
 /// Recomposes an unsigned 64-bit value from NZBGet's Hi/Lo 32-bit halves.
 int combineHiLo(dynamic hi, dynamic lo) {
   return _asInt(hi) * (1 << 32) + _asInt(lo);
-}
-
-/// Formats a byte-per-second rate into a compact human string.
-String formatNzbgetRate(int bytesPerSec) {
-  if (bytesPerSec >= 1024 * 1024) {
-    return '${(bytesPerSec / (1024 * 1024)).toStringAsFixed(1)} MB/s';
-  }
-  if (bytesPerSec >= 1024) {
-    return '${(bytesPerSec / 1024).toStringAsFixed(0)} KB/s';
-  }
-  return '$bytesPerSec B/s';
-}
-
-/// Formats a size in megabytes into a compact human string.
-String formatNzbgetMb(int mb) {
-  if (mb >= 1024) return '${(mb / 1024).toStringAsFixed(1)} GB';
-  return '$mb MB';
 }
 
 /// Global download status (`status`).
@@ -54,8 +44,8 @@ class NzbgetStatus {
 
   final bool paused;
 
-  String get rateLabel => formatNzbgetRate(downloadRateBytes);
-  String get remainingLabel => formatNzbgetMb(remainingSizeMb);
+  String get rateLabel => formatBytesPerSecond(downloadRateBytes);
+  String get remainingLabel => formatMegabytes(remainingSizeMb);
 
   factory NzbgetStatus.fromJson(Map<String, dynamic> json) {
     // Prefer the direct MB field; fall back to Hi/Lo bytes if absent.
@@ -95,7 +85,7 @@ class NzbgetGroup {
   }
 
   int get percentage => (progress * 100).round();
-  String get remainingLabel => formatNzbgetMb(remainingSizeMb);
+  String get remainingLabel => formatMegabytes(remainingSizeMb);
 
   factory NzbgetGroup.fromJson(Map<String, dynamic> json) {
     final fileMb = json.containsKey('FileSizeMB')

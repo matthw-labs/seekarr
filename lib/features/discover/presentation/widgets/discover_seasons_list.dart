@@ -53,6 +53,7 @@ class DiscoverSeasonsList extends StatelessWidget {
     return MediaChildGroupSliver(
       accent: accent,
       pickerTitle: 'Seasons',
+      childNoun: 'episodes',
       pickerLabel: 'All ${ordered.length} seasons',
       groups: ordered
           .map(

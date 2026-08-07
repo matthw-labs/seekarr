@@ -1,6 +1,5 @@
 import 'package:seekarr/core/network/cert_trust.dart';
 import 'package:seekarr/core/utils/url_utils.dart';
-import 'package:seekarr/features/settings/domain/service_key.dart';
 
 /// Represents the reachability state of a configured service.
 ///
@@ -13,40 +12,47 @@ enum ServiceConnectionStatus {
   disconnected,
 }
 
-/// Only TrueNAS and Dockge use the WebSocket clients that support cert pinning.
+/// The outcome of probing an origin for a certificate the platform does not
+/// already trust.
 ///
-/// Public so onboarding and settings can tailor their TLS-failure copy without
-/// keeping a second copy of this rule.
-bool supportsCertPinning(ServiceKey service) =>
-    service == ServiceKey.truenas || service == ServiceKey.dockge;
+/// [rotated] is the one field that changes how the caller must present this:
+/// true means this origin already had a *different* pin, so the certificate
+/// presented today is not the one the user trusted before. That is the
+/// shape a real interception would take, and it must read as an escalation —
+/// never as a routine first-time trust prompt — see ADR-6.
+typedef UntrustedCertificateProbe = ({
+  ServerCertificate certificate,
+  bool rotated,
+});
 
-/// Parses [rawUrl] into `(host, port, isSecure)`, applying the same scheme and
-/// default-port rules the TrueNAS/Dockge clients use.
-({String host, int port, bool secure})? _tlsEndpoint(String rawUrl) {
-  var raw = rawUrl.trim();
-  if (raw.isEmpty) return null;
-  if (!raw.contains('://')) raw = 'https://$raw';
-  final uri = Uri.tryParse(raw);
-  if (uri == null || uri.host.isEmpty) return null;
-  final secure = UrlUtils.isSecureScheme(raw);
-  return (
-    host: uri.host,
-    port: uri.hasPort ? uri.port : (secure ? 443 : 80),
-    secure: secure,
-  );
-}
+/// The shape of [probeUntrustedCertificate], so a caller that reaches it from
+/// a widget can accept one as an optional constructor parameter and default
+/// to the real function.
+///
+/// Exists because under ADR-6 *every* disconnected, probe-worthy failure
+/// reaches this — not just the rare TrueNAS/Dockge case ADR-5 confined it
+/// to — and the probe opens a real [SecureSocket], which `flutter_test`
+/// cannot intercept the way it does an `HttpClient` (the framework's own
+/// warning about raw sockets is not idle: this is exactly the socket it
+/// means). A widget test now needs a fake here to stay offline and
+/// deterministic; production code never passes one.
+typedef CertificateProber =
+    Future<UntrustedCertificateProbe?> Function(
+      String rawUrl, {
+      String pinnedFingerprint,
+    });
 
-/// Probes [rawUrl] for a TLS certificate that is not trusted by the platform
-/// and not already pinned as [pinnedFingerprint], returning it so the UI can
-/// offer to trust it (trust-on-first-use). Returns null when the URL is not
-/// TLS, the certificate already validates, it matches the current pin, or the
-/// server is simply unreachable. Never trusts anything itself.
-Future<ServerCertificate?> probeUntrustedCertificate(
+/// Probes [rawUrl]'s origin for a TLS certificate that is not trusted by the
+/// platform and not already pinned as [pinnedFingerprint], returning it so
+/// the UI can offer to trust it (trust-on-first-use). Returns null when the
+/// URL is not TLS, the certificate already validates, it matches the current
+/// pin, or the server is simply unreachable. Never trusts anything itself.
+Future<UntrustedCertificateProbe?> probeUntrustedCertificate(
   String rawUrl, {
   String pinnedFingerprint = '',
 }) async {
-  final endpoint = _tlsEndpoint(rawUrl);
-  if (endpoint == null || !endpoint.secure) return null;
+  final endpoint = tlsEndpointFor(rawUrl);
+  if (endpoint == null) return null;
   try {
     final validates = await certificateValidatesByDefault(
       endpoint.host,
@@ -56,15 +62,28 @@ Future<ServerCertificate?> probeUntrustedCertificate(
     if (validates) return null;
     final cert = await probeServerCertificate(endpoint.host, endpoint.port);
     if (cert == null) return null;
-    if (cert.fingerprint.toLowerCase() ==
-        pinnedFingerprint.trim().toLowerCase()) {
+    final pin = pinnedFingerprint.trim().toLowerCase();
+    if (cert.fingerprint.toLowerCase() == pin) {
       // Already pinned — the failure is something else.
       return null;
     }
-    return cert;
+    return (certificate: cert, rotated: pin.isNotEmpty);
   } catch (_) {
     // Server unreachable / DNS / refused — a genuine disconnect, not a cert
     // trust problem.
     return null;
   }
+}
+
+/// Resolves [rawUrl] to the host/port a TLS probe or a pinned client should
+/// connect to, or null when it cannot carry a certificate at all.
+///
+/// Thin wrapper around [UrlUtils.certOrigin] — that is the single place the
+/// scheme/default-port rule lives; this just unpacks its canonical
+/// `https://host:port` string back into the parts a socket call needs.
+({String host, int port})? tlsEndpointFor(String rawUrl) {
+  final origin = UrlUtils.certOrigin(rawUrl);
+  if (origin == null) return null;
+  final uri = Uri.parse(origin);
+  return (host: uri.host, port: uri.port);
 }

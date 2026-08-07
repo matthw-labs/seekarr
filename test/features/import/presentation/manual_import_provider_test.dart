@@ -394,6 +394,202 @@ void main() {
         expect(state.error, isNull);
       },
     );
+
+    test('resolves only the row at that path, never id twins', () async {
+      final container = _container(
+        client: FakeApiClient(),
+        service: ServiceKey.radarr,
+      );
+      addTearDown(container.dispose);
+
+      // A service that hands every file the same id — the *arrs hash the path
+      // into `Id` so this does not happen in practice, but the match must not
+      // depend on that being true.
+      final first = ManualImportItem.fromJson({
+        'id': 7,
+        'path': '/downloads/A.mkv',
+        'name': 'A',
+      });
+      final second = ManualImportItem.fromJson({
+        'id': 7,
+        'path': '/downloads/B.mkv',
+        'name': 'B',
+      });
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      notifier.state = container
+          .read(manualImportFlowProvider)
+          .copyWith(service: ServiceKey.radarr, items: [first, second]);
+
+      await notifier.applyFixAssignment(first, _radarrAssignment(movieId: 5));
+
+      final state = container.read(manualImportFlowProvider);
+      expect(state.items.first.hasMatchFor(ServiceKey.radarr), isTrue);
+      // The other file shares the id and nothing else: it is a different file
+      // and must stay unmatched.
+      expect(state.items[1].path, '/downloads/B.mkv');
+      expect(state.items[1].hasMatchFor(ServiceKey.radarr), isFalse);
+      expect(state.selectedPaths, {'/downloads/A.mkv'});
+    });
+  });
+
+  group('launching manual import from a title', () {
+    /// The four GETs a `start` + `loadSelectedFolderItems` round makes:
+    /// root folders, the file system listing, the scan, then the library.
+    FakeApiClient scanClient({
+      required List<Map<String, dynamic>> items,
+      List<Map<String, dynamic>> library = const [
+        {'id': 42, 'title': 'Target Movie', 'year': '2024'},
+      ],
+    }) {
+      final client = FakeApiClient();
+      client.getResponseQueue.addAll([
+        [
+          {'id': 1, 'path': '/downloads', 'accessible': true},
+        ],
+        {'parent': null, 'directories': <dynamic>[], 'files': <dynamic>[]},
+        items,
+        library,
+      ]);
+      return client;
+    }
+
+    test('assigns the target only to files Radarr could import', () async {
+      final client = scanClient(
+        items: const [
+          {'path': '/downloads/Target Movie.mkv', 'name': 'Target Movie'},
+          {'path': '/downloads/Target Movie.srt', 'name': 'Target Movie'},
+          {'path': '/downloads/poster.jpg', 'name': 'poster'},
+          {'path': '/downloads/Target Movie.nfo', 'name': 'Target Movie'},
+        ],
+      );
+      final container = _container(client: client, service: ServiceKey.radarr);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      await notifier.start(ServiceKey.radarr, targetId: 42, force: true);
+      await notifier.loadSelectedFolderItems();
+
+      final state = container.read(manualImportFlowProvider);
+      final matched = state.items
+          .where((item) => item.hasMatchFor(ServiceKey.radarr))
+          .map((item) => item.path);
+      // Radarr's library guard is satisfied by a movieId alone, so without the
+      // supported-file filter the launch target was written into the subtitle,
+      // the artwork and the NFO too — one tap from importing them as the movie.
+      expect(matched, ['/downloads/Target Movie.mkv']);
+    });
+
+    test('never pre-ticks a match the user has not seen', () async {
+      final client = scanClient(
+        items: const [
+          {'path': '/downloads/Target Movie.mkv', 'name': 'Target Movie'},
+        ],
+      );
+      final container = _container(client: client, service: ServiceKey.radarr);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      await notifier.start(ServiceKey.radarr, targetId: 42, force: true);
+      await notifier.loadSelectedFolderItems();
+
+      final state = container.read(manualImportFlowProvider);
+      // The file did get the guess, but a guess must not arrive armed: nothing
+      // is selected — and so nothing is importable — until the user ticks it.
+      expect(state.readyItems, hasLength(1));
+      expect(state.selectedPaths, isEmpty);
+      expect(state.canImportSelected, isFalse);
+    });
+
+    // The other half of the same protection, and the one that survives a tap on
+    // "Select all ready files": a file the app has no reason to think is the
+    // target never becomes ready in the first place. `targetId` outlives every
+    // folder change, and the entry points that carry one carry no path, so
+    // without this a scan of the whole downloads root labelled every
+    // unidentified rip in it with the movie the user came from.
+    test('leaves a file that is not the target alone', () async {
+      final client = scanClient(
+        items: const [
+          {'path': '/downloads/Target Movie.mkv', 'name': 'Target Movie'},
+          {'path': '/downloads/Some Other Movie.mkv', 'name': 'Some Other'},
+        ],
+      );
+      final container = _container(client: client, service: ServiceKey.radarr);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      await notifier.start(ServiceKey.radarr, targetId: 42, force: true);
+      await notifier.loadSelectedFolderItems();
+
+      final state = container.read(manualImportFlowProvider);
+      expect(
+        state.items
+            .where((item) => item.hasMatchFor(ServiceKey.radarr))
+            .map((item) => item.path),
+        ['/downloads/Target Movie.mkv'],
+      );
+
+      // And the gesture that arms the batch cannot reach the stranger either.
+      notifier.toggleAllReady();
+      expect(container.read(manualImportFlowProvider).selectedPaths, {
+        '/downloads/Target Movie.mkv',
+      });
+    });
+
+    test('a release-named file in the target folder still matches', () async {
+      // What the launch is actually for: Radarr could not parse the file, but
+      // the download is plainly the movie the user came from.
+      final client = scanClient(
+        items: const [
+          {
+            'path': '/downloads/Target Movie (2024)/rip-a1.mkv',
+            'folderName': 'Target Movie (2024)',
+            'relativePath': 'rip-a1.mkv',
+            'name': 'rip-a1',
+          },
+          {
+            'path': '/downloads/Target.Movie.2024.1080p.BluRay-GRP.mkv',
+            'name': 'Target.Movie.2024.1080p.BluRay-GRP',
+          },
+        ],
+      );
+      final container = _container(client: client, service: ServiceKey.radarr);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      await notifier.start(ServiceKey.radarr, targetId: 42, force: true);
+      await notifier.loadSelectedFolderItems();
+
+      final state = container.read(manualImportFlowProvider);
+      expect(
+        state.items.every((item) => item.hasMatchFor(ServiceKey.radarr)),
+        isTrue,
+      );
+    });
+
+    test('a real match found by the service is still preselected', () async {
+      final client = scanClient(
+        items: const [
+          {
+            'path': '/downloads/Known.mkv',
+            'name': 'Known',
+            'movie': {'id': 42, 'title': 'Target Movie'},
+          },
+          {'path': '/downloads/Unknown.mkv', 'name': 'Unknown'},
+        ],
+      );
+      final container = _container(client: client, service: ServiceKey.radarr);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      await notifier.start(ServiceKey.radarr, targetId: 42, force: true);
+      await notifier.loadSelectedFolderItems();
+
+      // What the service identified itself is not a guess, so the ordinary
+      // ready-file preselection is untouched.
+      expect(container.read(manualImportFlowProvider).selectedPaths, {
+        '/downloads/Known.mkv',
+      });
+    });
   });
 
   group('ManualImportFlowNotifier.loadSelectedFolderItems', () {

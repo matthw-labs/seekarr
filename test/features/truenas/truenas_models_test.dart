@@ -34,6 +34,46 @@ void main() {
     expect(pool.topology['data']!.first.members.first.name, 'sda');
   });
 
+  test('TrueNasPool derives capacity from the root dataset as used + free', () {
+    // `root_dataset.available` is ZFS FREE space, not the pool size. Reading it
+    // as the total made usedFraction compute used/free, which the clamp pinned
+    // to a flat 100% for any pool at or past half full.
+    final pool = TrueNasPool.fromJson({
+      'name': 'tank',
+      'status': 'ONLINE',
+      'healthy': true,
+      'root_dataset': {
+        'used': {'parsed': 600},
+        'available': {'parsed': 400},
+      },
+    });
+
+    expect(pool.sizeBytes, 1000);
+    expect(pool.allocatedBytes, 600);
+    expect(pool.freeBytes, 400);
+    expect(pool.usedFraction, closeTo(0.6, 1e-9));
+  });
+
+  test('TrueNasPool prefers top-level capacity over the root dataset', () {
+    final pool = TrueNasPool.fromJson({
+      'name': 'tank',
+      'status': 'ONLINE',
+      'healthy': true,
+      'size': 2000,
+      'allocated': 500,
+      'free': 1500,
+      'root_dataset': {
+        'used': {'parsed': 1},
+        'available': {'parsed': 2},
+      },
+    });
+
+    expect(pool.sizeBytes, 2000);
+    expect(pool.allocatedBytes, 500);
+    expect(pool.freeBytes, 1500);
+    expect(pool.usedFraction, closeTo(0.25, 1e-9));
+  });
+
   test('TrueNasDataset reads parsed property values and short name', () {
     final dataset = TrueNasDataset.fromJson({
       'id': 'tank/media',
@@ -93,6 +133,36 @@ void main() {
     expect(app.portals['Web UI'], 'https://host:32400');
   });
 
+  test('TrueNasSnapshot decodes the {\$date: ms} creation shape', () {
+    final snapshot = TrueNasSnapshot.fromJson({
+      'id': 'tank/media@auto-2026-08-06',
+      'snapshot_name': 'auto-2026-08-06',
+      'dataset': 'tank/media',
+      'properties': {
+        'used': {'parsed': 4096},
+        'creation': {
+          'parsed': {'\$date': 1770000000000},
+          'rawvalue': '1770000000',
+        },
+      },
+    });
+
+    expect(snapshot.usedBytes, 4096);
+    expect(snapshot.createdMs, 1770000000000);
+  });
+
+  test('TrueNasSnapshot reads a bare creation value as epoch seconds', () {
+    final snapshot = TrueNasSnapshot.fromJson({
+      'id': 'tank/media@manual',
+      'dataset': 'tank/media',
+      'properties': {
+        'creation': {'parsed': 1770000000},
+      },
+    });
+
+    expect(snapshot.createdMs, 1770000000 * 1000);
+  });
+
   test('TrueNasProtectionTask normalizes per kind', () {
     final snap = TrueNasProtectionTask.fromJson(TrueNasTaskKind.snapshot, {
       'id': 3,
@@ -104,6 +174,30 @@ void main() {
     expect(snap.title, 'tank/media');
     expect(snap.enabled, isTrue);
     expect(snap.subtitle, contains('recursive'));
+    expect(snap.poolName, isNull);
+  });
+
+  test('TrueNasProtectionTask keeps the pool name of a scrub task', () {
+    // `pool.scrub.run` is keyed by pool name, so dropping it (the previous
+    // behaviour) left "Run now" with nothing to send.
+    final scrub = TrueNasProtectionTask.fromJson(TrueNasTaskKind.scrub, {
+      'id': 1,
+      'pool_name': 'tank',
+      'threshold': 35,
+      'enabled': true,
+    });
+    expect(scrub.title, 'tank');
+    expect(scrub.poolName, 'tank');
+  });
+
+  test('TrueNasTaskKind maps cloud sync onto cloudsync.sync', () {
+    // `cloudsync.run` does not exist on the middleware; every "Run now"
+    // against it failed server-side.
+    expect(TrueNasTaskKind.cloudSync.runMethod, 'cloudsync.sync');
+    expect(TrueNasTaskKind.scrub.runMethod, 'pool.scrub.run');
+    expect(TrueNasTaskKind.snapshot.runMethod, 'pool.snapshottask.run');
+    expect(TrueNasTaskKind.replication.runMethod, 'replication.run');
+    expect(TrueNasTaskKind.rsync.runMethod, 'rsynctask.run');
   });
 
   test('TrueNasServiceItem derives running from state', () {

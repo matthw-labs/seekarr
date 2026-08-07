@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/utils/route_utils.dart';
+import 'package:seekarr/core/utils/service_routes.dart';
+import 'package:seekarr/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:seekarr/features/movies/domain/models/radarr_movie.dart';
 import 'package:seekarr/features/series/domain/models/sonarr_series.dart';
 import 'package:seekarr/features/shell/presentation/shell_screen.dart';
@@ -21,11 +23,13 @@ import 'package:seekarr/features/services/presentation/service_dashboard_screen.
 import 'package:seekarr/features/services/presentation/services_screen.dart';
 import 'package:seekarr/features/discover/presentation/discover_detail_screen.dart';
 import 'package:seekarr/features/discover/presentation/discover_see_all_screen.dart';
+import 'package:seekarr/features/release_search/presentation/release_search_settings_screen.dart';
 import 'package:seekarr/features/settings/presentation/settings_appearance_screen.dart';
 import 'package:seekarr/features/settings/presentation/settings_home_screen.dart';
 import 'package:seekarr/features/settings/presentation/settings_region_screen.dart';
 import 'package:seekarr/features/settings/presentation/settings_connections_screen.dart';
 import 'package:seekarr/features/settings/presentation/service_settings_screen.dart';
+import 'package:seekarr/features/settings/presentation/trusted_certificates_screen.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/import/presentation/manual_import_locate_screen.dart';
 import 'package:seekarr/features/import/presentation/manual_import_progress_screen.dart';
@@ -43,9 +47,15 @@ import 'package:seekarr/features/bazarr/presentation/bazarr_screen.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_screen.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_library_screen.dart';
 import 'package:seekarr/features/prowlarr/presentation/prowlarr_indexer_detail_screen.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_settings_screen.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_provider_list_screen.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_app_profiles_screen.dart';
+import 'package:seekarr/features/prowlarr/presentation/prowlarr_tags_screen.dart';
 import 'package:seekarr/features/readarr/presentation/readarr_screen.dart';
 import 'package:seekarr/features/readarr/presentation/readarr_library_screen.dart';
 import 'package:seekarr/features/sabnzbd/presentation/sabnzbd_screen.dart';
+import 'package:seekarr/features/npm/presentation/npm_screen.dart';
+import 'package:seekarr/features/transmission/presentation/transmission_screen.dart';
 import 'package:seekarr/features/nzbget/presentation/nzbget_screen.dart';
 import 'package:seekarr/features/stream/presentation/stream_dashboard_screen.dart';
 import 'package:seekarr/features/stream/presentation/stream_item_screen.dart';
@@ -579,6 +589,49 @@ GoRoute _prowlarrRoutes({required String path}) {
           );
         },
       ),
+      GoRoute(
+        path: 'settings',
+        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          child: const ProwlarrSettingsScreen(),
+        ),
+        routes: [
+          GoRoute(
+            path: 'sync-profiles',
+            pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: const ProwlarrAppProfilesScreen(),
+            ),
+          ),
+          GoRoute(
+            path: 'tags',
+            pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: const ProwlarrTagsScreen(),
+            ),
+          ),
+          // One route for the four field-driven sections; an unknown segment
+          // falls back to the hub rather than a blank screen.
+          GoRoute(
+            path: ':section',
+            redirect: (context, state) =>
+                ProwlarrProviderKind.fromRouteSegment(
+                      state.pathParameters['section'] ?? '',
+                    ) ==
+                    null
+                ? ServiceRoutes.prowlarrSettings
+                : null,
+            pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ProwlarrProviderListScreen(
+                kind: ProwlarrProviderKind.fromRouteSegment(
+                  state.pathParameters['section']!,
+                )!,
+              ),
+            ),
+          ),
+        ],
+      ),
     ],
   );
 }
@@ -648,6 +701,38 @@ GoRoute _unraidRoutes({required String path}) {
       child: ServiceDashboardScreen(
         service: ServiceKey.unraid,
         child: const UnraidScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+  );
+}
+
+GoRoute _transmissionRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.transmission,
+        child: const TransmissionScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+  );
+}
+
+GoRoute _npmRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.nginxProxyManager,
+        child: const NpmScreen(
           showAppBar: false,
           topPadding: _serviceDashboardTopPadding,
         ),
@@ -952,6 +1037,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               _sabnzbdRoutes(path: 'sabnzbd'),
               _nzbgetRoutes(path: 'nzbget'),
               _unraidRoutes(path: 'unraid'),
+              _transmissionRoutes(path: 'transmission'),
+              // `npm`, not `nginxProxyManager` — see `ServiceKey.routeParam`.
+              _npmRoutes(path: ServiceKey.nginxProxyManager.routeParam),
               _streamRoutes(service: ServiceKey.jellyfin, path: 'jellyfin'),
               _streamRoutes(service: ServiceKey.plex, path: 'plex'),
             ],
@@ -1012,6 +1100,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SettingsHomeScreen(),
             routes: [
               GoRoute(
+                path: 'background-search',
+                builder: (context, state) =>
+                    const ReleaseSearchSettingsScreen(),
+              ),
+              GoRoute(
                 path: 'appearance',
                 pageBuilder: (context, state) =>
                     _settingsSubpage(state, const SettingsAppearanceScreen()),
@@ -1031,6 +1124,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'region',
                 pageBuilder: (context, state) =>
                     _settingsSubpage(state, const SettingsRegionScreen()),
+              ),
+              GoRoute(
+                path: 'certificates',
+                pageBuilder: (context, state) =>
+                    _settingsSubpage(state, const TrustedCertificatesScreen()),
               ),
               GoRoute(
                 path: 'service/:service',
