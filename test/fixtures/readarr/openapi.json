@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.1",
   "info": { "title": "Readarr", "version": "1.0.0" },
-  "_note": "Subset of the Readarr v1 OpenAPI spec (sourced from the documented API, marked doc until captured from a live instance). Only the paths and schema properties Seekarr depends on are kept, so the contract test fails loudly if any of them disappear upstream.",
+  "_note": "Subset of the Readarr v1 OpenAPI spec (sourced from the documented API, marked doc until captured from a live instance). Only the paths and schema properties Cupola depends on are kept, so the contract test fails loudly if any of them disappear upstream.",
   "paths": {
     "/api/v1/system/status": { "get": { "operationId": "getSystemStatus" } },
     "/api/v1/author": { "get": { "operationId": "getAuthor" } },

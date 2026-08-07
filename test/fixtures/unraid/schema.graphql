@@ -1,6 +1,6 @@
 # Subset of the Unraid GraphQL SDL (sourced from the documented schema / Apollo
 # introspection, marked doc until captured from a live instance). Only the types
-# and fields Seekarr queries are kept; the contract test asserts each still
+# and fields Cupola queries are kept; the contract test asserts each still
 # exists so an upstream rename fails loudly instead of silently returning nulls.
 
 type Query {
