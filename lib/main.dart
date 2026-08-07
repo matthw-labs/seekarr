@@ -119,7 +119,7 @@ class CupolaApp extends ConsumerWidget {
     // accents stay recognisable and the experience is identical on every OS.
     // See AppTheme.darkTheme.
     return MaterialApp.router(
-      title: 'Seekarr',
+      title: 'Cupola',
       theme: AppTheme.lightTheme(),
       darkTheme: AppTheme.darkTheme(),
       themeMode: themeMode,

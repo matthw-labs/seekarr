@@ -128,7 +128,7 @@ flutter:
     # The product mark — the Cupola seen from above: six lit window panes on the
     # hexagon's edge midpoints, around the central circular window. Rendered from
     # `assets/brand/cupola_mark.svg`, which is the vector source of record.
-    - assets/brand/seekarr_mark.png
+    - assets/brand/cupola_mark.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

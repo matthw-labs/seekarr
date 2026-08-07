@@ -417,7 +417,7 @@ class _Mark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Image.asset(
-    'assets/brand/seekarr_mark.png',
+    'assets/brand/cupola_mark.png',
     fit: BoxFit.contain,
     // Decorative here: [ServiceRing] already publishes the ring's meaning.
     excludeFromSemantics: true,

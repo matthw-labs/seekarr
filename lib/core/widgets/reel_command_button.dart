@@ -119,7 +119,7 @@ class _ReelCommandButtonState extends State<ReelCommandButton> {
       FlutterErrorDetails(
         exception: error,
         stack: stack,
-        library: 'seekarr',
+        library: 'cupola',
         context: ErrorDescription(
           'while running the "${widget.label}" command button action',
         ),

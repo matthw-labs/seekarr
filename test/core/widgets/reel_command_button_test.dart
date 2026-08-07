@@ -35,7 +35,7 @@ void main() {
     expect(reported.single.exception, isStateError);
     // Reported deliberately, through the framework's own channel, rather than
     // arriving as an uncaught async error from a dropped future.
-    expect(reported.single.library, 'seekarr');
+    expect(reported.single.library, 'cupola');
     expect(reported.single.context.toString(), contains('Test connection'));
     // And the button is usable again rather than stuck in its waiting state.
     expect(
@@ -62,7 +62,7 @@ void main() {
 
     expect(reported, hasLength(1));
     expect(reported.single.exception, isStateError);
-    expect(reported.single.library, 'seekarr');
+    expect(reported.single.library, 'cupola');
     expect(
       tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNotNull,
