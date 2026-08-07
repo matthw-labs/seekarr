@@ -6,10 +6,10 @@
          exact-alarm permissions and their declaration form. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
-        android:label="Seekarr"
+        android:label="Cupola"
         android:name="${applicationName}"
-        android:icon="@mipmap/seekarr_icon"
-        android:roundIcon="@mipmap/seekarr_icon_round"
+        android:icon="@mipmap/cupola_icon"
+        android:roundIcon="@mipmap/cupola_icon_round"
         android:networkSecurityConfig="@xml/network_security_config"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

@@ -23,7 +23,7 @@ import 'package:flutter/services.dart';
 abstract final class SecureClipboard {
   /// The host channel. Public so a test can stand in for the native side.
   static const MethodChannel channel = MethodChannel(
-    'labs.matthw.seekarr/secure_clipboard',
+    'com.matthwlabs.cupola/secure_clipboard',
   );
 
   /// Asks the host to put [secret] on the clipboard as sensitive content.

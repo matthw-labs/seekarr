@@ -14,6 +14,8 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<resources>
-    <color name="seekarr_icon_background">#003DA4</color>
-</resources>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/cupola_icon_bg_gradient"/>
+    <foreground android:drawable="@mipmap/cupola_icon_foreground"/>
+    <monochrome android:drawable="@mipmap/cupola_icon_monochrome"/>
+</adaptive-icon>

@@ -1,4 +1,4 @@
-package labs.matthw.seekarr
+package com.matthwlabs.cupola
 
 import android.content.ClipData
 import android.content.ClipDescription
@@ -65,6 +65,6 @@ class MainActivity : FlutterActivity() {
     }
 
     private companion object {
-        const val SECURE_CLIPBOARD_CHANNEL = "labs.matthw.seekarr/secure_clipboard"
+        const val SECURE_CLIPBOARD_CHANNEL = "com.matthwlabs.cupola/secure_clipboard"
     }
 }

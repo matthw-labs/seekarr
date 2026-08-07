@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Seekarr holds credentials for the user's own infrastructure and, in
+    Cupola holds credentials for the user's own infrastructure and, in
     SharedPreferences, the trust-on-first-use certificate fingerprints that pin
     TrueNAS and Dockge.
 

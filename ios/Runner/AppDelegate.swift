@@ -33,7 +33,7 @@ import UserNotifications
 enum SecureClipboardChannel {
   static func register(with messenger: FlutterBinaryMessenger) {
     let channel = FlutterMethodChannel(
-      name: "labs.matthw.seekarr/secure_clipboard",
+      name: "com.matthwlabs.cupola/secure_clipboard",
       binaryMessenger: messenger
     )
 

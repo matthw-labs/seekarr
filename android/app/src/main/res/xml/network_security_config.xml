@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Cleartext HTTP is permitted on purpose: Seekarr talks to instances the user
+    Cleartext HTTP is permitted on purpose: Cupola talks to instances the user
     runs themselves, and a plain `http://192.168.1.10:8080` LAN address is a
     normal, supported setup.
 
