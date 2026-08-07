@@ -9,7 +9,7 @@ class MainFlutterWindow: NSWindow {
     // Enforce a phone-like minimum so the mobile-first UI stays usable.
     self.minSize = NSSize(width: 360, height: 780)
 
-    let autosaveName = "SeekarrMainWindow"
+    let autosaveName = "CupolaMainWindow"
     let isFirstLaunch =
       UserDefaults.standard.object(forKey: "NSWindow Frame \(autosaveName)") == nil
 

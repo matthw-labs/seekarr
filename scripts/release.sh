@@ -3,8 +3,8 @@
 set -euo pipefail
 
 TARGET="${1:-all}"
-APP_NAME="Seekarr"
-APP_SLUG="seekarr"
+APP_NAME="Cupola"
+APP_SLUG="cupola"
 
 case "$TARGET" in
   android|ios|macos|all)
