@@ -6,7 +6,7 @@ One client for **Seerr**, **Radarr**, **Sonarr**, **Lidarr**, and **qBittorrent*
 ![Flutter](https://img.shields.io/badge/Flutter-3.38.7-02569B?logo=flutter)
 ![Dart](https://img.shields.io/badge/Dart-%5E3.10.0-0175C2?logo=dart)
 ![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20macOS-informational)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-Apache--2.0-green)
 ![Latest release](https://img.shields.io/github/v/release/matthw-labs/seekarr?include_prereleases)
 [![CI](https://github.com/matthw-labs/seekarr/actions/workflows/ci.yml/badge.svg)](https://github.com/matthw-labs/seekarr/actions/workflows/ci.yml)
 [![Ko-fi](https://img.shields.io/badge/support-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/matthwlabs)
@@ -258,4 +258,8 @@ If you find Seekarr useful, consider supporting me with a donation — it helps 
 
 ## License
 
-This project is licensed under the **[MIT License](LICENSE)**.
+This project is licensed under the **[Apache License 2.0](LICENSE)**.
+
+Seekarr was previously distributed under the MIT License. That license still
+covers copies obtained before the change, and its original notice is preserved
+in [LICENSE-MIT](LICENSE-MIT); see [NOTICE](NOTICE) for details.

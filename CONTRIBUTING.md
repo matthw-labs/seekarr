@@ -113,6 +113,24 @@ Do not commit:
 - `.env` files or similar local secrets
 Use example files or placeholder values when documentation needs configuration examples.
 
+### Licensing of contributions
+
+Seekarr is licensed under the [Apache License 2.0](LICENSE). Unless you state
+otherwise in writing, any contribution you intentionally submit for inclusion in
+this project is offered under the same license — inbound equals outbound, as
+described in section 5 of the license. No separate contributor agreement is
+required.
+
+Please sign off your commits to certify that you wrote the code, or otherwise
+have the right to submit it under that license:
+
+```bash
+git commit -s -m "your message"
+```
+
+This adds a `Signed-off-by:` line, which is your agreement to the
+[Developer Certificate of Origin](https://developercertificate.org/).
+
 ### Questions
 
 If something is unclear, open an issue and ask before implementing a large change.
